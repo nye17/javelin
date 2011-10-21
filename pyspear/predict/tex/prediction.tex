@@ -1,0 +1,122 @@
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{grffile}
+\usepackage{natbib}
+\usepackage{amsmath}	% just math
+\usepackage{amssymb}	% allow blackboard bold (aka N,R,Q sets)
+\usepackage{amsthm}	% allows thm environment
+
+%\linespread{1.8}	% double spaces lines
+\linespread{0.9}	% single spaces lines
+
+\textwidth 6.5truein  % These 4 commands define more efficient margins
+\textheight 9.5truein
+\oddsidemargin 0.0in
+\topmargin -0.6in
+
+\parindent 0pt	% let's not indent paragraphs
+\parskip 5pt  % Also, a bit of space between paragraphs
+
+\def\ok{yeah}
+\def\sstarhat{\widehat{s_*}}
+\def\sstar{s_*}
+\def\ustar{u_*}
+\def\bcsstar{\mathbf{S}_*}
+\def\balpha{\mathbf{\alpha}}
+\def\bv{\mathbf{v}}
+\def\by{\mathbf{y}}
+\def\bs{\mathbf{s}}
+\def\bn{\mathbf{n}}
+\def\br{\mathbf{r}}
+\def\bx{\mathbf{x}}
+\def\bcs{\mathbf{S}}
+\def\bcn{\mathbf{N}}
+\def\bcc{\mathbf{C}}
+\def\bcq{\mathbf{Q}}
+
+\begin{document}
+\begin{flushright}
+\linespread{1}	% single spaces lines
+\small \normalsize %% dumb, but have to do this for the prev to work
+Predictive Distribution of Light Curves as Gaussian Processes\\
+YZ \\
+Last Updated: \today\footnote{Written in Oct 20, 2011}
+\end{flushright}
+
+\paragraph{Minimum Variance Estimate.}
+
+Ignoring any large time trend in the light curve, we can write any
+realization as 
+\begin{equation} 
+\by = \bs + \bn
+\end{equation}
+and define
+\begin{equation} 
+\bcs \equiv \left<\bs\bs^T\right> ,\; \bcn \equiv
+\left<\bn\bn^T\right>,\; \bcsstar \equiv \left<(\sstar)\bs\right>
+\end{equation}
+We then have the minimum variance estimate~(MVE) $\sstarhat$ for
+$\sstar$ as
+\begin{equation} 
+\sstarhat = \bcsstar^T[\bcs+\bcn]^{-1}\by
+\label{eqn:mve}
+\end{equation}
+with the variance of $\sstar$ about $\sstarhat$ as
+\begin{equation} 
+\left<(\sstar - \sstarhat)^2\right> = \left<\sstar^2\right> - \bcsstar^T[\bcs+\bcn]^{-1}\bcsstar
+\label{eqn:variance}
+\end{equation}
+
+\paragraph{Unconstrained Realizations of the Underlying Process.} 
+
+Given the symmetric, postive-definite covariance matrix $\bcc \equiv \bcs+\bcn$,
+generating a random realization is straightforward.
+\begin{itemize}
+\item Cholesky decompose $\bcc = MM^T$, where $M$ is the lower
+triangular matrix.
+\item Generate $\br \sim \mathcal{N}(\mathbf{0}, I)$
+\item Compute $\bx = M\br$ so that
+$\left<\bx\bx^T\right>=\left<M\br (M\br)^T
+\right>=\left<M\br\br^TM^T\right>=\bcc$
+\end{itemize}
+
+\paragraph{Predictive Distribution from the Observed Light Curve.}
+
+Given $\bcc$ and the observed light curve vector $\by$, we can
+compute Equation~(\ref{eqn:mve}) and~(\ref{eqn:variance}) by
+\begin{itemize}
+\item Cholesky decompose $\bcc = MM^T$, where $M$ is the lower.
+\item Solve $MA=\by$ for $A$ and then $M^T\balpha=A$ for
+$\balpha$, so that $\bcc\balpha=(MM^T)\balpha=\by$, thus
+$\balpha=\bcc^{-1}\by$.
+\item $\sstarhat = \bcsstar^T\balpha$ is the MVE.
+\item Solve $M\bv=\bcsstar$ for $\bv$
+\item $\left<(\sstar - \sstarhat)^2\right> = \left<\sstar^2\right> -
+\bv^T\bv$, given $\bcsstar^T\bcc^{-1}\bcsstar =
+\bcsstar^T(M^T)^{-1}M^{-1}\bcsstar = \bv^T\bv$
+\end{itemize}
+
+\paragraph{Constrained Realizations of the Underlying Process by
+Observed Light Curves.}
+A typical realization contrained by the data at unmeasured epoch can
+be produced as $\sstar$ by
+\begin{equation} 
+\sstar = \ustar + \sstarhat
+\end{equation}
+where $\ustar$ is a Gaussian process with zero mean and correlation matrix $\bcq$
+\begin{equation} 
+\bcq = [\bcs^{-1}+\bcn^{-1}]^{1} = \bcs[\bcs+\bcn]^{-1}\bcn =
+\bcn[\bcs+\bcn]^{-1}\bcs
+\end{equation}
+$\ustar$ can be generated using the same way as in the unconstrained
+prediction case using the Cholesky decomposition of $\bcq$.
+
+
+
+\bibliography{/home/nye/usr/bib/library}
+\bibliographystyle{apj}
+
+
+\end{document}

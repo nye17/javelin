@@ -1,0 +1,16 @@
+syntax: glob
+
+*.pyc
+*.pyo
+*.swp
+*.so
+*.o
+dist/**
+doc/**
+build/**
+*.lprof
+*.bak
+*.ori
+*.orig
+*.mod
+zypy/zycosmo/EH_Transfer/*

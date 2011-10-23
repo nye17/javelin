@@ -1,6 +1,6 @@
 
 from pylab import *
-from pyspear.gp import Mean, Covariance, GPSubmodel, GPEvaluationGibbs, gpplots, FullRankCovariance
+from pyspear.gp import Mean, Covariance, GPSubmodel, GPEvaluationGibbs, gpplots, FullRankCovariance, NearlyFullRankCovariance
 #from pyspear.gp import Mean, Covariance, observe, Realization, GPutils
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 
@@ -26,7 +26,8 @@ class PowExpSampler(pm.MCMC):
         # = The mean =
         # ============
 
-        lcmean = pm.Uniform('lcmean', lcmean_obs-2*lcstd_obs, lcmean_obs+2*lcstd_obs,value=lcmean_obs)
+#        lcmean = pm.Uniform('lcmean', lcmean_obs-2*lcstd_obs, lcmean_obs+2*lcstd_obs,value=lcmean_obs)
+        lcmean = pm.Normal('lcmean', lcmean_obs, 1./lcstd_obs**2, value=lcmean_obs)
         def constant(x, val):
             return(np.zeros(x.shape[:-1],dtype=float) + val)
         @pm.deterministic
@@ -37,12 +38,19 @@ class PowExpSampler(pm.MCMC):
         # = The covariance =
         # ==================
 
-        sigma = pm.Exponential('sigma',7.e-5, value=lcstd_obs)
-        tau   = pm.Exponential('tau',  4.e-3, value=rx/2.0)
+#        sigma = pm.Exponential('sigma',7.e-5, value=lcstd_obs)
+        invsigsq = pm.Gamma('invsigsq', alpha = 2., beta = 1./(ry/4.)**2)
+        @pm.deterministic
+        def sigma(name="sigma", invsigsq=invsigsq):
+            return(1./np.sqrt(invsigsq))
+
+#        tau   = pm.Exponential('tau',  4.e-3, value=rx/2.0)
+        tau   = pm.InverseGamma('tau' , alpha=2., beta=1./(6./rx), value=rx/2.)
         nu    = pm.Uniform('nu', 0, 2, value=1.0)
         @pm.deterministic
         def C(nu=nu, sigma=sigma, tau=tau):
 #            C = Covariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
+#            C = NearlyFullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
             C = FullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
             return(C)
 
@@ -56,7 +64,10 @@ class PowExpSampler(pm.MCMC):
         # = The data =
         # ============
 
-        errcov = pm.Uniform("errcov", lower=0.0, upper=0.5, value=0.0)
+#        errcov = pm.Uniform("errcov", lower=0.0, upper=0.5, value=0.0)
+#        errcov = pm.TruncatedNormal("errcov", 0.0, 1./0.2**2, 0.0, 1.0, value=0.0)
+#        errcov = pm.Gamma("errcov", alpha=1, beta=1./5.0, value=0.0)
+        errcov = pm.Uniform("errcov", lower=0.00, upper=0.001, value=0.0)
         @pm.deterministic
         def phvar(errcov=errcov):
             ediag = np.diag(edata*edata)

@@ -109,6 +109,7 @@ class SalmonSampler(MCMC):
             figure()
             plot(y)
             title(object.__name__)
+            show()
 
 
     def plot_SR(self):
@@ -131,3 +132,4 @@ class SalmonSampler(MCMC):
         # subplot(2,1,2)
         # plot(midpoint_trace)
         # title('SR(mean(abundance))')
+        show()

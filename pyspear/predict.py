@@ -97,15 +97,12 @@ class Predict(object):
         return(m,v)
 
 
-
-if __name__ == "__main__":    
-    from pylab import *
-
+def test_Predict():
+    from pylab import fill, plot, show
     jdata = np.array([25., 100, 175.])
     mdata = np.array([0.7, 0.1, 0.4])
     edata = np.array([0.07, 0.02, 0.05])
     j = np.arange(0, 200, 1)
-
     P = Predict(jdata=jdata, mdata=mdata, edata=edata, nu=1.0)
     mve, var = P.mve_var(j)
     sig = np.sqrt(var)
@@ -113,9 +110,19 @@ if __name__ == "__main__":
     y=np.concatenate((mve-sig, (mve+sig)[::-1]))
     fill(x,y,facecolor='.8',edgecolor='1.')
     plot(j, mve, 'k-.')
-
     mlist = P.generate(j, nlc=3, ewant=0.0)
     for m in mlist:
         plot(j, m)
     show()
 
+
+if __name__ == "__main__":    
+#    test_Predict()
+    j, m, e = np.genfromtxt("lc.dat", unpack=True)
+#    lcmean = np.mean(m)
+    lcmean = 10.0
+    print(lcmean)
+    P = Predict(lcmean=lcmean, 
+            tau=10.0, sigma=2.0, nu=0.5)
+    mwant = P.generate(j, nlc=1, ewant=lcmean*0.05)
+    np.savetxt("lc_m10t10s2n0.5e0.05.dat", np.vstack((j, mwant, e)).T)

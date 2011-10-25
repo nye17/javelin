@@ -3,7 +3,7 @@ from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 #from gp import Mean, Covariance, observe, Realization
 #from gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 import numpy as np
-from numpy.random import normal
+from numpy.random import normal, multivariate_normal
 
 covfunc_dict = {
                 "matern"    :  matern.euclidean,
@@ -60,7 +60,7 @@ class Predict(object):
             print("No Data Input or Some of jdata/mdata/edata Are None")
             print("Unconstrained Realization...")
 
-    def generate(self, jwant, ewant=0.0, nlc=1):
+    def generate(self, jwant, ewant=0.0, nlc=1, errcov=0.0):
         if (np.min(ewant) < 0.0):
             raise RuntimeError("ewant should be either 0  or postive")
         elif np.alltrue(ewant==0.0):
@@ -77,18 +77,23 @@ class Predict(object):
         else:
             raise RuntimeError("ewant should be either a const or array with same shape as jwant")
 
+        ediag = np.diag(ewant*ewant)
+        temp1 = np.repeat(ewant, nwant).reshape(nwant,nwant)
+        temp2 = (temp1*temp1.T - ediag)*errcov
+        ecovmat = ediag + temp2
+
         if nlc == 1:
             f = Realization(self.M, self.C)
             mwant = f(jwant)
             if set_error_on_mocklc:
-                mwant = mwant + e*normal(size=nwant)
+                mwant = mwant + multivariate_normal(np.zeros(nwant), ecovmat)
             return(mwant)
         else:
             mwant_list = []
             for i in xrange(nlc):
                 f = Realization(self.M, self.C)
                 mwant = f(jwant)
-                mwant = mwant + e*normal(size=nwant)
+                mwant = mwant + multivariate_normal(np.zeros(nwant), ecovmat)
                 mwant_list.append(mwant)
             return(mwant_list)
 
@@ -115,14 +120,20 @@ def test_Predict():
         plot(j, m)
     show()
 
+def test_simlc():
+#    j, m, e = np.genfromtxt("test/c.lmc112.4_i_86478.dat", unpack=True)
+    j, m, e = np.genfromtxt("lc.dat", unpack=True)
+    lcmean = np.mean(m)
+    emean  = np.mean(e)
+    print("observed light curve mean mag is %10.3f"%lcmean)
+    print("observed light curve mean err is %10.3f"%emean)
+#    P = Predict(lcmean=lcmean, tau=500.0, sigma=0.07, nu=0.6)
+    P = Predict(lcmean=lcmean, tau=20., sigma=2, nu=0.6)
+    ewant = emean*np.ones_like(j)
+#    mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.1)
+    mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
+#    np.savetxt("mock_t500s0.07n0.6ecov0.1.dat", np.vstack((j, mwant, ewant)).T)
+    np.savetxt("mock.dat", np.vstack((j, mwant, ewant)).T)
 
 if __name__ == "__main__":    
-#    test_Predict()
-    j, m, e = np.genfromtxt("lc.dat", unpack=True)
-#    lcmean = np.mean(m)
-    lcmean = 10.0
-    print(lcmean)
-    P = Predict(lcmean=lcmean, 
-            tau=10.0, sigma=2.0, nu=0.5)
-    mwant = P.generate(j, nlc=1, ewant=lcmean*0.05)
-    np.savetxt("lc_m10t10s2n0.5e0.05.dat", np.vstack((j, mwant, e)).T)
+    test_simlc()

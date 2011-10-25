@@ -26,11 +26,10 @@ class PowExpSampler(pm.MCMC):
         # = The mean =
         # ============
 
-#        lcmean = pm.Uniform('lcmean', lcmean_obs-2*lcstd_obs, lcmean_obs+2*lcstd_obs,value=lcmean_obs)
-        lcmean = pm.Normal('lcmean', lcmean_obs, 1./lcstd_obs**2, value=lcmean_obs)
+        lcmean = pm.Uniform('lcmean', lcmean_obs-2*lcstd_obs, lcmean_obs+2*lcstd_obs,value=lcmean_obs)
         def constant(x, val):
             return(np.zeros(x.shape[:-1],dtype=float) + val)
-        @pm.deterministic
+        @pm.deterministic(trace=False)
         def M(lcmean=lcmean):
             return(Mean(constant, val=lcmean))
 
@@ -43,54 +42,61 @@ class PowExpSampler(pm.MCMC):
         @pm.deterministic
         def sigma(name="sigma", invsigsq=invsigsq):
             return(1./np.sqrt(invsigsq))
-
-#        tau   = pm.Exponential('tau',  4.e-3, value=rx/2.0)
         tau   = pm.InverseGamma('tau' , alpha=2., beta=1./(6./rx), value=rx/2.)
-        nu    = pm.Uniform('nu', 0, 2, value=1.0)
-        @pm.deterministic
+        nu    = pm.Uniform('nu', 0, 2, value=0.6)
+
+        @pm.deterministic(trace=False)
         def C(nu=nu, sigma=sigma, tau=tau):
 #            C = Covariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
-#            C = NearlyFullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
-            C = FullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
+#            C = FullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
+            C = NearlyFullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
             return(C)
 
         # ===================
         # = The GP submodel =
         # ===================
 
-        PES = GPSubmodel(self.name + '.PES', M, C, mesh=jdata)
+        PES = GPSubmodel(self.name + '.PES', M, C, mesh=jdata, tally_all=False)
 
         # ============
         # = The data =
         # ============
 
-#        errcov = pm.Uniform("errcov", lower=0.0, upper=0.5, value=0.0)
-#        errcov = pm.TruncatedNormal("errcov", 0.0, 1./0.2**2, 0.0, 1.0, value=0.0)
+#        errcov = pm.Uniform("errcov", lower=0.0, upper=0.8, value=0.0)
+#        errcov = pm.TruncatedNormal("errcov", 0.0, 1./0.05**2, 0.0, 0.5, value=0.0)
+#        errcov = pm.Uniform("errcov", lower=0.00, upper=0.001, value=0.0)
 #        errcov = pm.Gamma("errcov", alpha=1, beta=1./5.0, value=0.0)
-        errcov = pm.Uniform("errcov", lower=0.00, upper=0.001, value=0.0)
-        @pm.deterministic
-        def phvar(errcov=errcov):
-            ediag = np.diag(edata*edata)
-            temp1 = np.repeat(edata, npt).reshape(npt,npt)
-            temp2 = (temp1*temp1.T - ediag)*errcov
-            phvar = ediag + temp2
-            return(phvar)
+#        @pm.deterministic(trace=False)
+#        def phvar(errcov=errcov):
+#            ediag = np.diag(edata*edata)
+#            temp1 = np.repeat(edata, npt).reshape(npt,npt)
+#            temp2 = (temp1*temp1.T - ediag)*errcov
+#            phvar = ediag + temp2
+#            return(phvar)
+        
+        phvar = pm.Exponential("phvar", 5e-9, value=edata*edata)
 
         @pm.observed
-        @pm.stochastic
-        def variability(value=mdata, mu=PES.f_eval, var=phvar):
-            _p = pm.mv_normal_cov_like(value, mu, var)
+        @pm.stochastic(trace=False)
+        def variability(value=mdata, mu=PES.f_eval, mesh=jdata, var=phvar):
+#            _p = pm.mv_normal_cov_like(value, mu, var)
+            _p = pm.normal_like(value, mu, 1./var)
             return(_p)
 
-        pm.MCMC.__init__(self, locals())
-        
-        self.use_step_method(GPEvaluationGibbs, PES, phvar, variability)
 
+
+        pm.MCMC.__init__(self, locals(), db='txt', 
+                                         dbname='pes_chain_txt',
+                                         dbmode='w'
+                                         )
+
+        self.use_step_method(GPEvaluationGibbs, PES, phvar, variability)
+        
         self.lcmean = lcmean 
         self.sigma = sigma
         self.tau = tau
         self.nu = nu
-        self.errcov = errcov
+#        self.errcov = errcov
 
     def get_lcstat(self):
         _lcmean =  np.average(self.mdata, weights=np.power(self.edata, -2))
@@ -100,7 +106,7 @@ class PowExpSampler(pm.MCMC):
         self.lcrms_obs  = self.get_lcrms()
 
     def plot_traces(self):
-        for object in [self.lcmean, self.sigma, self.tau, self.nu, self.errcov]:
+        for object in [self.lcmean, self.sigma, self.tau, self.nu]:
             try:
                 y=object.trace()
             except:
@@ -110,6 +116,8 @@ class PowExpSampler(pm.MCMC):
             try:
                 figure()
                 plot(y)
+                if object is self.tau:
+                    yscale("log")
                 title(object.__name__)
                 show()
             except:

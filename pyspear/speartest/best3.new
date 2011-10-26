@@ -1,9 +1,9 @@
              6               convmode
              3                  npara
-   1927.356419          maxlikelihood
-    618.121641                    chi
-           614                   ndof
+    -87.173097          maxlikelihood
+    100.080050                    chi
+            96                   ndof
       1.000000               rescaled
-     17.682353                   mean
-      0.010137           linearshifts
-      0.041744     75.016396      0.702976                bestfit
+     11.176422                   mean
+      0.305100           linearshifts
+      1.900133      7.168061      0.561154                bestfit

@@ -1,5 +1,8 @@
 import numpy as np
 
+#from pyspear.lcio import jdrangelc, jdmedlc
+from lcio import jdrangelc, jdmedlc
+
 class zyLC(object):
     """ zyLC object.
     """
@@ -7,11 +10,14 @@ class zyLC(object):
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
         self.nlc = len(zylclist)
+
         self.jlist, self.mlist, self.elist = self.sorteddatalist(zylclist)
         self.nptlist = np.array([a.size for a in self.jlist])
         self.npt = sum(self.nptlist)
 
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
+
+        self.rj = jdrangelc(zylclist)[-1] - jdrangelc(zylclist)[0]
 
     def sorteddatalist(self, zylclist):
         jlist = []
@@ -60,6 +66,6 @@ if __name__ == "__main__":
     zylclist= [[[2.0, 1.0], [5.0, 5.5], [0.1, 0.1]], [[1.5], [5.0], [0.1]], [[8.0, 9.0], [3.0, 1.5], [0.2, 0.1]]]
     zylc = zyLC(zylclist=zylclist)
     print(zylc.jlist)
-    print(zylc.jarr)
-    print(zylc.marr)
-    print(zylc.iarr)
+#    print(zylc.jarr)
+#    print(zylc.marr)
+#    print(zylc.iarr)

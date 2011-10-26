@@ -121,19 +121,15 @@ def test_Predict():
     show()
 
 def test_simlc():
-#    j, m, e = np.genfromtxt("test/c.lmc112.4_i_86478.dat", unpack=True)
-    j, m, e = np.genfromtxt("lc.dat", unpack=True)
-    lcmean = np.mean(m)
-    emean  = np.mean(e)
+    j = np.arange(0., 100, 1.)
+    lcmean = 10.0
+    emean  = lcmean*0.05
     print("observed light curve mean mag is %10.3f"%lcmean)
     print("observed light curve mean err is %10.3f"%emean)
-#    P = Predict(lcmean=lcmean, tau=500.0, sigma=0.07, nu=0.6)
-    P = Predict(lcmean=lcmean, tau=20., sigma=2, nu=0.6)
+    P = Predict(lcmean=lcmean, tau=10., sigma=2.0, nu=0.5)
     ewant = emean*np.ones_like(j)
-#    mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.1)
     mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
-#    np.savetxt("mock_t500s0.07n0.6ecov0.1.dat", np.vstack((j, mwant, ewant)).T)
-    np.savetxt("mock.dat", np.vstack((j, mwant, ewant)).T)
+    np.savetxt("mock_l100c1_t10s2n0.5.dat", np.vstack((j, mwant, ewant)).T)
 
 if __name__ == "__main__":    
     test_simlc()

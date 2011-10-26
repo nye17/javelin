@@ -1,10 +1,8 @@
-#Last-modified: 25 Oct 2011 03:20:57 AM
+#Last-modified: 25 Oct 2011 10:13:48 PM
 
-from pyspear.gp import Mean, Covariance, observe, Realization, GPutils, FullRankCovariance
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 from pyspear.zylc import zyLC
-
-from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
+from pyspear.cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 
 import numpy as np
 from numpy.random import normal, multivariate_normal
@@ -18,6 +16,57 @@ covfunc_dict = {
 #                "sphere"    :    sphere.euclidean,
                }
 
+class SimpleCovariance1D(object):
+    def __init__(self, eval_fun, **params):
+        self.eval_fun = eval_fun
+        self.params   = params
+    def __call__(self, x, y=None):
+        if y is x:
+            symm=True
+        else:
+            symm=False
+
+        if (len(x.shape) != 1):
+            if (min(x.shape) == 1):
+                x = x.squeeze()
+            else:
+                raise RuntimeError("SimpleCovariance1D can only accept 1d arrays: x")
+
+        lenx = len(x)
+        orig_shape = x.shape
+        
+        if y is None:
+            # Special fast-path for functions that have an 'amp' parameter
+            if hasattr(self.eval_fun, 'diag_call'):
+                V = self.eval_fun.diag_call(x, **self.params)
+            # Otherwise, evaluate the diagonal in a loop.
+            else:
+                V=empty(lenx,dtype=float)
+                for i in xrange(lenx):
+                    this_x = x[i].reshape((1,-1))
+                    V[i] = self.eval_fun(this_x, this_x, **self.params)
+            return(V.reshape(orig_shape))
+        else:
+            # ====================================================
+            # = # If x and y are the same array, save some work: =
+            # ====================================================
+            if symm:
+                C=self.eval_fun(x,x,symm=True,**self.params)
+                return(C)
+            # ======================================
+            # = # If x and y are different arrays: =
+            # ======================================
+            else:
+                if (len(y.shape) != 1):
+                    if (min(y.shape) == 1):
+                        y = y.squeeze()
+                    else:
+                        raise RuntimeError("SimpleCovariance1D can only accept 1d arrays: y")
+
+                C = self.eval_fun(x,y,**self.params)
+                return(C)
+
+
 class PRH(object):
     """
     """
@@ -26,64 +75,55 @@ class PRH(object):
                        tau=20.0, sigma=0.5, nu=1,
                        ):
 
-        # get self.zylc, attributes[[jme]list, [jmei]arr]
         if not isinstance(zylc, zyLC):
             raise RuntimeError("zylc has to be a zyLC object")
-        else:
-            self.zylc = zylc
-            self.npt  = zylc.npt
-            self.nlc  = zylc.nlc
-            self.jarr = zylc.jarr
-            self.marr = zylc.marr.T  # make it a vector
-            self.earr = zylc.earr
-            self.iarr = zylc.iarr
-            self.varr = np.power(zylc.earr, 2)
-            self.larr = np.zeros((self.npt, self.nlc))
-            for i in xrange(self.npt):
-                lcid = self.iarr[i] - 1
-                self.larr[i, lcid] = 1.0
-            self.larrTr = self.larr.T
+
+        self.zylc = zylc
+        self.npt  = zylc.npt
+        self.nlc  = zylc.nlc
+        self.jarr = zylc.jarr
+        self.marr = zylc.marr.T  # make it a vector
+        self.earr = zylc.earr
+        self.iarr = zylc.iarr
+        self.varr = np.power(zylc.earr, 2.)
+        self.larr = np.zeros((self.npt, self.nlc))
+        for i in xrange(self.npt):
+            lcid = self.iarr[i] - 1
+            self.larr[i, lcid] = 1.0
+        self.larrTr = self.larr.T
 
         if (self.nlc == 1):
-            print("Single light curve modeling, using covariance from gp module.")
             self.set_single = True
         else:
-            print("Multiple light curve modeling, using only DRW model.")
             self.set_single = False
 
         if self.set_single:
-            # get self.C as Covariance, methods[cholesky, continue_cholesky, observe]
             if covfunc in covfunc_dict:
-                cf = covfunc_dict[covfunc]
+                self.cf = covfunc_dict[covfunc]
                 if covfunc == "matern":
-                    self.C  = FullRankCovariance(eval_fun = cf, amp=sigma, scale=tau, 
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             diff_degree=nu)
                 elif covfunc == "pow_exp":
-                    self.C  = FullRankCovariance(eval_fun = cf, amp=sigma, scale=tau, 
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             pow=nu)
                 elif covfunc == "drw":
-                    self.C  = FullRankCovariance(eval_fun = cf, amp=sigma, scale=tau, 
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             pow=1.0)
                 else:
-                    self.C  = FullRankCovariance(eval_fun = cf, amp=sigma, scale=tau)
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau)
             else:
                 print("covfuncs currently implemented:")
                 print(" ".join(covfunc_dict.keys))
                 raise RuntimeError("%s has not been implemented"%covfunc)
-
-            output = self.loglike_prh(self.set_single)
-            print(output)
-#            U, smatrix = self.C.cholesky(self.jarr, nugget=self.varr, return_eval_also=True)
-#            output = self.loglike_prh(False, U=U)
-#            print(output)
         else:
-            raise RuntimeError("Sorry, not implemented yet")
+            raise RuntimeError("Sorry, RM part not implemented yet")
 
 
-    def loglike_prh(self, set_single, U=None, retq=True):
+    def loglike_prh(self, U=None, retq=True):
         # cholesky decompose S+N so that U^T U = S+N = C
-        if set_single:
-            U, smatrx = self.C.cholesky(self.jarr, nugget=self.varr, return_eval_also=True)
+        if self.set_single:
+            cmatrix = self.C(self.jarr, self.jarr)
+            U = cholesky(cmatrix, nugget=self.varr, inplace=True)
         elif U is None:
             raise RuntimeError("require U of cpnmatrix for more RM purposes")
 
@@ -96,7 +136,7 @@ class PRH(object):
         C_p = np.dot(self.larrTr, b)
 
         # for 'set_single is True' case, C_p is a scalar.
-        if set_single:
+        if self.set_single:
             # for single-mode, cholesky of C_p is simply squre-root of C_p
             W = np.sqrt(C_p)
             detCp_log = np.log(C_p.squeeze())
@@ -135,14 +175,13 @@ class PRH(object):
 
 
 if __name__ == "__main__":    
-#    zylclist= [
-#               [[1.0, 2.0, 2.0], [5.0, 5.5, 4.8], [0.1, 0.1, 0.2]],
-#               [[1.1, 2.1, 2.1], [5.1, 5.6, 4.9], [0.1, 0.1, 0.2]],
-#              ]
-    zylclist= [
-               [[1.0, 2.0, 2.0], [5.0, 5.5, 4.8], [0.1, 0.1, 0.2]],
-              ]
-    zylc = zyLC(zylclist=zylclist)
-    prh = PRH(zylc)
+    import pyspear.lcio as IO
+
+    lcfile = "mock.dat"
+    lclist = IO.readlc_3c(lcfile)
+
+    zylc = zyLC(zylclist=lclist)
+    prh = PRH(zylc, tau=200.0, sigma=0.05, nu=0.5)
+    print(prh.loglike_prh())
     
 

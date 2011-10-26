@@ -82,6 +82,8 @@ if __name__ == '__main__':
             Ongoing effort to combine an integral GP module to the AGN variablility study.
             """,
             packages=["pyspear", 
+#                      "pyspear/likelihood", 
+#                      "pyspear/bayesian", 
                       "pyspear/examples/gp", 
                       "pyspear/gp", 
                       "pyspear/gp/cov_funs" ],

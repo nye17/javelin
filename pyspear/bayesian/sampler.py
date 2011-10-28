@@ -76,13 +76,13 @@ def runMAP(model):
 
 
 if __name__ == "__main__":    
-#    lcfile  = "mock_l100c1_t10s2n0.5.dat"
-#    zydata  = get_data(lcfile)
+    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
+    zydata  = get_data(lcfile)
 #    testout = getPlike(zydata, [2., 10., 0.5])
 
-#    model  = make_model_powexp(zydata, cadence=1.0, set_csktauprior=False)
+    model  = make_model_powexp(zydata, cadence=1.0, set_csktauprior=False)
 ##    model  = make_model_powexp(zydata, cadence=1.0, set_csktauprior=True)
-#    runMAP(model)
+    runMAP(model)
 
 
 #    runMCMC(model, "petest", iter=50000, burn=5000, thin=2, verbose=0)

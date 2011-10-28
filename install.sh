@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 name=`hostname`
 
@@ -12,7 +12,7 @@ elif [ $name = "Sing-Sing" ];then
 elif [ $name = "arjuna.mps.ohio-state.edu" ];then
     echo "arjuna"
     echo "doesnt work in logon macihne, switch to a node"
-elif [ echo ${name} | grep -c "node" -eq 1 ] ; then
+elif [ `echo ${name} | grep -c "node"` -eq 1 ]; then
     echo "arjuna node"
     python setup.py config_fc --fcompiler=intelem install --prefix="~/local" sdist
 fi 

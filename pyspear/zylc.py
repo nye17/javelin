@@ -20,10 +20,8 @@ class zyLC(object):
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
         self.cont_std      = np.std(self.mlist[0])
-#        self.cont_avg = np.average(self.mlist[0], 
-#                                   weights=1./np.power(self.elist[0], 2))
-#        self.cont_std = np.sqrt(np.sum(self.mlist[0] - self.cont_avg)**2)
-        self.cont_SN  = self.cont_std/self.cont_mean_err
+        self.cont_SN       = self.cont_std/self.cont_mean_err
+        self.cont_cad      = jdmedlc(list(self.jlist[0]))
 
         if set_subtractmean:
             # usually good for the code health, smaller means means less 
@@ -92,8 +90,9 @@ class zyLC(object):
 
 
 if __name__ == "__main__":    
-    zylclist= [[[2.0, 1.0], [5.0, 5.5], [0.1, 0.1]], [[1.5], [5.0], [0.1]], [[8.0, 9.0], [3.0, 1.5], [0.2, 0.1]]]
+    zylclist= [[[2.0, 1.0, 5.0, 10.0], [5.0, 5.5, 4.3, 5.6], [0.1, 0.1, 0.1, 0.4]], [[1.5], [5.0], [0.1]], [[8.0, 9.0], [3.0, 1.5], [0.2, 0.1]]]
     zylc = zyLC(zylclist=zylclist)
-    print(zylc.cont_mean_err)
-    print(zylc.cont_std)
-    print(zylc.cont_SN)
+#    print(zylc.cont_mean_err)
+#    print(zylc.cont_std)
+#    print(zylc.cont_SN)
+    print(zylc.cont_cad)

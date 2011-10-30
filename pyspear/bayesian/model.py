@@ -2,14 +2,14 @@ import numpy as np
 import pymc as pm
 from prh import PRH
 
-def make_model_powexp(zydata, cadence=1.0, set_csktauprior=False):
+def make_model_powexp(zydata, set_csktauprior=False):
+    cadence = zydata.cont_cad
     rx = zydata.rj
     ry = zydata.marr.max() - zydata.marr.min()
     #-------
     # priors
     #-------
     # sigma
-    # classical "improper" prior on inverse variance
     invsigsq = pm.Gamma('invsigsq', alpha = 2., beta = 1./(ry/4.)**2)
     @pm.deterministic
     def sigma(name="sigma", invsigsq=invsigsq):
@@ -28,7 +28,7 @@ def make_model_powexp(zydata, cadence=1.0, set_csktauprior=False):
                     return(-np.Inf)
     else:
         # inverse gamma prior on tau, penalty on extremely small or large scales.
-        tau   = pm.InverseGamma('tau' , alpha=2., beta=0.3*rx, value=rx/6.)
+        tau   = pm.InverseGamma('tau' , alpha=2., beta=rx/6.0, value=rx/6.0)
     # nu
     # uniform prior on nu
     nu    = pm.Uniform('nu', 0, 2, value=1.0)
@@ -46,7 +46,6 @@ def make_model_powexp(zydata, cadence=1.0, set_csktauprior=False):
         out = prh.loglike_prh()
         return(out[0])
 
-#    return([invsigsq, sigma, tau, nu, model_powexp])
     return(locals())
 
 

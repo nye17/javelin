@@ -36,13 +36,19 @@ def anaMCMC(resource, db='txt'):
     print("**************************************")
     print(T)
     print("--------------------------------------")
+    retdict = {}
     for para in ['sigma', 'tau', 'nu']:
         print(para+":")
-        print("1-sigma HPD: %.2f %.2f" % tuple(T.hpd(para, cred=cred1s)) )
-        print("mean: %.2f median: %.2f std: %.2f" % (T.mean(para), T.median(para), T.std(para)))
+        medpar = T.median(para)
+        print("median: %.2f" % medpar)
+        hpdlow, hpdupp  = T.hpd(para, cred=cred1s)
+        print("1-sigma HPD: %.2f %.2f" % (hpdlow, hpdupp))
+        print("mean: %.2f std: %.2f" % (T.mean(para), T.std(para)))
         print("--------------------------------------")
+        retdict[para] = [medpar, hpdlow, hpdupp]
     print("MCMC Database Analysis Ends")
     print("**************************************")
+    return(retdict)
 
 def getPlike(zydata, par):
     print("**************************************")
@@ -76,14 +82,15 @@ def runMAP(model):
 
 
 if __name__ == "__main__":    
-    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
-    zydata  = get_data(lcfile)
+#    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
+#    zydata  = get_data(lcfile)
 #    testout = getPlike(zydata, [2., 10., 0.5])
 
-    model  = make_model_powexp(zydata, cadence=1.0, set_csktauprior=False)
-##    model  = make_model_powexp(zydata, cadence=1.0, set_csktauprior=True)
-    runMAP(model)
+#    model  = make_model_powexp(zydata, set_csktauprior=False)
+##    model  = make_model_powexp(zydata, set_csktauprior=True)
+#    runMAP(model)
 
 
 #    runMCMC(model, "petest", iter=50000, burn=5000, thin=2, verbose=0)
-    anaMCMC("petest", db='txt')
+    retdict = anaMCMC("petest", db='txt')
+    print(retdict)

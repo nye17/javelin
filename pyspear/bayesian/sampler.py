@@ -14,7 +14,8 @@ def pretty_array(x):
 def runMCMC(model, txtdb, iter=10000, burn=1000, thin=2, verbose=0,
         set_geweke=False, set_sumplot=False):
     M = pm.MCMC(model, db='txt', dbname=txtdb, dbmode="w")
-    M.use_step_method(pm.AdaptiveMetropolis,[M.tau, M.invsigsq, M.sigma, M.nu])
+#    M.use_step_method(pm.AdaptiveMetropolis,[M.tau, M.invsigsq, M.sigma, M.nu])
+    M.use_step_method(pm.AdaptiveMetropolis,[M.tau, M.sigma, M.nu])
     print("**************************************")
     print("Initial sigma, tau, nu")
     print(pretty_array([M.sigma.value, M.tau.value, M.nu.value]))
@@ -82,15 +83,15 @@ def runMAP(model):
 
 
 if __name__ == "__main__":    
-#    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
-#    zydata  = get_data(lcfile)
+    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
+    zydata  = get_data(lcfile)
 #    testout = getPlike(zydata, [2., 10., 0.5])
 
-#    model  = make_model_powexp(zydata, set_csktauprior=False)
+    model  = make_model_powexp(zydata, set_csktauprior=False)
 ##    model  = make_model_powexp(zydata, set_csktauprior=True)
-#    runMAP(model)
+    runMAP(model)
 
 
-#    runMCMC(model, "petest", iter=50000, burn=5000, thin=2, verbose=0)
-    retdict = anaMCMC("petest", db='txt')
-    print(retdict)
+    runMCMC(model, "/home/mitchell/yingzu/petest", iter=50000, burn=5000, thin=2, verbose=0)
+#    retdict = anaMCMC("~/petest", db='txt')
+#    print(retdict)

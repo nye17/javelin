@@ -27,8 +27,12 @@ def make_model_powexp(zydata, set_cskprior=False,
             def sigma(name="sigma", invsigsq=invsigsq):
                 return(1./np.sqrt(invsigsq))
     else:
-        sigma = fixsigma
-        print("sigma is fixed to be %.3f"%sigma)
+        @pm.stochastic(plot=False)
+        def sigma(value=fixsigma, const=fixsigma):
+            if value == const:
+                return(0.0)
+            else:
+                return(-np.Inf)
 
     # tau
     if fixtau is None:
@@ -47,16 +51,25 @@ def make_model_powexp(zydata, set_cskprior=False,
             # inverse gamma prior on tau, penalty on extremely small or large scales.
             tau   = pm.InverseGamma('tau' , alpha=2., beta=np.sqrt(rx*cadence), value=rx/6.0)
     else:
-        tau   = fixtau
-        print("tau is fixed to be %.3f"%tau)
+        @pm.stochastic(plot=False)
+        def tau(value=fixtau, const=fixtau):
+            if value == const:
+                return(0.0)
+            else:
+                return(-np.Inf)
 
     # nu
     # uniform prior on nu
     if fixnu is None:
         nu    = pm.Uniform('nu', 0, 2, value=1.0)
     else:
-        nu    = fixnu
-        print("nu is fixed to be %.3f"%nu)
+        @pm.stochastic(plot=False)
+        def nu(value=fixnu, const=fixnu):
+            if value == const:
+                return(0.0)
+            else:
+                return(-np.Inf)
+
 
     #-------
     # model

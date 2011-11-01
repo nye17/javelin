@@ -2,6 +2,7 @@ import numpy as np
 import pymc as pm
 import pickle
 from prh import PRH
+import os.path
 
 from data import get_data
 from model import make_model_powexp
@@ -14,8 +15,17 @@ def pretty_array(x):
 def runMCMC(model, txtdb, iter=10000, burn=1000, thin=2, verbose=0,
         set_geweke=False, set_sumplot=False):
     M = pm.MCMC(model, db='txt', dbname=txtdb, dbmode="w")
-#    M.use_step_method(pm.AdaptiveMetropolis,[M.tau, M.invsigsq, M.sigma, M.nu])
-    M.use_step_method(pm.AdaptiveMetropolis,[M.tau, M.sigma, M.nu])
+    tosample = []
+    if M.fixsigma is not None:
+        tosample.append(M.sigma)
+    if M.fixtau   is not None:
+        tosample.append(M.tau)
+    if M.fixnu    is not None:
+        tosample.append(M.nu)
+    if M.invsigsq is not None:
+        print("inv?")
+        tosample.append(M.invsigsq)
+    M.use_step_method(pm.AdaptiveMetropolis, tosample)
     print("**************************************")
     print("Initial sigma, tau, nu")
     print(pretty_array([M.sigma.value, M.tau.value, M.nu.value]))
@@ -32,6 +42,7 @@ def runMCMC(model, txtdb, iter=10000, burn=1000, thin=2, verbose=0,
     print("**************************************")
 
 def anaMCMC(resource, db='txt'):
+    resource = os.path.expanduser(resource)
     T = TraceLess(resource, db=db)
     cred1s = 0.683
     print("**************************************")
@@ -66,32 +77,43 @@ def getPlike(zydata, par):
 
 def runMAP(model):
     M = pm.MAP(model)
+    tovary = getValues(M)
     print("**************************************")
     print("Initial sigma, tau, nu")
-    print(pretty_array([M.sigma.value, M.tau.value, M.nu.value]))
+    print(pretty_array(tovary))
     M.fit()
+    tovary = getValues(M)
     print("--------------------------------------")
     print("Bestfit sigma, tau, nu")
-    print(pretty_array([M.sigma.value, M.tau.value, M.nu.value]))
+    print(pretty_array(tovary))
     print("**************************************")
-    parbestfit = [
-     M.sigma.value,
-     M.tau.value,
-     M.nu.value,
-    ]
-    return(parbestfit)
+    return(tovary)
 
+
+def getValues(M):
+    tovary = []
+    if M.fixsigma is None:
+        tovary.append(M.sigma.value)
+    else:
+        tovary.append(M.sigma)
+    if M.fixtau   is None:
+        tovary.append(M.tau.value)
+    else:
+        tovary.append(M.tau)
+    if M.fixnu    is None:
+        tovary.append(M.nu.value)
+    else:
+        tovary.append(M.nu)
+    return(tovary)
 
 if __name__ == "__main__":    
     lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
     zydata  = get_data(lcfile)
 #    testout = getPlike(zydata, [2., 10., 0.5])
 
-    model  = make_model_powexp(zydata, set_csktauprior=False)
-##    model  = make_model_powexp(zydata, set_csktauprior=True)
+    model  = make_model_powexp(zydata, set_cskprior=True, fixnu=1.1)
+#    model  = make_model_powexp(zydata, set_cskprior=True)
     runMAP(model)
-
-
-    runMCMC(model, "/home/mitchell/yingzu/petest", iter=50000, burn=5000, thin=2, verbose=0)
-#    retdict = anaMCMC("~/petest", db='txt')
+#    runMCMC(model, "/home/mitchell/yingzu/tmp/petest", iter=2000, burn=0, thin=1, verbose=0)
+#    retdict = anaMCMC("~/tmp/petest", db='txt')
 #    print(retdict)

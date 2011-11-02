@@ -2,7 +2,8 @@ from sampler import PowExpSampler
 from pylab import *
 import numpy as np
 
-jdata, mdata, edata = np.genfromtxt("lc.dat", unpack=True)
+#jdata, mdata, edata = np.genfromtxt("lc.dat", unpack=True)
+jdata, mdata, edata = np.genfromtxt("dat/t1000n0_6.dat", unpack=True)
 #jdata, mdata, edata = np.genfromtxt("lc_m10t50s4n0.5.dat", unpack=True)
 #jdata, mdata, edata = np.genfromtxt("lc_m10t50s3n0.5.dat", unpack=True)
 #jdata, mdata, edata = np.genfromtxt("lc_m10t50s3n0.5e0.05.dat", unpack=True)

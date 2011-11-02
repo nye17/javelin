@@ -45,7 +45,7 @@ class PowExpSampler(pm.MCMC):
         tau   = pm.InverseGamma('tau' , alpha=2., beta=1./(6./rx), value=rx/2.)
         nu    = pm.Uniform('nu', 0, 2, value=0.6)
 
-        @pm.deterministic(trace=False)
+        @pm.deterministic(plot=False, trace=False)
         def C(nu=nu, sigma=sigma, tau=tau):
 #            C = Covariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
 #            C = FullRankCovariance(pow_exp.euclidean, pow=nu, amp=sigma, scale=tau)
@@ -74,7 +74,13 @@ class PowExpSampler(pm.MCMC):
 #            phvar = ediag + temp2
 #            return(phvar)
         
-        phvar = pm.Exponential("phvar", 5e-9, value=edata*edata)
+#        phvar = pm.Exponential("phvar", 5e-9, value=edata*edata)
+        
+        erramp = pm.TruncatedNormal("erramp", 0.0, 1./0.1**2., -0.5, 0.5, value=0.0)
+        @pm.deterministic(plot=False, trace=False)
+        def phvar(name="phvar", erramp=erramp):
+            phvar = edata*edata*(1.+erramp)*(1.+erramp)
+            return(phvar)
 
         @pm.observed
         @pm.stochastic(trace=False)
@@ -97,6 +103,7 @@ class PowExpSampler(pm.MCMC):
         self.tau = tau
         self.nu = nu
 #        self.errcov = errcov
+        self.erramp = erramp
 
     def get_lcstat(self):
         _lcmean =  np.average(self.mdata, weights=np.power(self.edata, -2))
@@ -106,7 +113,7 @@ class PowExpSampler(pm.MCMC):
         self.lcrms_obs  = self.get_lcrms()
 
     def plot_traces(self):
-        for object in [self.lcmean, self.sigma, self.tau, self.nu]:
+        for object in [self.lcmean, self.sigma, self.tau, self.nu, self.erramp]:
             try:
                 y=object.trace()
             except:

@@ -116,17 +116,26 @@ def is_number(s):
 
 
 if __name__ == "__main__":    
-    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
+#    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
+#    lcfile  = "dat/t100n0_6.dat"
+    lcfile  = "dat/t1000n0_6.dat"
+    print("reading %s"%lcfile)
     zydata  = get_data(lcfile)
 #    testout = getPlike(zydata, [2., 10., 0.5])
 
-    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=10.0, use_nuprior="Uniform")
+#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprior="Uniform")
+    model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior="None", use_nuprior="Uniform")
     bestpar = runMAP(model)
     testout = getPlike(zydata, bestpar)
 
-    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=0.1, use_nuprior="Uniform")
-    bestpar = runMAP(model)
-    testout = getPlike(zydata, bestpar)
+#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=10.0, use_nuprior="Uniform")
+#    bestpar = runMAP(model)
+#    testout = getPlike(zydata, bestpar)
+
+#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=1000.0, use_nuprior="Uniform")
+#    bestpar = runMAP(model)
+#    testout = getPlike(zydata, bestpar)
+
 #    runMCMC(model, "/home/mitchell/yingzu/tmp/petest", iter=2000, burn=0, thin=1, verbose=0)
 #    retdict = anaMCMC("~/tmp/petest", db='txt')
 #    print(retdict)

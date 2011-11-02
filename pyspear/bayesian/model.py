@@ -49,7 +49,11 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
         def sigma(name="sigma", invsigsq=invsigsq):
             return(1./np.sqrt(invsigsq))
     elif use_sigprior == "None":
-        sigma = pm.Uninformative("sigma", value=ry/4.)
+#        sigma = pm.Uninformative("sigma", value=ry/4.)
+        invsigsq = pm.Uninformative('invsigsq', value=1./(ry/4.0)**2.)
+        @pm.deterministic
+        def sigma(name="sigma", invsigsq=invsigsq):
+            return(1./np.sqrt(np.abs(invsigsq)))
     else:
         try:
             sigma = float(use_sigprior)
@@ -103,6 +107,7 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     def model_powexp(value=guess,
                      sigma=sigma, tau=tau, nu=nu):
         par=[sigma, tau, nu]
+#        print(par)
         prh = PRH(zydata, covfunc="pow_exp", 
                                sigma=par[0], tau=par[1], nu=par[2])
         out = prh.loglike_prh()

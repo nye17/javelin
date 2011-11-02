@@ -93,15 +93,15 @@ def getValues(M):
     if is_number(M.use_sigprior):
         tovary.append(M.sigma)
     else:
-        tovary.append(M.sigma.value)
+        tovary.append(np.atleast_1d(M.sigma.value)[0])
     if is_number(M.use_tauprior):
         tovary.append(M.tau)
     else:
-        tovary.append(M.tau.value)
+        tovary.append(np.atleast_1d(M.tau.value)[0])
     if is_number(M.use_nuprior):
         tovary.append(M.nu)
     else:
-        tovary.append(M.nu.value)
+        tovary.append(np.atleast_1d(M.nu.value)[0])
     return(tovary)
 
 
@@ -112,21 +112,64 @@ def is_number(s):
     except ValueError:
         return False
 
+def varying_tau(output, zydata, tauarray):
+    result = []
+    for tau in tauarray:
+        model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior="Uniform")
+        bestpar = list(runMAP(model))
+        testout = list(getPlike(zydata, bestpar))
+        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+    f=open(output, "w")
+    f.write("".join(result))
+    f.close()
+
 
 
 
 if __name__ == "__main__":    
 #    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
 #    lcfile  = "dat/t100n0_6.dat"
-    lcfile  = "dat/t1000n0_6.dat"
-    print("reading %s"%lcfile)
-    zydata  = get_data(lcfile)
-#    testout = getPlike(zydata, [2., 10., 0.5])
+
+#pow_exp_T1000.0_N0.4.dat 
+
+#    tauarray = np.power(10.0, np.arange(0, 4.2, 0.2))
+    tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
+    truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
+    truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
+#    truetau  = np.array([20.0, 100.0, 200.0, 600.0, 1000.0])
+#    truenu   = np.array([0.2, 0.6, 1.0, 1.4, 1.8])
+    for ttau in truetau:
+        for tnu in truenu:
+            lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
+            print("reading %s"%lcfile)
+            zydata  = get_data(lcfile)
+            record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.dat"
+            print("writing %s"%record)
+            varying_tau(record, zydata, tauarray)
+
+#     reading dat/OGLE_example/pow_exp_T1000.0_N1.0.dat
+#     writing dat/OGLE_example/pow_exp_T1000.0_N1.0.testtau.dat
+#     tau is fixed to be 1.000
+#     **************************************
+#     Initial sigma, tau, nu
+#     [0.08, 1.00, 1.00]
+
+
+
+#    lcfile  = "dat/t1000n0_6.dat"
+#    print("reading %s"%lcfile)
+#    zydata  = get_data(lcfile)
+#    varying_tau("test1000.dat2", zydata)
+
+#    lcfile  = "dat/t100n0_6.dat"
+#    print("reading %s"%lcfile)
+#    zydata  = get_data(lcfile)
+#    varying_tau("test100.dat2", zydata)
 
 #    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprior="Uniform")
-    model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior="None", use_nuprior="Uniform")
-    bestpar = runMAP(model)
-    testout = getPlike(zydata, bestpar)
+#    model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior="None", use_nuprior="Uniform")
+#    bestpar = runMAP(model)
+#    testout = getPlike(zydata, bestpar)
 
 #    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=10.0, use_nuprior="Uniform")
 #    bestpar = runMAP(model)

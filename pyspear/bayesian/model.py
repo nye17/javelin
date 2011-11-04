@@ -2,7 +2,8 @@ import numpy as np
 import pymc as pm
 from prh import PRH
 
-def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprior="Uniform"):
+def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprior="Uniform",
+                              set_verbose=False):
     """
     powexp = model
 
@@ -19,6 +20,8 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     use_nuprior: str or float, optional
         Prior for nu: 'Uniform', or you could specify 
         a number so that the value of nu will be fixed during the analysis (default: 'Uniform').
+    set_verbose: bool, optional
+        Verbose mode (default: False)
     """
     #-------
     # light curve stat
@@ -57,7 +60,8 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     else:
         try:
             sigma = float(use_sigprior)
-            print("sigma is fixed to be %.3f"%sigma)
+            if set_verbose:
+                print("sigma is fixed to be %.3f"%sigma)
         except:
             raise RuntimeError("no such prior for sigma %s"%use_sigprior)
 
@@ -84,7 +88,8 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     else:
         try:
             tau   = float(use_tauprior)
-            print("tau is fixed to be %.3f"%tau)
+            if set_verbose:
+                print("tau is fixed to be %.3f"%tau)
         except:
             raise RuntimeError("no such prior for tau %s"%use_tauprior)
 
@@ -95,7 +100,8 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     else:
         try:
             nu   = float(use_nuprior)
-            print("nu is fixed to be %.3f"%nu)
+            if set_verbose:
+                print("nu is fixed to be %.3f"%nu)
         except:
             raise RuntimeError("no such prior for nu %s"%use_nuprior)
 
@@ -107,7 +113,6 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
     def model_powexp(value=guess,
                      sigma=sigma, tau=tau, nu=nu):
         par=[sigma, tau, nu]
-#        print(par)
         prh = PRH(zydata, covfunc="pow_exp", 
                                sigma=par[0], tau=par[1], nu=par[2])
         out = prh.loglike_prh()

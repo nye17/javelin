@@ -1,19 +1,19 @@
+#Last-modified: 04 Nov 2011 06:22:20 PM
 import numpy as np
-import pymc as pm
 import pickle
-from prh import PRH
 import os.path
+import pymc as pm
 
+from prh import PRH
 from data import get_data
 from model import make_model_powexp
 
 from pyspear.traceless import TraceLess 
 
-def pretty_array(x):
-    return('[%s]' % ', '.join('%.2f' % x_i for x_i in x))
-
 def runMCMC(model, txtdb, iter=10000, burn=1000, thin=2, verbose=0,
-        set_geweke=False, set_sumplot=False):
+                          set_geweke=False, set_sumplot=False):
+    """ running MCMC chains for the input model and save into a txt database.
+    """
     M = pm.MCMC(model, db='txt', dbname=txtdb, dbmode="w")
     tosample = []
     if M.fixsigma is not None:
@@ -41,6 +41,8 @@ def runMCMC(model, txtdb, iter=10000, burn=1000, thin=2, verbose=0,
     print("**************************************")
 
 def anaMCMC(resource, db='txt'):
+    """ load and analysis MCCM database.
+    """
     resource = os.path.expanduser(resource)
     T = TraceLess(resource, db=db)
     cred1s = 0.683
@@ -61,34 +63,44 @@ def anaMCMC(resource, db='txt'):
     print("**************************************")
     return(retdict)
 
-def getPlike(zydata, par):
-    print("**************************************")
-    print("Input  sigma, tau, nu")
-    print(pretty_array(par))
+def getPlike(zydata, par, set_verbose=False):
+    """ Calculate the log marginal likelihood of data given input paramters.
+    """
+    if set_verbose:
+        print("**************************************")
+        print("Input  sigma, tau, nu")
+        print(pretty_array(par))
     prh = PRH(zydata, covfunc="pow_exp",
                            sigma=par[0], tau=par[1], nu=par[2])
     out = prh.loglike_prh()
-    print("--------------------------------------")
-    print("Output logL, -chi2/2, complexity, drift, [q]")
-    print(pretty_array(out))
-    print("**************************************")
+    if set_verbose:
+        print("--------------------------------------")
+        print("Output logL, -chi2/2, complexity, drift, [q]")
+        print(pretty_array(out))
+        print("**************************************")
     return(out)
 
-def runMAP(model):
+def runMAP(model, set_verbose=True):
+    """ Running MAP ananlysis.
+    """
     M = pm.MAP(model)
     tovary = getValues(M)
-    print("**************************************")
-    print("Initial sigma, tau, nu")
-    print(pretty_array(tovary))
+    if set_verbose:
+        print("**************************************")
+        print("Initial sigma, tau, nu")
+        print(pretty_array(tovary))
     M.fit()
     tovary = getValues(M)
-    print("--------------------------------------")
-    print("Bestfit sigma, tau, nu")
-    print(pretty_array(tovary))
-    print("**************************************")
+    if set_verbose:
+        print("--------------------------------------")
+        print("Bestfit sigma, tau, nu")
+        print(pretty_array(tovary))
+        print("**************************************")
     return(tovary)
 
 def getValues(M):
+    """ Get current paramter values of the model.
+    """
     tovary = []
     if is_number(M.use_sigprior):
         tovary.append(M.sigma)
@@ -104,15 +116,9 @@ def getValues(M):
         tovary.append(np.atleast_1d(M.nu.value)[0])
     return(tovary)
 
-
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
 def varying_tau(output, zydata, tauarray):
+    """ grid optimization along tau axis.
+    """
     result = []
     for tau in tauarray:
         model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior="Uniform")
@@ -123,21 +129,57 @@ def varying_tau(output, zydata, tauarray):
     f.write("".join(result))
     f.close()
 
+def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
+    """ grid optimization along both tau and nu axes.
+    """
+    dim_tau = len(tauarray)
+    dim_nu  = len(nuarray)
+    result = []
+    for tau in tauarray:
+        print("tau: %10.5f"%tau)
+        for nu in nuarray:
+            print("_______________  nu: %10.5f"%nu)
+            model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
+            bestpar = list(runMAP(model, set_verbose=set_verbose))
+            testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
+            result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+    f=open(output, "w")
+    # write dims into the header string
+    header = " ".join(["#", str(dim_tau), str(dim_nu), "\n"])
+    f.write(header)
+    f.write("".join(result))
+    f.close()
+
+def read_grid_tau_nu(input):
+    pass
+def show_loglike_map():
+    """ Process the 2D likelihood maps.
+    """
+    pass
 
 
+def pretty_array(x):
+    """ Return a string from list or array for nice print format.
+    """
+    return('[%s]' % ', '.join('%.2f' % x_i for x_i in x))
 
-if __name__ == "__main__":    
-#    lcfile  = "dat/mock_l100c1_t10s2n0.5.dat"
-#    lcfile  = "dat/t100n0_6.dat"
+def is_number(s):
+    """ Check if s is a number or not.
+    """
+    try:
+        float(s)
+        return(True)
+    except ValueError:
+        return(False)
 
-#pow_exp_T1000.0_N0.4.dat 
-
-#    tauarray = np.power(10.0, np.arange(0, 4.2, 0.2))
+def ogle_example_1():
+    """ Use mock light curves from OGLE as an example of 1-D grid optimization, everything
+    is in data/OGLE_example directory.
+    """
     tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
     truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
     truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
-#    truetau  = np.array([20.0, 100.0, 200.0, 600.0, 1000.0])
-#    truenu   = np.array([0.2, 0.6, 1.0, 1.4, 1.8])
+
     for ttau in truetau:
         for tnu in truenu:
             lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
@@ -146,39 +188,31 @@ if __name__ == "__main__":
             record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.dat"
             print("writing %s"%record)
             varying_tau(record, zydata, tauarray)
+    print("done!")
 
-#     reading dat/OGLE_example/pow_exp_T1000.0_N1.0.dat
-#     writing dat/OGLE_example/pow_exp_T1000.0_N1.0.testtau.dat
-#     tau is fixed to be 1.000
-#     **************************************
-#     Initial sigma, tau, nu
-#     [0.08, 1.00, 1.00]
+def ogle_example_2():
+    """ another OGLE example, testing 2D grid optimization using 'varying_tau_nu'.
+    """
+    tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
+    print(tauarray)
+    nuarray  = np.arange(0.0, 2.0, 0.2)
+    print(nuarray)
+    ttau = 200.0
+    tnu = 1.4
+    lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
+    print("reading %s"%lcfile)
+    zydata  = get_data(lcfile)
+    record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+    print("writing %s"%record)
+    varying_tau_nu(record, zydata, tauarray, nuarray, set_verbose=False)
+    print("done!")
+
+if __name__ == "__main__":    
+    ogle_example_2()
 
 
 
-#    lcfile  = "dat/t1000n0_6.dat"
-#    print("reading %s"%lcfile)
-#    zydata  = get_data(lcfile)
-#    varying_tau("test1000.dat2", zydata)
 
-#    lcfile  = "dat/t100n0_6.dat"
-#    print("reading %s"%lcfile)
-#    zydata  = get_data(lcfile)
-#    varying_tau("test100.dat2", zydata)
 
-#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprior="Uniform")
-#    model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior="None", use_nuprior="Uniform")
-#    bestpar = runMAP(model)
-#    testout = getPlike(zydata, bestpar)
 
-#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=10.0, use_nuprior="Uniform")
-#    bestpar = runMAP(model)
-#    testout = getPlike(zydata, bestpar)
 
-#    model   = make_model_powexp(zydata, use_sigprior="CSK", use_tauprior=1000.0, use_nuprior="Uniform")
-#    bestpar = runMAP(model)
-#    testout = getPlike(zydata, bestpar)
-
-#    runMCMC(model, "/home/mitchell/yingzu/tmp/petest", iter=2000, burn=0, thin=1, verbose=0)
-#    retdict = anaMCMC("~/tmp/petest", db='txt')
-#    print(retdict)

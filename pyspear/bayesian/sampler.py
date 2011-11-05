@@ -1,4 +1,4 @@
-#Last-modified: 04 Nov 2011 06:22:20 PM
+#Last-modified: 05 Nov 2011 02:06:47 AM
 import numpy as np
 import pickle
 import os.path
@@ -151,7 +151,28 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
     f.close()
 
 def read_grid_tau_nu(input):
-    pass
+    """ read the grid file
+    """ 
+    print("reading from %s"%input)
+    f = open(input, "r")
+    dim_tau, dim_nu = [int(r) for r in f.readline().lstrip("#").split()]
+    print("dim of tau: %d"%dim_tau)
+    print("dim of  nu: %d"%dim_nu)
+#    0.0915     1.0000     0.0000   956.2928  -238.4517  1197.6332    -2.8886     0.0011
+    sigma, tau, nu, loglike, chi2, complexity, drift, q = np.genfromtxt(f, unpack=True)
+    f.close()
+    retdict = {
+               'sigma'          :        sigma.reshape(dim_tau, dim_nu)
+               'tau'            :          tau.reshape(dim_tau, dim_nu)
+               'nu'             :           nu.reshape(dim_tau, dim_nu)
+               'loglike'        :      loglike.reshape(dim_tau, dim_nu)
+               'chi2'           :         chi2.reshape(dim_tau, dim_nu)
+               'complexity'     :   complexity.reshape(dim_tau, dim_nu)
+               'drift'          :        drift.reshape(dim_tau, dim_nu)
+               'q'              :            q.reshape(dim_tau, dim_nu)
+              }
+    return(retdict)
+
 def show_loglike_map():
     """ Process the 2D likelihood maps.
     """
@@ -208,7 +229,10 @@ def ogle_example_2():
     print("done!")
 
 if __name__ == "__main__":    
-    ogle_example_2()
+    ttau = 200.0
+    tnu = 1.4
+    record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+    read_grid_tau_nu(record)
 
 
 

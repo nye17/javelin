@@ -16,8 +16,9 @@ def plot_decomp(ttau, tnu, tsig, tmean):
     lcfile  = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
     j, m, e = np.genfromtxt(lcfile, unpack=True)
     lcmean = np.mean(m)
-    record  = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.dat"
-    figname = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.pdf"
+    record     = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.dat"
+    recorddrw  = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_DRW.dat"
+    figname    = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.pdf"
     print(lcfile)
     print(record)
     print(figname)
@@ -33,6 +34,11 @@ def plot_decomp(ttau, tnu, tsig, tmean):
     drift   -= pmax
 
     indx = np.argmax(loglike)
+
+    taudrw, loglikedrw = np.genfromtxt(recorddrw, usecols=(1,3), unpack=True)
+    pmaxdrw = np.max(loglikedrw)
+    loglikedrw -= pmaxdrw
+    indxdrw = np.argmax(loglikedrw)
 
 
     # get the posterior mean
@@ -59,9 +65,11 @@ def plot_decomp(ttau, tnu, tsig, tmean):
     ax1.plot(tau, chi2, "r--", label="data fit")
     ax1.plot(tau, complex, "g--", label="minus complexity penalty")
     ax1.plot(tau, drift, "b--", label="minus q variance penalty")
+    ax1.plot(tau, loglikedrw, "m-", lw=1, label="DRW likelihood")
     ax1.axhline(0.0, ls="-", color="k", lw=1, alpha=0.6)
     ax1.axvline(ttau, ls="-", color="k", lw=3, alpha=0.3)
     ax1.axvline(tau[indx], ls="-", color="y", lw=2, alpha=0.6)
+    ax1.axvline(taudrw[indxdrw], ls="-", color="m", lw=2, alpha=0.6)
     ax1.axvline(tau_post, ls="-", color="purple", lw=1, alpha=0.9)
     ax1.set_xscale("log")
     ax1.set_xlabel("$\\tau_d$")

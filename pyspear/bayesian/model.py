@@ -56,7 +56,10 @@ def make_model_powexp(zydata, use_sigprior="CSK", use_tauprior="CSK", use_nuprio
         invsigsq = pm.Uninformative('invsigsq', value=1./(ry/4.0)**2.)
         @pm.deterministic
         def sigma(name="sigma", invsigsq=invsigsq):
-            return(1./np.sqrt(np.abs(invsigsq)))
+            if np.abs(invsigsq) < 1.e-6:
+                return(1.e6)
+            else:
+                return(1./np.sqrt(np.abs(invsigsq)))
     else:
         try:
             sigma = float(use_sigprior)

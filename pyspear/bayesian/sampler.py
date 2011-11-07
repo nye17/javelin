@@ -1,4 +1,4 @@
-#Last-modified: 06 Nov 2011 01:26:34 AM
+#Last-modified: 06 Nov 2011 06:57:55 PM
 import numpy as np
 import pickle
 import os.path
@@ -122,7 +122,8 @@ def getValues(M):
 def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
     """ grid optimization along tau axis.
     """
-    result = []
+#    result = []
+    f=open(output, "w")
     if fixednu is None:
         use_nuprior="Uniform"
     elif is_number(fixednu):
@@ -134,9 +135,9 @@ def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
         model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=use_nuprior)
         bestpar = list(runMAP(model, set_verbose=set_verbose))
         testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
-        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
-    f=open(output, "w")
-    f.write("".join(result))
+#        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+        f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+#    f.write("".join(result))
     f.close()
 
 def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
@@ -144,7 +145,11 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
     """
     dim_tau = len(tauarray)
     dim_nu  = len(nuarray)
-    result = []
+    f=open(output, "w")
+    # write dims into the header string
+    header = " ".join(["#", str(dim_tau), str(dim_nu), "\n"])
+    f.write(header)
+#    result = []
     for tau in tauarray:
         print("tau: %10.5f"%tau)
         for nu in nuarray:
@@ -152,12 +157,10 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
             model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
-            result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
-    f=open(output, "w")
-    # write dims into the header string
-    header = " ".join(["#", str(dim_tau), str(dim_nu), "\n"])
-    f.write(header)
-    f.write("".join(result))
+#            result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+            f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
+            f.flush()
+#    f.write("".join(result))
     f.close()
 
 def read_grid_tau_nu(input):
@@ -315,7 +318,8 @@ def ogle_example_4():
     """ another OGLE example, testing 1d grid optimization using 'varying_tau' but with nu fixed.
     """
     tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
-    truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
+#    truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
+    truetau  = np.array([80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
     truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
     fixednu = 1.0
     ttau = 200.0

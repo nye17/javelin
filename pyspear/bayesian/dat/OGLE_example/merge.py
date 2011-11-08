@@ -42,13 +42,13 @@ def mergepdfs(inputf, outputf):
 
 
 if __name__ == "__main__":    
-    for ttau in ttaus:
-        outputf = "ogle_example_T"+ str(ttau) + ".pdf"
-        inputf = []
-        for tnu in tnus:
-            figname = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.pdf"
-            inputf.append(figname)
-        mergepdfs(inputf, outputf)
+#    for ttau in ttaus:
+#        outputf = "ogle_example_T"+ str(ttau) + ".pdf"
+#        inputf = []
+#        for tnu in tnus:
+#            figname = "pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.pdf"
+#            inputf.append(figname)
+#        mergepdfs(inputf, outputf)
     for tnu in tnus:
         outputf = "ogle_example_N"+ str(tnu) + ".pdf"
         inputf = []

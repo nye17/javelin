@@ -116,6 +116,8 @@ def peakdet2d(image):
 
 
 if __name__=="__main__":
-    series = [0,0,0,2,0,0,0,-2,0,0,0,2,0,0,0,-2,0]
-    print peakdet(series,1)
+    series = [0,0,0,2,0,0,0,-2,0,0,0, 2, 0, 0, 0, -2,0]
+    x      = [0,1,2,3,4,5,6, 7,8,9,10,11,12,13,14,15,16]
+    print peakdet1d(series,1,x=x)
+    print peakdet1d(series,1,x=x[::-1])
 

@@ -1,4 +1,4 @@
-#Last-modified: 25 Oct 2011 10:13:48 PM
+#Last-modified: 21 Nov 2011 07:06:36 PM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 from pyspear.zylc import zyLC
@@ -12,8 +12,8 @@ covfunc_dict = {
                 "pow_exp"   :  pow_exp.euclidean,
                 "drw"       :  pow_exp.euclidean,
                 "gaussian"  :  gaussian.euclidean,
-#                "quadratic" : quadratic.euclidean,
-#                "sphere"    :    sphere.euclidean,
+                "quadratic" : quadratic.euclidean,
+                "sphere"    :    sphere.euclidean,
                }
 
 class SimpleCovariance1D(object):
@@ -57,6 +57,7 @@ class SimpleCovariance1D(object):
             # = # If x and y are different arrays: =
             # ======================================
             else:
+                y = np.atleast_1d(y)
                 if (len(y.shape) != 1):
                     if (min(y.shape) == 1):
                         y = y.squeeze()

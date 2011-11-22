@@ -3,9 +3,6 @@ from pyspear.gp.cov_funs import matern
 from numpy import *
 
 C = Covariance(eval_fun = matern.euclidean, diff_degree = 0.4, amp = .4, scale = 1.)
-# C = Covariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1., rank_limit=100)
-# C = FullRankCovariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
-# C = NearlyFullRankCovariance(eval_fun = matern.euclidean, diff_degree = 1.4, amp = .4, scale = 1.)
 
 #### - Plot - ####
 if __name__ == '__main__':
@@ -17,8 +14,8 @@ if __name__ == '__main__':
     # Plot the covariance function
     subplot(1,2,1)
 
-#    contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.bone)
-    contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.hot)
+    contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.bone)
+#    contourf(x,x,C(x,x).view(ndarray),origin='lower',extent=(-1.,1.,-1.,1.),cmap=cm.hot)
 
     xlabel('x')
     ylabel('y')

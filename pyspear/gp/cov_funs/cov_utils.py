@@ -8,9 +8,9 @@ import pickle
 from isotropic_cov_funs import symmetrize, imul
 from copy import copy
 import sys,os
-from pymc import get_threadpool_size, map_noreturn
-import pymc
-mod_search_path = [pymc.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
+import pyspear
+from pyspear.threadpool import get_threadpool_size, map_noreturn
+mod_search_path = [pyspear.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
 
 
 __all__ = ['covariance_wrapper', 'covariance_function_bundle']
@@ -46,7 +46,7 @@ def regularize_array(A):
 
 def import_nested_module(name):
     """
-    Useful for importing nested modules such as pymc.gp.cov_funs.isotropic_cov_funs.
+    Useful for importing nested modules such as pyspear.gp.cov_funs.isotropic_cov_funs.
     """
     tree = name.split('.')
     root = tree[0]

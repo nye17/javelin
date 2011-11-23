@@ -2,7 +2,7 @@ import isotropic_cov_funs
 import numpy as np
 from isotropic_cov_funs import symmetrize, imul
 from copy import copy
-from pymc import get_threadpool_size, map_noreturn
+from pyspear.threadpool import get_threadpool_size, map_noreturn
 
 __all__ = ['brownian']
 
@@ -99,7 +99,7 @@ weiner = brownian
 
 if __name__ == '__main__':
     import numpy
-    import pymc
+    import pyspear
     from pylab import *
 
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     z = numpy.empty((N,N,2))
     z[:,:,0]=x
     z[:,:,1]=y
-    C = pymc.gp.FullRankCovariance(brownian, amp=1., scale=1., h=.1)
-    M = pymc.gp.Mean(lambda x: numpy.zeros(x.shape[:-1]))
-    f = pymc.gp.Realization(M,C)
+    C = pyspear.gp.FullRankCovariance(brownian, amp=1., scale=1., h=.1)
+    M = pyspear.gp.Mean(lambda x: numpy.zeros(x.shape[:-1]))
+    f = pyspear.gp.Realization(M,C)
     imshow(f(z))

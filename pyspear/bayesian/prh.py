@@ -1,6 +1,6 @@
-#Last-modified: 21 Nov 2011 07:06:36 PM
+#Last-modified: 22 Nov 2011 11:25:19 PM
 
-from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
+from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC
 from pyspear.cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 
@@ -14,6 +14,7 @@ covfunc_dict = {
                 "gaussian"  :  gaussian.euclidean,
                 "quadratic" : quadratic.euclidean,
                 "sphere"    :    sphere.euclidean,
+                "pareto_exp":pareto_exp.euclidean,
                }
 
 class SimpleCovariance1D(object):

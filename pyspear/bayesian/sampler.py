@@ -1,4 +1,4 @@
-#Last-modified: 06 Nov 2011 06:57:55 PM
+#Last-modified: 24 Nov 2011 03:31:07 AM
 import numpy as np
 import pickle
 import os.path
@@ -140,7 +140,7 @@ def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
 #    f.write("".join(result))
     f.close()
 
-def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
+def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_verbose=False):
     """ grid optimization along both tau and nu axes.
     """
     dim_tau = len(tauarray)
@@ -149,18 +149,20 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, set_verbose=False):
     # write dims into the header string
     header = " ".join(["#", str(dim_tau), str(dim_nu), "\n"])
     f.write(header)
-#    result = []
     for tau in tauarray:
         print("tau: %10.5f"%tau)
         for nu in nuarray:
             print("_______________  nu: %10.5f"%nu)
-            model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
+            if covfunc is "pow_exp":
+                model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
+            elif covfunc is "matern":
+                model   = make_model_matern(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
+            elif covfunc is "pareto_exp":
+                model   = make_model_paretoexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
-#            result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
             f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
             f.flush()
-#    f.write("".join(result))
     f.close()
 
 def read_grid_tau_nu(input):

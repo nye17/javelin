@@ -1,4 +1,4 @@
-#Last-modified: 23 Nov 2011 12:37:43 AM
+#Last-modified: 24 Nov 2011 03:27:12 AM
 
 
 import matplotlib.pyplot as plt
@@ -40,6 +40,8 @@ def plot_powexp(ax):
 def plot_matern(ax):
     covfunc = "matern"
     nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
+    print(nuarr[0]),
+    print(nuarr[-1])
     for i, nu in enumerate(nuarr):
         print("plot %s for nu %10.5f"%(covfunc, nu))
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
@@ -48,9 +50,12 @@ def plot_matern(ax):
 def plot_paretoexp(ax):
     covfunc = "pareto_exp"
     nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
+    print(nuarr[0]),
+    print(nuarr[-1])
     for i, nu in enumerate(nuarr):
         print("plot %s for alpha %10.5f"%(covfunc, nu))
-        plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
+     
+     plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
                 scale=1., ls="-", alpha=nu)
 
 def plot_drw(ax):

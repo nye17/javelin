@@ -1,4 +1,4 @@
-#Last-modified: 22 Nov 2011 11:25:19 PM
+#Last-modified: 26 Nov 2011 02:22:58 AM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC
@@ -108,6 +108,9 @@ class PRH(object):
                 elif covfunc == "pow_exp":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             pow=nu)
+                elif covfunc == "pareto_exp":
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
+                            alpha=nu)
                 elif covfunc == "drw":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             pow=1.0)

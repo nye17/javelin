@@ -1,4 +1,4 @@
-#Last-modified: 24 Nov 2011 03:31:07 AM
+#Last-modified: 26 Nov 2011 02:35:22 AM
 import numpy as np
 import pickle
 import os.path
@@ -6,7 +6,7 @@ import pymc as pm
 
 from prh import PRH
 from data import get_data
-from model import make_model_powexp
+from model import make_model_cov3par
 from peakdetect import peakdet1d, peakdet2d
 
 import matplotlib.pyplot as plt
@@ -132,7 +132,8 @@ def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
         raise RuntimeError("no such fixednu option")
     for tau in tauarray:
         print("tau: %10.5f"%tau)
-        model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=use_nuprior)
+        model   = make_model_cov3par(zydata, covfunc=covfunc,
+                use_sigprior="None", use_tauprior=tau, use_nuprior=use_nuprior)
         bestpar = list(runMAP(model, set_verbose=set_verbose))
         testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
 #        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
@@ -153,12 +154,8 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_ver
         print("tau: %10.5f"%tau)
         for nu in nuarray:
             print("_______________  nu: %10.5f"%nu)
-            if covfunc is "pow_exp":
-                model   = make_model_powexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
-            elif covfunc is "matern":
-                model   = make_model_matern(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
-            elif covfunc is "pareto_exp":
-                model   = make_model_paretoexp(zydata, use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
+            model   = make_model_cov3par(zydata, covfunc=covfunc, 
+                    use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
             f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
@@ -272,7 +269,7 @@ def ogle_example_2():
     zydata  = get_data(lcfile)
     record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
     print("writing %s"%record)
-    varying_tau_nu(record, zydata, tauarray, nuarray, set_verbose=False)
+    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pow_exp", set_verbose=False)
     print("done!")
 
 def ogle_example_3():
@@ -320,7 +317,6 @@ def ogle_example_4():
     """ another OGLE example, testing 1d grid optimization using 'varying_tau' but with nu fixed.
     """
     tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
-#    truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
     truetau  = np.array([80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
     truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
     fixednu = 1.0
@@ -337,8 +333,24 @@ def ogle_example_4():
     print("done!")
 
 
+def ogle_example_5():
+    """ testing 2D grid optimization using 'varying_tau_nu' with matern and pareto_exp.
+    """
+    tauarray = np.power(10.0, np.arange(0,  4.2, 4.0))
+    nuarray  = np.power(10.0, np.arange(-1, 0.4, 0.1))
+    ttau = 200.0
+    tnu = 1.4
+    lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
+    print("reading %s"%lcfile)
+    zydata  = get_data(lcfile)
+#    record = "dat/OGLE_example/matern_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+    record = "dat/OGLE_example/pow_pareto_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+    print("writing %s"%record)
+#    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="matern", set_verbose=False)
+    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pareto_exp", set_verbose=False)
+
 if __name__ == "__main__":    
-    ogle_example_4()
+    ogle_example_5()
 
 
 

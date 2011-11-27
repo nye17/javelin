@@ -1,4 +1,4 @@
-#Last-modified: 26 Nov 2011 02:22:58 AM
+#Last-modified: 27 Nov 2011 02:01:12 AM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC
@@ -16,6 +16,8 @@ covfunc_dict = {
                 "sphere"    :    sphere.euclidean,
                 "pareto_exp":pareto_exp.euclidean,
                }
+
+my_neg_inf = float(-1.0e+300)
 
 class SimpleCovariance1D(object):
     def __init__(self, eval_fun, **params):
@@ -128,7 +130,13 @@ class PRH(object):
         # cholesky decompose S+N so that U^T U = S+N = C
         if self.set_single:
             cmatrix = self.C(self.jarr, self.jarr)
-            U = cholesky(cmatrix, nugget=self.varr, inplace=True)
+            U, info = cholesky(cmatrix, nugget=self.varr, inplace=True, raiseinfo=False)
+            if info > 0:
+                print("warning: cmatrix non positive-definite")
+                if retq:
+                    return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
+                else:
+                    return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
         elif U is None:
             raise RuntimeError("require U of cpnmatrix for more RM purposes")
 

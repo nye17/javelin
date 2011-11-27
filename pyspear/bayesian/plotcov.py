@@ -1,4 +1,4 @@
-#Last-modified: 27 Nov 2011 12:25:51 AM
+#Last-modified: 27 Nov 2011 02:06:16 AM
 
 
 import matplotlib.pyplot as plt
@@ -41,7 +41,7 @@ def plot_matern(ax):
     covfunc = "matern"
 #    nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
 #    nuarr= np.power(10.0, np.arange(-1, 0.4, 0.1))
-    nuarr= np.power(10.0, np.arange(-1, np.log10(2), 0.1))
+    nuarr= np.power(10.0, np.arange(-1, np.log10(2.5), 0.1))
     for i, nu in enumerate(nuarr):
         print("plot %s for nu %10.5f"%(covfunc, nu))
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 

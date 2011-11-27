@@ -1,4 +1,4 @@
-#Last-modified: 25 Oct 2011 02:26:20 AM
+#Last-modified: 27 Nov 2011 01:58:40 AM
 
 __all__ = ['cholesky', 'trisolve', 'chosolve', 'chodet', 'chosolve_from_tri', 'chodet_from_tri']
 
@@ -9,7 +9,7 @@ import numpy as np
 from numpy.testing import assert_equal,  assert_almost_equal, assert_array_equal
 
 
-def cholesky(A, nugget=None, inplace=False):
+def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
     """
     U = cholesky(A, nugget=None])
 
@@ -23,9 +23,11 @@ def cholesky(A, nugget=None, inplace=False):
         for i in xrange(n):
             U[i,i] += nugget[i]
     info = dpotrf_wrap(U)
-    if info>0:
-        raise RuntimeError("Matrix does not appear to be positive definite by row %i." % info)
-    return(U)
+    if raiseinfo:
+        if info>0:
+            raise RuntimeError("Matrix does not appear to be positive definite by row %i." % info)
+    else:
+        return(U, info)
 
 
 def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):

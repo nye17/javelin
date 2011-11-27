@@ -1,4 +1,4 @@
-#Last-modified: 26 Nov 2011 02:35:22 AM
+#Last-modified: 27 Nov 2011 12:25:32 AM
 import numpy as np
 import pickle
 import os.path
@@ -66,15 +66,14 @@ def anaMCMC(resource, db='txt'):
     print("**************************************")
     return(retdict)
 
-def getPlike(zydata, par, set_verbose=False):
+def getPlike(zydata, par, covfunc, set_verbose=False):
     """ Calculate the log marginal likelihood of data given input paramters.
     """
     if set_verbose:
         print("**************************************")
         print("Input  sigma, tau, nu")
         print(pretty_array(par))
-    prh = PRH(zydata, covfunc="pow_exp",
-                           sigma=par[0], tau=par[1], nu=par[2])
+    prh = PRH(zydata, covfunc=covfunc, sigma=par[0], tau=par[1], nu=par[2])
     out = prh.loglike_prh()
     if set_verbose:
         print("--------------------------------------")
@@ -92,7 +91,11 @@ def runMAP(model, set_verbose=True):
         print("**************************************")
         print("Initial sigma, tau, nu")
         print(pretty_array(tovary))
-    M.fit()
+    if set_verbose:
+        verbose=1
+    else:
+        verbose=0
+    M.fit(verbose=verbose)
     tovary = getValues(M)
     if set_verbose:
         print("--------------------------------------")
@@ -119,7 +122,7 @@ def getValues(M):
         tovary.append(np.atleast_1d(M.nu.value)[0])
     return(tovary)
 
-def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
+def varying_tau(output, zydata, tauarray, covfunc="pow_exp", fixednu=None, set_verbose=False):
     """ grid optimization along tau axis.
     """
 #    result = []
@@ -135,7 +138,7 @@ def varying_tau(output, zydata, tauarray, fixednu=None, set_verbose=False):
         model   = make_model_cov3par(zydata, covfunc=covfunc,
                 use_sigprior="None", use_tauprior=tau, use_nuprior=use_nuprior)
         bestpar = list(runMAP(model, set_verbose=set_verbose))
-        testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
+        testout = list(getPlike(zydata, bestpar,  covfunc, set_verbose=set_verbose))
 #        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
         f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
 #    f.write("".join(result))
@@ -157,7 +160,7 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_ver
             model   = make_model_cov3par(zydata, covfunc=covfunc, 
                     use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
-            testout = list(getPlike(zydata, bestpar, set_verbose=set_verbose))
+            testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
             f.write(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
             f.flush()
     f.close()
@@ -336,18 +339,21 @@ def ogle_example_4():
 def ogle_example_5():
     """ testing 2D grid optimization using 'varying_tau_nu' with matern and pareto_exp.
     """
-    tauarray = np.power(10.0, np.arange(0,  4.2, 4.0))
-    nuarray  = np.power(10.0, np.arange(-1, 0.4, 0.1))
+#    tauarray = np.power(10.0, np.arange(0,  4.2, 0.1))
+#    nuarray  = np.power(10.0, np.arange(-1, 0.4, 0.1))
+    tauarray = [10000,]
+#    nuarray  = np.power(10.0, np.linspace(-1, 0.4, 2))
+    nuarray  = [2.,]
     ttau = 200.0
     tnu = 1.4
     lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
     print("reading %s"%lcfile)
     zydata  = get_data(lcfile)
-#    record = "dat/OGLE_example/matern_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
-    record = "dat/OGLE_example/pow_pareto_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+    record = "dat/OGLE_example/matern_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
+#    record = "dat/OGLE_example/pow_pareto_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
     print("writing %s"%record)
-#    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="matern", set_verbose=False)
-    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pareto_exp", set_verbose=False)
+    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="matern", set_verbose=True)
+#    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pareto_exp", set_verbose=True)
 
 if __name__ == "__main__":    
     ogle_example_5()

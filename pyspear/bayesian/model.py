@@ -172,6 +172,16 @@ def make_model_cov3par(zydata, covfunc="pow_exp",
         elif covfunc is "pareto_exp":
             nu_init     = 1.5
         par_init = [sigma_init, tau_init, nu_init]
+    # truncation limit for the third parameter
+    if covfunc is "pow_exp":
+        nu_min = 0.0
+        nu_max = 1.999
+    elif covfunc is "matern":
+        nu_min = 0.001
+        nu_max = 2.000
+    elif covfunc is "pareto_exp":
+        nu_min = 0.001
+        nu_max = 2.000
     #-------
     # priors
     #-------
@@ -241,7 +251,7 @@ def make_model_cov3par(zydata, covfunc="pow_exp",
     # nu
     if use_nuprior == "Uniform":
         # uniform prior on matern nu
-        nu    = pm.Uniform('nu', 0.01, 10.0, value=0.5)
+        nu    = pm.Uniform('nu', nu_min, nu_max, value=nu_init)
     else:
         try:
             nu   = float(use_nuprior)

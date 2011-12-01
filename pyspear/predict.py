@@ -47,6 +47,9 @@ class Predict(object):
             elif covfunc == "drw":
                 self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau, 
                         pow=1.0)
+            elif covfunc == "pareto_exp":
+                self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau, 
+                        alpha=nu)
             else:
                 self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau)
         else:

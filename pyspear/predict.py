@@ -1,5 +1,5 @@
 from pyspear.gp import Mean, Covariance, observe, Realization, GPutils
-from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
+from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 #from gp import Mean, Covariance, observe, Realization
 #from gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 import numpy as np
@@ -10,8 +10,9 @@ covfunc_dict = {
                 "pow_exp"   :  pow_exp.euclidean,
                 "drw"       :  pow_exp.euclidean,
                 "gaussian"  :  gaussian.euclidean,
-#                "quadratic" : quadratic.euclidean,
-#                "sphere"    :    sphere.euclidean,
+                "quadratic" : quadratic.euclidean,
+                "sphere"    :    sphere.euclidean,
+                "pareto_exp":pareto_exp.euclidean,
                }
 
 class Predict(object):

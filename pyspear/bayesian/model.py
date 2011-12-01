@@ -265,8 +265,7 @@ def make_model_cov3par(zydata, covfunc="pow_exp",
     #-------
     guess = par_init
     @pm.stochastic(observed=True)
-    def model_powexp(value=guess,
-                     sigma=sigma, tau=tau, nu=nu):
+    def model_cov3par(value=guess, sigma=sigma, tau=tau, nu=nu):
         par=[sigma, tau, nu]
         prh = PRH(zydata, covfunc=covfunc, sigma=par[0], tau=par[1], nu=par[2])
         out = prh.loglike_prh()

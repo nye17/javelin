@@ -1,4 +1,4 @@
-#Last-modified: 27 Nov 2011 02:01:12 AM
+#Last-modified: 30 Nov 2011 12:34:41 PM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC

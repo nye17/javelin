@@ -1,4 +1,4 @@
-#Last-modified: 27 Nov 2011 02:06:16 AM
+#Last-modified: 30 Nov 2011 06:49:48 PM
 
 
 import matplotlib.pyplot as plt
@@ -49,7 +49,7 @@ def plot_matern(ax):
 
 def plot_paretoexp(ax):
     covfunc = "pareto_exp"
-    nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
+#    nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
     nuarr= np.power(10.0, np.arange(-1, np.log10(5), 0.1))
     for i, nu in enumerate(nuarr):
         print("plot %s for alpha %10.5f"%(covfunc, nu))
@@ -89,6 +89,79 @@ def main(set_log=False):
     ax3.axes.get_yaxis().set_visible(False)
     plt.show()
 
+def single(set_log=False, prop={"pow_exp":   (1.0, 1.000, 1.0), 
+                                "matern" :   (1.0, 1.414, 0.5),
+                                "pareto_exp":(1.0, 1.000, 0.5)},
+                          xmax=None):
+    fig = plt.figure(figsize=(8,8))
+    ax  = fig.add_subplot(111)
+    if xmax is None:
+        xmax = 0
+        for par in prop.itervalues():
+            tau = par[1]
+            if tau > xmax:
+                xmax = tau
+        xmax = xmax*3
+        if xmax > 2000.0:
+            xmax = 2000.0
+    x = np.linspace(0.0, xmax, 100)
+    for covfunc in prop.iterkeys():
+        v=prop[covfunc]
+        print(covfunc)
+        if covfunc == "drw": 
+            cf = covfunc_dict[covfunc]
+            C = SimpleCovariance1D(eval_fun=cf, amp=v[0], scale=v[1], pow=1.0)
+            y = C(x,0)
+            ax.plot(x,y, ls="-", color="gray", lw=4, alpha=0.1, label=covfunc)
+            ax.axvline(v[1], color="gray",  ls="-", lw=4, alpha=0.1)
+        elif covfunc == "pow_exp": 
+            cf = covfunc_dict[covfunc]
+            C = SimpleCovariance1D(eval_fun=cf, amp=v[0], scale=v[1], pow=v[2])
+            y = C(x,0)
+            ax.plot(x,y, ls="-", color="k", lw=3, alpha=0.3, label=covfunc)
+            ax.axvline(v[1], color="k", lw=3,  ls="-", alpha=0.3)
+        elif covfunc == "matern":
+            cf = covfunc_dict[covfunc]
+            C = SimpleCovariance1D(eval_fun=cf, amp=v[0], scale=v[1], diff_degree=v[2])
+            y = C(x,0)
+            ax.plot(x,y, ls="--", color="g", lw=2, alpha=0.6, label=covfunc)
+            ax.axvline(v[1], color="g", lw=2, ls="--", alpha=0.6)
+        elif covfunc == "pareto_exp":
+            cf = covfunc_dict[covfunc]
+            C = SimpleCovariance1D(eval_fun=cf, amp=v[0], scale=v[1], alpha=v[2])
+            y = C(x,0)
+            ax.plot(x,y, ls=":", color="r", lw=1, alpha=0.9, label=covfunc)
+            ax.axvline(v[1], color="r", lw=1, ls=":", alpha=0.9)
+        else:
+            raise RuntimeError("no %s found"%covfunc)
+        ax.legend(loc=1)
+    plt.show()
+
+
 if __name__ == "__main__":    
 #    main(set_log=True)
-    main(set_log=False)
+#    main(set_log=False)
+#    single(set_log=False)
+    prop={
+#          "drw":       (0.085,   409.4915,    1.0000), 
+#          "pow_exp":   (0.0867,  494.1713,    0.9200), 
+#          "matern" :   (0.0858,  719.6857,    0.4319),
+#          "pareto_exp":(0.0847,  494.1713,    0.5649),
+#          "pareto_exp":(0.0847,  494.1713,    1.5),
+#          "pareto_exp":(0.0732,  281.1769,    3.2374),
+
+#          "pareto_exp":(0.085,   409.4915,    0.8875),
+#          "pareto_exp":(0.0847,  409.4915,    0.5469 ),
+# smc105.5_i_32347
+#          "drw":       (0.1017,  494.1713,    1.0000 ), 
+#          "pow_exp":   (0.1194,  596.3623,    1.0600 ), 
+#          "matern" :   (0.1153,  719.6857,    0.5603 ),
+#          "pareto_exp":(0.1362,  868.5114,    5.0000 ),
+# sandbox
+          "drw":       (1.0,     10.,      1.0000 ), 
+          "pow_exp":   (0.9981,  8.685,    1.053  ), 
+#          "pareto_exp":(1.147,   13.38,    1.648 ),
+#          "pareto_exp":(1.036,     10.78,    0.7368),
+          "pareto_exp":(2.832,      84.04,   0.0),
+         }
+    single(set_log=False, prop=prop, xmax=100)

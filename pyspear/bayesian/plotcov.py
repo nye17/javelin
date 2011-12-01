@@ -1,4 +1,4 @@
-#Last-modified: 30 Nov 2011 06:49:48 PM
+#Last-modified: 30 Nov 2011 07:23:13 PM
 
 
 import matplotlib.pyplot as plt
@@ -159,8 +159,8 @@ if __name__ == "__main__":
 #          "pareto_exp":(0.1362,  868.5114,    5.0000 ),
 # sandbox
           "drw":       (1.0,     10.,      1.0000 ), 
-          "pow_exp":   (0.9981,  8.685,    1.053  ), 
-#          "pareto_exp":(1.147,   13.38,    1.648 ),
+#          "pow_exp":   (0.9981,  8.685,    1.053  ), 
+          "pareto_exp":(1.147,   13.38,    1.648 ),
 #          "pareto_exp":(1.036,     10.78,    0.7368),
           "pareto_exp":(2.832,      84.04,   0.0),
          }

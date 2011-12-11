@@ -1,4 +1,4 @@
-#Last-modified: 27 Nov 2011 01:58:40 AM
+#Last-modified: 11 Dec 2011 05:45:22 PM
 
 __all__ = ['cholesky', 'trisolve', 'chosolve', 'chodet', 'chosolve_from_tri', 'chodet_from_tri']
 
@@ -26,6 +26,8 @@ def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
     if raiseinfo:
         if info>0:
             raise RuntimeError("Matrix does not appear to be positive definite by row %i." % info)
+        else:
+            return(U)
     else:
         return(U, info)
 
@@ -98,7 +100,7 @@ def chodet(A, nugget=None, retlog=True):
     det(A) = |A| = product {U_ii^2} for i=[1:n]
     log(det(A)) = log(|A|) = 2 sum {log(U_ii)} for i=[1:n]
     """
-    U = cholesky(A, nugget=nugget, inplace=False)
+    U = cholesky(A, nugget=nugget, inplace=False, raiseinfo=True)
     d = chodet_from_tri(U, nugget=nugget, retlog=retlog)
     return(d)
 

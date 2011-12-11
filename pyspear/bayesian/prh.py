@@ -1,4 +1,4 @@
-#Last-modified: 30 Nov 2011 12:34:41 PM
+#Last-modified: 11 Dec 2011 04:45:53 PM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC
@@ -18,6 +18,7 @@ covfunc_dict = {
                }
 
 my_neg_inf = float(-1.0e+300)
+#my_neg_inf = float('-Inf'))
 
 class SimpleCovariance1D(object):
     def __init__(self, eval_fun, **params):

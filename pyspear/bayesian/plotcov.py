@@ -1,4 +1,4 @@
-#Last-modified: 30 Nov 2011 07:23:13 PM
+#Last-modified: 12 Dec 2011 04:58:56 PM
 
 
 import matplotlib.pyplot as plt
@@ -50,7 +50,8 @@ def plot_matern(ax):
 def plot_paretoexp(ax):
     covfunc = "pareto_exp"
 #    nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
-    nuarr= np.power(10.0, np.arange(-1, np.log10(5), 0.1))
+#    nuarr= np.power(10.0, np.arange(-1, np.log10(5), 0.1))
+    nuarr= np.power(10.0, np.arange(np.log10(1), np.log10(5), 0.1))
     for i, nu in enumerate(nuarr):
         print("plot %s for alpha %10.5f"%(covfunc, nu))
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
@@ -140,7 +141,7 @@ def single(set_log=False, prop={"pow_exp":   (1.0, 1.000, 1.0),
 
 if __name__ == "__main__":    
 #    main(set_log=True)
-#    main(set_log=False)
+    main(set_log=False)
 #    single(set_log=False)
     prop={
 #          "drw":       (0.085,   409.4915,    1.0000), 
@@ -164,4 +165,4 @@ if __name__ == "__main__":
 #          "pareto_exp":(1.036,     10.78,    0.7368),
           "pareto_exp":(2.832,      84.04,   0.0),
          }
-    single(set_log=False, prop=prop, xmax=100)
+#    single(set_log=False, prop=prop, xmax=100)

@@ -1,4 +1,4 @@
-#Last-modified: 30 Nov 2011 02:08:44 PM
+#Last-modified: 15 Dec 2011 01:52:51 PM
 import numpy as np
 import pickle
 import os.path
@@ -140,7 +140,7 @@ def varying_tau(output, zydata, tauarray, covfunc="pow_exp", fixednu=None, set_v
         bestpar = list(runMAP(model, set_verbose=set_verbose))
         testout = list(getPlike(zydata, bestpar,  covfunc, set_verbose=set_verbose))
 #        result.append(" ".join(format(r, "10.4f") for r in bestpar+testout)+"\n")
-        f.write(" ".join(format(r, "10.4g") for r in bestpar+testout)+"\n")
+        f.write(" ".join(format(r, "14.6f") for r in bestpar+testout)+"\n")
 #    f.write("".join(result))
     f.close()
 
@@ -161,7 +161,7 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_ver
                     use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
-            f.write(" ".join(format(r, "10.4g") for r in bestpar+testout)+"\n")
+            f.write(" ".join(format(r, "14.6f") for r in bestpar+testout)+"\n")
             f.flush()
     f.close()
 

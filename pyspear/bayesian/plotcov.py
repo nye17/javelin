@@ -1,4 +1,4 @@
-#Last-modified: 12 Dec 2011 04:58:56 PM
+#Last-modified: 16 Dec 2011 02:35:44 AM
 
 
 import matplotlib.pyplot as plt
@@ -51,7 +51,8 @@ def plot_paretoexp(ax):
     covfunc = "pareto_exp"
 #    nuarr= np.power(10.0, np.arange(-1, 1, 0.1))
 #    nuarr= np.power(10.0, np.arange(-1, np.log10(5), 0.1))
-    nuarr= np.power(10.0, np.arange(np.log10(1), np.log10(5), 0.1))
+#    nuarr= np.power(10.0, np.arange(np.log10(1), np.log10(5), 0.1))
+    nuarr= np.array([1.5, 2.0, 2.5, 3.0])
     for i, nu in enumerate(nuarr):
         print("plot %s for alpha %10.5f"%(covfunc, nu))
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 

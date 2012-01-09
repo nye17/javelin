@@ -1,6 +1,6 @@
-#Last-modified: 09 Jan 2012 03:38:57 PM
+#Last-modified: 09 Jan 2012 04:29:51 PM
 
-from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
+from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp, kepler_exp
 from pyspear.zylc import zyLC
 from pyspear.cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 

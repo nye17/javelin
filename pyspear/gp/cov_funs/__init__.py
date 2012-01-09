@@ -16,6 +16,7 @@ extra_parameters = {
                 'sphere': {'': ''},
                 'quadratic': {'phi': 'The characteristic (scaled) distance of decorrelation.'},
                 'pareto_exp': {'alpha': 'The pareto index.'},
+                'kepler_exp': {'tcut': 'The cutoff time scale divided by tau_drw'},
                 }
 
 

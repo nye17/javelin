@@ -1,4 +1,4 @@
-#Last-modified: 11 Dec 2011 04:45:53 PM
+#Last-modified: 09 Jan 2012 03:38:57 PM
 
 from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp
 from pyspear.zylc import zyLC
@@ -15,10 +15,10 @@ covfunc_dict = {
                 "quadratic" : quadratic.euclidean,
                 "sphere"    :    sphere.euclidean,
                 "pareto_exp":pareto_exp.euclidean,
+                "kepler_exp":kepler_exp.euclidean,
                }
 
 my_neg_inf = float(-1.0e+300)
-#my_neg_inf = float('-Inf'))
 
 class SimpleCovariance1D(object):
     def __init__(self, eval_fun, **params):
@@ -114,6 +114,9 @@ class PRH(object):
                 elif covfunc == "pareto_exp":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             alpha=nu)
+                elif covfunc == "kepler_exp":
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
+                            tcut=nu)
                 elif covfunc == "drw":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             pow=1.0)

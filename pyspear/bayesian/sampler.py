@@ -1,4 +1,4 @@
-#Last-modified: 15 Dec 2011 01:58:20 PM
+#Last-modified: 09 Jan 2012 03:41:09 PM
 import numpy as np
 import pickle
 import os.path
@@ -125,7 +125,6 @@ def getValues(M):
 def varying_tau(output, zydata, tauarray, covfunc="pow_exp", fixednu=None, set_verbose=False):
     """ grid optimization along tau axis.
     """
-#    result = []
     f=open(output, "w")
     if fixednu is None:
         use_nuprior="Uniform"

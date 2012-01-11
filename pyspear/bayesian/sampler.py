@@ -1,4 +1,4 @@
-#Last-modified: 09 Jan 2012 03:41:09 PM
+#Last-modified: 10 Jan 2012 07:44:14 PM
 import numpy as np
 import pickle
 import os.path
@@ -138,7 +138,9 @@ def varying_tau(output, zydata, tauarray, covfunc="pow_exp", fixednu=None, set_v
                 use_sigprior="None", use_tauprior=tau, use_nuprior=use_nuprior)
         bestpar = list(runMAP(model, set_verbose=set_verbose))
         testout = list(getPlike(zydata, bestpar,  covfunc, set_verbose=set_verbose))
-        f.write(" ".join(format(r, "14.6f") for r in bestpar+testout)+"\n")
+        bparstr = " ".join(format(r, "14.6f") for r in bestpar)
+        logpstr = " ".join(format(r, "20.5g") for r in testout)
+        f.write(bparstr+logpstr+"\n")
     f.close()
 
 def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_verbose=False):
@@ -158,7 +160,36 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_ver
                     use_sigprior="None", use_tauprior=tau, use_nuprior=nu)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
-            f.write(" ".join(format(r, "14.6f") for r in bestpar+testout)+"\n")
+            bparstr = " ".join(format(r, "14.6f") for r in bestpar)
+            logpstr = " ".join(format(r, "20.5g") for r in testout)
+            f.write(bparstr+logpstr+"\n")
+            f.flush()
+    f.close()
+
+def varying_tau_nu_ke2(output, zydata, tauarray, nuarray, set_verbose=False):
+    """ grid optimization along both tau and nu axes for the kepler_exp
+    covariance function, where nu is set to be the t_cut, rather than t_cut/tau.
+    """
+    dim_tau = len(tauarray)
+    dim_nu  = len(nuarray)
+    f=open(output, "w")
+    # write dims into the header string
+    header = " ".join(["#", str(dim_tau), str(dim_nu), "\n"])
+    f.write(header)
+    for tau in tauarray:
+        print("tau: %10.5f"%tau)
+        for nu in nuarray:
+            print("_______________  nu: %10.5f"%nu)
+            nu_ratio = nu/tau
+            model   = make_model_cov3par(zydata, covfunc="kepler_exp", 
+                    use_sigprior="None", use_tauprior=tau, use_nuprior=nu_ratio)
+            bestpar = list(runMAP(model, set_verbose=set_verbose))
+            testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
+            # reset bestpar to the original t_cut
+            bestpar[2] = nu
+            bparstr = " ".join(format(r, "14.6f") for r in bestpar)
+            logpstr = " ".join(format(r, "20.5g") for r in testout)
+            f.write(bparstr+logpstr+"\n")
             f.flush()
     f.close()
 
@@ -170,7 +201,6 @@ def read_grid_tau_nu(input):
     dim_tau, dim_nu = [int(r) for r in f.readline().lstrip("#").split()]
     print("dim of tau: %d"%dim_tau)
     print("dim of  nu: %d"%dim_nu)
-#    0.0915     1.0000     0.0000   956.2928  -238.4517  1197.6332    -2.8886     0.0011
     sigma, tau, nu, loglike, chi2, complexity, drift, q = np.genfromtxt(f, unpack=True)
     f.close()
     retdict = {

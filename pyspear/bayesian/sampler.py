@@ -1,4 +1,4 @@
-#Last-modified: 10 Jan 2012 07:44:14 PM
+#Last-modified: 10 Jan 2012 08:08:52 PM
 import numpy as np
 import pickle
 import os.path
@@ -139,7 +139,7 @@ def varying_tau(output, zydata, tauarray, covfunc="pow_exp", fixednu=None, set_v
         bestpar = list(runMAP(model, set_verbose=set_verbose))
         testout = list(getPlike(zydata, bestpar,  covfunc, set_verbose=set_verbose))
         bparstr = " ".join(format(r, "14.6f") for r in bestpar)
-        logpstr = " ".join(format(r, "20.5g") for r in testout)
+        logpstr = " ".join(format(r, "20.15g") for r in testout)
         f.write(bparstr+logpstr+"\n")
     f.close()
 
@@ -161,7 +161,7 @@ def varying_tau_nu(output, zydata, tauarray, nuarray, covfunc="pow_exp", set_ver
             bestpar = list(runMAP(model, set_verbose=set_verbose))
             testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
             bparstr = " ".join(format(r, "14.6f") for r in bestpar)
-            logpstr = " ".join(format(r, "20.5g") for r in testout)
+            logpstr = " ".join(format(r, "20.15g") for r in testout)
             f.write(bparstr+logpstr+"\n")
             f.flush()
     f.close()
@@ -179,16 +179,17 @@ def varying_tau_nu_ke2(output, zydata, tauarray, nuarray, set_verbose=False):
     for tau in tauarray:
         print("tau: %10.5f"%tau)
         for nu in nuarray:
-            print("_______________  nu: %10.5f"%nu)
             nu_ratio = nu/tau
+            print("_______________  nu: %10.5f"%nu),
+            print("_______________  tcut/tau: %10.5f"%nu_ratio)
             model   = make_model_cov3par(zydata, covfunc="kepler_exp", 
                     use_sigprior="None", use_tauprior=tau, use_nuprior=nu_ratio)
             bestpar = list(runMAP(model, set_verbose=set_verbose))
-            testout = list(getPlike(zydata, bestpar, covfunc=covfunc, set_verbose=set_verbose))
+            testout = list(getPlike(zydata, bestpar, covfunc="kepler_exp", set_verbose=set_verbose))
             # reset bestpar to the original t_cut
             bestpar[2] = nu
             bparstr = " ".join(format(r, "14.6f") for r in bestpar)
-            logpstr = " ".join(format(r, "20.5g") for r in testout)
+            logpstr = " ".join(format(r, "20.15g") for r in testout)
             f.write(bparstr+logpstr+"\n")
             f.flush()
     f.close()

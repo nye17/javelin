@@ -31,7 +31,7 @@ class kepler(Function):
 #        _val = exp(-Abs(x)) + 2.0*exp(-(Abs(10.0*x))**2)
 #        _val = exp(-Abs(x))*H(Abs(x)-0.2)+exp(0.8)*exp(-(Abs(5.0*x))**2)*H(0.2-Abs(x))
 #        _val = exp(-Abs(x))*H(Abs(x)-0.2)+exp(-0.2)*H(0.2-Abs(x))
-        _val = exp(-Abs(x)) - 0.5*exp(-(Abs(20.0*x)**2))
+        _val = exp(-Abs(x)) - 0.5*exp(-(Abs(10.0*x))**2)
         return(_val)
 
 

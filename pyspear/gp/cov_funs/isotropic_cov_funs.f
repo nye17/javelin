@@ -910,7 +910,7 @@ cf2py threadsafe
       end if
 
 C     the variance if the DRW model were not cutoff at tcut.
-      vdrw = dexp(dabs(tcut))
+      vdrw = dexp(-dabs(tcut)**2.0+dabs(tcut))
 
       if(symm) then
           
@@ -922,7 +922,7 @@ C     the variance if the DRW model were not cutoff at tcut.
                 C(i,j) = vdrw*dexp(-dabs(t))
             else
 C     below the cutoff timescale
-                C(i,j) = 1.0D0
+                C(i,j) = dexp(-dabs(t)**2)
             endif
           enddo
         enddo
@@ -932,10 +932,10 @@ C     below the cutoff timescale
         do j=cmin+1,cmax
           do i=1,nx
             t = C(i,j)
-            if (t .GT. 1.0D0) then
+            if (t .GT. tcut) then
                 C(i,j) = vdrw*dexp(-dabs(t))
             else
-                C(i,j) = 1.0D0
+                C(i,j) = dexp(-dabs(t)**2)
             endif
           enddo
         enddo

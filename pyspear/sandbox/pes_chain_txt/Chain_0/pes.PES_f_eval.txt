@@ -1,4 +1,0 @@
-# Variable: pes.PES_f_eval
-# Sample shape: (754, 489)
-# Date: 2011-11-02 01:32:59.543426
-object multi-dimension, ignore

@@ -1,6 +1,7 @@
-#Last-modified: 09 Jan 2012 04:29:51 PM
+#Last-modified: 11 Jan 2012 07:50:48 PM
 
-from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp, kepler_exp
+from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere,\
+pareto_exp, kepler_exp, pow_tail
 from pyspear.zylc import zyLC
 from pyspear.cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 
@@ -16,6 +17,7 @@ covfunc_dict = {
                 "sphere"    :    sphere.euclidean,
                 "pareto_exp":pareto_exp.euclidean,
                 "kepler_exp":kepler_exp.euclidean,
+                "pow_tail"  :  pow_tail.euclidean,
                }
 
 my_neg_inf = float(-1.0e+300)
@@ -114,6 +116,9 @@ class PRH(object):
                 elif covfunc == "pareto_exp":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             alpha=nu)
+                elif covfunc == "pow_tail":
+                    self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
+                            beta=nu)
                 elif covfunc == "kepler_exp":
                     self.C  = SimpleCovariance1D(eval_fun = self.cf, amp=sigma, scale=tau, 
                             tcut=nu)

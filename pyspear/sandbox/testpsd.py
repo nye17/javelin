@@ -1,4 +1,4 @@
-#Last-modified: 11 Jan 2012 03:26:46 PM
+#Last-modified: 11 Jan 2012 04:16:03 PM
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -30,6 +30,7 @@ def show_dehnen(alpha=2, beta=3):
     plt.show()
 
 def mk_kepler(gamma, tcut, tau, sigma):
+    # tcut is not a ratio here
     def kepler(t):
         tau2 = tau
         sigma2drw = sigma**2*np.exp(-np.abs(tcut/tau2)**gamma+np.abs(tcut/tau))
@@ -62,5 +63,6 @@ def show_kepler(gamma = 2.0, tcut=0.2, tau=1.0, sigma=1.):
 
 if __name__ == "__main__":    
     gamma = 2.0; tcut=0.5; tau=1.0; sigma=1.
-    show_kepler(gamma, tcut, tau, sigma)
+#    show_kepler(gamma, tcut, tau, sigma)
+    f = mk_kepler(gamma, tcut, tau, sigma)
 

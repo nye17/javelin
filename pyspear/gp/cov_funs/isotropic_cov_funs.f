@@ -891,6 +891,58 @@ cf2py threadsafe
       return
       END
 
+      SUBROUTINE pow_tail(C,beta,nx,ny,cmin,cmax,symm)
+      
+cf2py intent(inplace) C
+cf2py intent(hide) nx,ny
+cf2py logical intent(in), optional:: symm=0
+cf2py integer intent(in), optional :: cmin=0
+cf2py integer intent(in), optional :: cmax=-1
+cf2py threadsafe
+
+      INTEGER nx,ny,i,j,cmin,cmax
+      DOUBLE PRECISION C(nx,ny), t
+      DOUBLE PRECISION beta
+      LOGICAL symm
+      
+      if (cmax.EQ.-1) then
+          cmax = ny
+      end if
+
+
+      if(symm) then
+          
+        do j=cmin+1,cmax
+          C(j,j)=1.0D0         
+          do i=1,j-1
+            t = C(i,j)
+            if (t .LT. 1.0D0) then
+                C(i,j) = dexp(-dabs(t))
+            else
+                C(i,j) = dexp(-dabs(t)**beta)
+            endif
+          enddo
+        enddo
+
+      else
+
+        do j=cmin+1,cmax
+          do i=1,nx
+            t = C(i,j)
+            if (t .LT. 1.0D0) then
+                C(i,j) = dexp(-dabs(t))
+            else
+                C(i,j) = dexp(-dabs(t)**beta)
+            endif
+          enddo
+        enddo
+
+      endif
+      
+
+      return
+      END
+
       SUBROUTINE kepler_exp(C,tcut,nx,ny,cmin,cmax,symm)
       
 cf2py intent(inplace) C
@@ -902,15 +954,15 @@ cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
-      DOUBLE PRECISION tcut, vdrw
+      DOUBLE PRECISION tcut, vcut, coef
       LOGICAL symm
+
+      vcut = dexp(-dabs(tcut))
+      coef = (1.0D0 - vcut)/sqrt(tcut)
       
       if (cmax.EQ.-1) then
           cmax = ny
       end if
-
-C     the variance if the DRW model were not cutoff at tcut.
-      vdrw = dexp(-dabs(tcut)**2.0+dabs(tcut))
 
       if(symm) then
           
@@ -919,10 +971,10 @@ C     the variance if the DRW model were not cutoff at tcut.
           do i=1,j-1
             t = C(i,j)
             if (t .GT. tcut) then
-                C(i,j) = vdrw*dexp(-dabs(t))
+                C(i,j) = dexp(-dabs(t))
             else
 C     below the cutoff timescale
-                C(i,j) = dexp(-dabs(t)**2)
+                C(i,j) = 1.0D0 - coef*sqrt(t)
             endif
           enddo
         enddo
@@ -933,9 +985,9 @@ C     below the cutoff timescale
           do i=1,nx
             t = C(i,j)
             if (t .GT. tcut) then
-                C(i,j) = vdrw*dexp(-dabs(t))
+                C(i,j) = dexp(-dabs(t))
             else
-                C(i,j) = dexp(-dabs(t)**2)
+                C(i,j) = 1.0D0 - coef*sqrt(t)
             endif
           enddo
         enddo

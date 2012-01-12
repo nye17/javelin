@@ -1,4 +1,4 @@
-#Last-modified: 16 Dec 2011 04:07:06 PM
+#Last-modified: 11 Jan 2012 07:51:58 PM
 
 
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ def plotcov(ax, covfunc="pow_exp", color="k", ls="-", lw=1,
     """ demo plot for various covariances
     with both dt/tau and sigma fixed to be one.
     """
-    x=np.arange(0.,5.,.01)
+    x=np.arange(0.,5.,.001)
     if covfunc in covfunc_dict:
         cf = covfunc_dict[covfunc]
         C = SimpleCovariance1D(eval_fun=cf, amp=1.0, scale=scale, **par3rd)
@@ -58,6 +58,22 @@ def plot_paretoexp(ax):
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
                 scale=1., ls="-", alpha=nu)
 
+def plot_powtail(ax):
+    covfunc = "pow_tail"
+    nuarr= np.arange(0, 2, 0.1)
+    for i, nu in enumerate(nuarr):
+        print("plot %s for beta %10.5f"%(covfunc, nu))
+        plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
+                scale=1., ls="-", beta=nu)
+
+def plot_keplerexp(ax):
+    covfunc = "kepler_exp"
+    nuarr= np.arange(0.0, 0.5, 0.05)
+    for i, nu in enumerate(nuarr):
+        print("plot %s for tcut %10.5f"%(covfunc, nu))
+        plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 
+                scale=1., ls="-", tcut=nu)
+
 def plot_drw(ax):
     covfunc = "pow_exp"
     print("plot %s "%"drw")
@@ -75,15 +91,19 @@ def main(set_log=False):
     plot_matern(ax2)
     plot_drw(ax2)
     ax2.text(0.9, 0.9,'matern',      ha='right', va='top', transform = ax2.transAxes)
-    plot_paretoexp(ax3)
+#    plot_paretoexp(ax3)
+#    plot_keplerexp(ax3)
+    plot_powtail(ax3)
     plot_drw(ax3)
-    ax3.text(0.9, 0.9,'pareto exp',  ha='right', va='top', transform = ax3.transAxes)
+#    ax3.text(0.9, 0.9,'pareto exp',  ha='right', va='top', transform = ax3.transAxes)
+#    ax3.text(0.9, 0.9,'kepler exp',  ha='right', va='top', transform = ax3.transAxes)
+    ax3.text(0.9, 0.9,'powered tail',  ha='right', va='top', transform = ax3.transAxes)
     axes = [ax1, ax2, ax3]
     for ax in axes:
         ax.set_xlabel("$\Delta t/\\tau_d$")
         ax.set_ylabel("$\\xi$")
         ax.set_xlim(0, 4.9)
-        ax.set_ylim(1e-3, 1)
+        ax.set_ylim(1e-3, 1.05)
         if set_log:
             ax.set_xscale("log")
             ax.set_yscale("log")
@@ -141,7 +161,6 @@ def single(set_log=False, prop={"pow_exp":   (1.0, 1.000, 1.0),
 
 
 if __name__ == "__main__":    
-#    main(set_log=True)
     main(set_log=False)
 #    single(set_log=False)
     prop={

@@ -1,5 +1,6 @@
 from pyspear.gp import Mean, Covariance, observe, Realization, GPutils
-from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere, pareto_exp, kepler_exp
+from pyspear.gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere,\
+pareto_exp, kepler_exp, pow_tail
 #from gp import Mean, Covariance, observe, Realization
 #from gp.cov_funs import matern, quadratic, gaussian, pow_exp, sphere
 import numpy as np
@@ -14,6 +15,7 @@ covfunc_dict = {
                 "sphere"    :    sphere.euclidean,
                 "pareto_exp":pareto_exp.euclidean,
                 "kepler_exp":kepler_exp.euclidean,
+                "pow_tail"  :  pow_tail.euclidean,
                }
 
 class Predict(object):
@@ -51,6 +53,12 @@ class Predict(object):
             elif covfunc == "pareto_exp":
                 self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau, 
                         alpha=nu)
+            elif covfunc == "pow_tail":
+                self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau, 
+                        beta=nu)
+            elif covfunc == "kepler_exp":
+                self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau, 
+                        tcut=nu)
             else:
                 self.C  = Covariance(eval_fun = cf, amp=sigma, scale=tau)
         else:
@@ -128,15 +136,18 @@ def test_Predict():
     show()
 
 def test_simlc():
-    j = np.arange(0., 100, 1.)
+    covfunc = "kepler_exp"
+    tau, sigma, nu = (10.0, 2.0, 0.1)
+    j = np.linspace(0., 200, 4096)
     lcmean = 10.0
-    emean  = lcmean*0.05
+#    emean  = lcmean*0.05
+    emean  = lcmean*0.00
     print("observed light curve mean mag is %10.3f"%lcmean)
     print("observed light curve mean err is %10.3f"%emean)
-    P = Predict(lcmean=lcmean, tau=10., sigma=2.0, nu=0.5)
+    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma, nu=nu)
     ewant = emean*np.ones_like(j)
     mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
-    np.savetxt("mock_l100c1_t10s2n0.5.dat", np.vstack((j, mwant, ewant)).T)
+    np.savetxt("mock2.dat", np.vstack((j, mwant, ewant)).T)
 
 if __name__ == "__main__":    
     test_simlc()

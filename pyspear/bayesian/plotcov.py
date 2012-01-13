@@ -1,4 +1,4 @@
-#Last-modified: 13 Jan 2012 12:11:54 AM
+#Last-modified: 13 Jan 2012 12:14:58 AM
 
 
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ def plotcov(ax, covfunc="pow_exp", color="k", ls="-", lw=1,
     if xrange is None :
         x=np.arange(0.,5.,.01)
     else :
-        x=np.arange(xtuple)
+        x=np.arange(xtuple[0], xtuple[1], xtuple[2])
     if covfunc in covfunc_dict:
         cf = covfunc_dict[covfunc]
         C = SimpleCovariance1D(eval_fun=cf, amp=1.0, scale=scale, **par3rd)

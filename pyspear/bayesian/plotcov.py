@@ -1,4 +1,4 @@
-#Last-modified: 11 Jan 2012 07:51:58 PM
+#Last-modified: 13 Jan 2012 12:11:54 AM
 
 
 import matplotlib.pyplot as plt
@@ -13,11 +13,14 @@ from prh import SimpleCovariance1D, covfunc_dict
 
 
 def plotcov(ax, covfunc="pow_exp", color="k", ls="-", lw=1,
-        scale=1.0, label=None, transparency=1.0, **par3rd):
+        scale=1.0, label=None, transparency=1.0, xtuple=None, **par3rd):
     """ demo plot for various covariances
     with both dt/tau and sigma fixed to be one.
     """
-    x=np.arange(0.,5.,.001)
+    if xrange is None :
+        x=np.arange(0.,5.,.01)
+    else :
+        x=np.arange(xtuple)
     if covfunc in covfunc_dict:
         cf = covfunc_dict[covfunc]
         C = SimpleCovariance1D(eval_fun=cf, amp=1.0, scale=scale, **par3rd)

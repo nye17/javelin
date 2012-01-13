@@ -1,4 +1,4 @@
-#Last-modified: 13 Jan 2012 12:14:58 AM
+#Last-modified: 13 Jan 2012 12:20:59 AM
 
 
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ def plotcov(ax, covfunc="pow_exp", color="k", ls="-", lw=1,
     """ demo plot for various covariances
     with both dt/tau and sigma fixed to be one.
     """
-    if xrange is None :
+    if xtuple is None :
         x=np.arange(0.,5.,.01)
     else :
         x=np.arange(xtuple[0], xtuple[1], xtuple[2])

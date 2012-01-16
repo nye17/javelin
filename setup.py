@@ -5,7 +5,7 @@ from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os, sys
 
-config = Configuration('pyspear',parent_package=None,top_path=None)
+config = Configuration('javelin',parent_package=None,top_path=None)
 dist = sys.argv[1]
 
 
@@ -26,12 +26,12 @@ lapack_info = get_info('lapack_opt',1)
 
 # Compile linear algebra utilities
 if lapack_info:
-    config.add_extension(name='gp.linalg_utils',sources=['pyspear/gp/linalg_utils.f','pyspear/blas_wrap.f'], extra_info=lapack_info)
-    config.add_extension(name='gp.incomplete_chol',sources=['pyspear/gp/incomplete_chol.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.linalg_utils',sources=['javelin/gp/linalg_utils.f','javelin/blas_wrap.f'], extra_info=lapack_info)
+    config.add_extension(name='gp.incomplete_chol',sources=['javelin/gp/incomplete_chol.f'], extra_info=lapack_info)
 
 if not lapack_info or dist in ['bdist', 'sdist']:
     print 'No optimized BLAS or Lapack libraries found, building from source. This may take a while...'
-    f_sources = ['pyspear/blas_wrap.f']
+    f_sources = ['javelin/blas_wrap.f']
     for fname in os.listdir('blas/BLAS'):
         if fname[-2:]=='.f':
             f_sources.append('blas/BLAS/'+fname)
@@ -39,16 +39,16 @@ if not lapack_info or dist in ['bdist', 'sdist']:
     for fname in ['dpotrs','dpotrf','dpotf2','ilaenv','dlamch','ilaver','ieeeck','iparmq']:
         f_sources.append('lapack/double/'+fname+'.f')
 
-    config.add_extension(name='gp.linalg_utils',sources=['pyspear/gp/linalg_utils.f'] + f_sources)
-    config.add_extension(name='gp.incomplete_chol',sources=['pyspear/gp/incomplete_chol.f'] + f_sources)
+    config.add_extension(name='gp.linalg_utils',sources=['javelin/gp/linalg_utils.f'] + f_sources)
+    config.add_extension(name='gp.incomplete_chol',sources=['javelin/gp/incomplete_chol.f'] + f_sources)
 
 
 # Compile covariance functions
 config.add_extension(name='gp.cov_funs.isotropic_cov_funs',\
-sources=['pyspear/gp/cov_funs/isotropic_cov_funs.f','blas/BLAS/dscal.f'],\
+sources=['javelin/gp/cov_funs/isotropic_cov_funs.f','blas/BLAS/dscal.f'],\
 extra_info=lapack_info)
 
-config.add_extension(name='gp.cov_funs.distances',sources=['pyspear/gp/cov_funs/distances.f'], extra_info=lapack_info)
+config.add_extension(name='gp.cov_funs.distances',sources=['javelin/gp/cov_funs/distances.f'], extra_info=lapack_info)
 
 
 config_dict = config.todict()
@@ -62,10 +62,10 @@ except:
 if __name__ == '__main__':
     from numpy.distutils.core import setup
     setup(  version="0.1alpha",
-            description="Python Version of SPEAR",
+            description="JAVELIN: Python Version of SPEAR",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
-            url="https://bitbucket.org/nye17/pyspear",
+            url="https://bitbucket.org/nye17/javelin",
             license="Academic Free License",
             classifiers=[
                 'Development Status :: 5 - Production/Stable',
@@ -81,11 +81,9 @@ if __name__ == '__main__':
             long_description="""
             Ongoing effort to combine an integral GP module to the AGN variablility study.
             """,
-            packages=["pyspear", 
-                      "pyspear/bayesian", 
-                      "pyspear/examples/gp", 
-                      "pyspear/gp", 
-                      "pyspear/gp/cov_funs" ],
+            packages=["javelin", 
+                      "javelin/gp", 
+                      "javelin/gp/cov_funs" ],
             **(config_dict)
             )
 

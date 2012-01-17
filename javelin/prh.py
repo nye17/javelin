@@ -1,11 +1,11 @@
-#Last-modified: 16 Jan 2012 05:39:41 PM
+#Last-modified: 16 Jan 2012 11:58:11 PM
 
 from zylc import zyLC
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
-from gp import Covariance
+from gp import FullRankCovariance
 
 """ PRH likelihood calculation.
 """
@@ -33,34 +33,44 @@ class PRH(object):
             lcid = self.iarr[i] - 1
             self.larr[i, lcid] = 1.0
         self.larrTr = self.larr.T
-
+        # decide dimension of the problem
         if (self.nlc == 1):
             self.set_single = True
         else:
             self.set_single = False
-
+        # set up covariance function
         if self.set_single:
             covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-            self.C = Covariance(covfunc_dict)
+            # using full-rank
+            self.C = FullRankCovariance(**covfunc_dict)
         else:
             pass
             raise RuntimeError("Sorry, RM part not implemented yet")
 
 
-    def loglike_prh(self, U=None, retq=True):
+
+    def loglike_prh(self, retq=True):
         # cholesky decompose S+N so that U^T U = S+N = C
-        if self.set_single:
-            cmatrix = self.C(self.jarr, self.jarr)
-            U, info = cholesky(cmatrix, nugget=self.varr, inplace=True, raiseinfo=False)
-            if info > 0:
-                print("warning: cmatrix non positive-definite")
-                if retq:
-                    return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
-                else:
-                    return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
-        elif U is None:
-            pass
+        if self.set_single :
+            # using intrinsic method of C without explicitly writing out cmatrix
+            try :
+                U = self.C.cholesky(self.jarr, observed=False, nugget=self.varr)
+                info = 0
+            except :
+                info = 1
+            #cmatrix = self.C(self.jarr, self.jarr)
+            #U, info = cholesky(cmatrix, nugget=self.varr, 
+            #        inplace=True, raiseinfo=False)
+        else :
             raise RuntimeError("require U of cpnmatrix for more RM purposes")
+
+        if info > 0 :
+            print("warning: cmatrix non positive-definite")
+            if retq:
+                return(my_neg_inf, my_neg_inf, my_neg_inf, 
+                        my_neg_inf, my_neg_inf)
+            else:
+                return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
 
         detC_log = chodet_from_tri(U, retlog=True)
         # solve for C a = y so that a = C^-1 y 
@@ -116,7 +126,7 @@ if __name__ == "__main__":
     lclist = IO.readlc_3c(lcfile)
 
     zylc = zyLC(zylclist=lclist)
-    prh = PRH(zylc, tau=200.0, sigma=0.05, nu=0.5)
+    prh = PRH(zylc, covfunc="pow_exp", tau=200.0, sigma=0.05, nu=0.5)
     print(prh.loglike_prh())
     
 

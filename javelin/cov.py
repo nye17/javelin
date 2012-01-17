@@ -1,4 +1,4 @@
-#Last-modified: 16 Jan 2012 06:18:57 PM
+#Last-modified: 16 Jan 2012 08:25:04 PM
 
 all = ['get_covfunc_dict', 'covname_dict']
 
@@ -23,18 +23,18 @@ def get_covfunc_dict(covfunc, **covparams):
     """
     _cov_dict = {}
     _cov_dict['eval_fun'] = covname_dict[covfunc]
-    _cov_dict['amp']      = sigma
-    _cov_dict['scale']    = tau
+    _cov_dict['amp']      = covparams['sigma']
+    _cov_dict['scale']    = covparams['tau']
     if   covfunc is "drw" :
         _cov_dict['pow']         = 1.0
     elif covfunc is "matern" :
-        _cov_dict['diff_degree'] = nu
+        _cov_dict['diff_degree'] = covparams['nu']
     elif covfunc is "pow_exp" : 
-        _cov_dict['pow']         = nu
+        _cov_dict['pow']         = covparams['nu']
     elif covfunc is "pareto_exp" : 
-        _cov_dict['alpha']       = nu
+        _cov_dict['alpha']       = covparams['nu']
     elif covfunc is "kepler_exp" : 
-        _cov_dict['tcut']        = nu
+        _cov_dict['tcut']        = covparams['nu']
     else :
         print("covfuncs currently implemented:")
         print(" ".join(covfunc_dict.keys))

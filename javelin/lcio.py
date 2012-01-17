@@ -1,12 +1,12 @@
-# Last-modified: 16 Jan 2012 03:53:29 PM
+# Last-modified: 16 Jan 2012 08:41:33 PM
 
 """ 
 Functions related to the processing of quasar light curves. Numpy is not used
 here so that it could be called by basic python outside of JAVELIN.
-
 """
+
 __all__ = ['combinelc', 'readlc', 'readlc_3c', 'writelc', 'plotlc',
-'plotlc_single', 'jdrangelc', 'jdmedlc', 'file_len']
+           'plotlc_single', 'jdrangelc', 'jdmedlc', 'file_len']
 
 
 try:

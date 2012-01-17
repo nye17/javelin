@@ -1,4 +1,5 @@
-from gp import Mean, FullRankCovariance, observe, Realization, GPutils
+from gp import Mean, Covariance, observe, Realization, GPutils
+from gp import NearlyFullRankCovariance, FullRankCovariance
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
@@ -29,7 +30,8 @@ class Predict(object):
                 raise RuntimeError("lcmean is neither a Mean obj or a const")
         
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-        self.C  = FullRankCovariance(**covfunc_dict)
+#        self.C  = FullRankCovariance(**covfunc_dict)
+        self.C  = NearlyFullRankCovariance(**covfunc_dict)
 
         if ((jdata is not None) and (mdata is not None) and (edata is not None)):
             print("Constrained Realization...")

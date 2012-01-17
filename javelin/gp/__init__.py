@@ -12,10 +12,8 @@ __modules__ = [ 'GPutils',
                 'NearlyFullRankCovariance',
                 'Realization',
                 'cov_funs',
-                'gp_submodel',
-                'step_methods']
+              ]
 
-__optmodules__ = ['gpplots']
 
 from GPutils import *
 from Mean import *
@@ -25,13 +23,6 @@ from FullRankCovariance import *
 from NearlyFullRankCovariance import *
 from Realization import *
 from cov_funs import *
-from gp_submodel import *
-from step_methods import *
-
-try:
-    import gpplots
-except ImportError:
-    pass
 
 try:
     import SparseCovariance

@@ -1,7 +1,7 @@
-from gp import Mean, Covariance, observe, Realization, GPutils
+from gp import Mean, FullRankCovariance, observe, Realization, GPutils
 import numpy as np
 from numpy.random import normal, multivariate_normal
-from covariance import get_covfunc_dict
+from cov import get_covfunc_dict
 
 
 """ Generate random realizations based on the covariance function.
@@ -29,7 +29,7 @@ class Predict(object):
                 raise RuntimeError("lcmean is neither a Mean obj or a const")
         
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-        self.C  = Covariance(covfunc_dict)
+        self.C  = FullRankCovariance(**covfunc_dict)
 
         if ((jdata is not None) and (mdata is not None) and (edata is not None)):
             print("Constrained Realization...")
@@ -55,8 +55,8 @@ class Predict(object):
         else:
             raise RuntimeError("ewant should be either a const or array with same shape as jwant")
 
-        ediag = np.diag(ewant*ewant)
-        temp1 = np.repeat(ewant, nwant).reshape(nwant,nwant)
+        ediag = np.diag(e*e)
+        temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
         temp2 = (temp1*temp1.T - ediag)*errcov
         ecovmat = ediag + temp2
 
@@ -88,7 +88,8 @@ def test_Predict():
     mdata = np.array([0.7, 0.1, 0.4])
     edata = np.array([0.07, 0.02, 0.05])
     j = np.arange(0, 200, 1)
-    P = Predict(jdata=jdata, mdata=mdata, edata=edata, nu=1.0)
+    P = Predict(jdata=jdata, mdata=mdata, edata=edata, covfunc="pow_exp",
+            tau=10.0, sigma=0.2, nu=1.0)
     mve, var = P.mve_var(j)
     sig = np.sqrt(var)
     x=np.concatenate((j, j[::-1]))
@@ -102,17 +103,17 @@ def test_Predict():
 
 def test_simlc():
     covfunc = "kepler_exp"
-    tau, sigma, nu = (10.0, 2.0, 0.1)
-    j = np.linspace(0., 200, 4096)
+    tau, sigma, nu = (10.0, 2.0, 0.2)
+    j = np.linspace(0., 200, 256)
     lcmean = 10.0
-#    emean  = lcmean*0.05
-    emean  = lcmean*0.00
+    emean  = lcmean*0.05
     print("observed light curve mean mag is %10.3f"%lcmean)
     print("observed light curve mean err is %10.3f"%emean)
     P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma, nu=nu)
     ewant = emean*np.ones_like(j)
     mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
-    np.savetxt("mock2.dat", np.vstack((j, mwant, ewant)).T)
+    np.savetxt("mock.dat", np.vstack((j, mwant, ewant)).T)
 
 if __name__ == "__main__":    
-    test_simlc()
+#    test_simlc()
+    test_Predict()

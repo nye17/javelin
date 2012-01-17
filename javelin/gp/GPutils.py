@@ -13,15 +13,11 @@ from numpy.linalg.linalg import LinAlgError
 from javelin.gp.linalg_utils import *
 from threading import Thread, Lock
 import sys
-from pymc import thread_partition_array, map_noreturn
+from javelin.threadpool import thread_partition_array, map_noreturn
 from javelin.gp import chunksize
-import pymc
 
-try:
-    from PyMC2 import ZeroProbability
-except ImportError:
-    class ZeroProbability(ValueError):
-        pass
+class ZeroProbability(ValueError):
+    pass
 
 half_log_2pi = .5 * log(2. * pi)
 
@@ -337,6 +333,7 @@ def point_predict(f, x, size=1, nugget=None):
 
 
 def point_eval(M, C, x):
+    from BasisCovariance import BasisCovariance
     """
     Evaluates M(x) and C(x).
     
@@ -352,7 +349,7 @@ def point_eval(M, C, x):
     M_out = empty(x_.shape[0])
     V_out = empty(x_.shape[0])
     
-    if isinstance(C, pymc.gp.BasisCovariance):
+    if isinstance(C, BasisCovariance):
         y_size = len(C.basis)
     elif C.obs_mesh is not None:
         y_size = C.obs_mesh.shape[0]

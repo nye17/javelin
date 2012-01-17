@@ -1,4 +1,4 @@
-#Last-modified: 17 Jan 2012 05:16:22 PM
+#Last-modified: 17 Jan 2012 05:33:23 PM
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -130,10 +130,13 @@ def varying_tau_nu_ke2(output, zydata, tauarray, nuarray, rank="NearlyFull", set
             nu_ratio = nu/tau
             print("_______________  nu: %10.5f"%nu),
             print("_______________  tcut/tau: %10.5f"%nu_ratio)
+            print("model setup")
             model   = make_model_cov3par(zydata, covfunc="kepler_exp",
                     rank=rank, use_sigprior="None", use_tauprior=tau, 
                     use_nuprior=nu_ratio)
+            print("run MAP")
             bestpar = list(runMAP(model, set_verbose=set_verbose))
+            print("get likelihood")
             testout = list(getPlike(zydata, bestpar, covfunc="kepler_exp",
                 rank=rank, set_verbose=set_verbose))
             # reset bestpar to the original t_cut

@@ -1,11 +1,11 @@
-#Last-modified: 16 Jan 2012 11:58:11 PM
+#Last-modified: 17 Jan 2012 05:13:12 PM
 
 from zylc import zyLC
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
-from gp import FullRankCovariance
+from gp import FullRankCovariance, NearlyFullRankCovariance
 
 """ PRH likelihood calculation.
 """
@@ -16,7 +16,7 @@ my_neg_inf = float(-1.0e+300)
 class PRH(object):
     """
     """
-    def __init__(self, zylc, covfunc, **covparams):
+    def __init__(self, zylc, covfunc, rank="Full", **covparams):
         if not isinstance(zylc, zyLC):
             raise RuntimeError("zylc has to be a zyLC object")
         # initialize zylc
@@ -41,8 +41,12 @@ class PRH(object):
         # set up covariance function
         if self.set_single:
             covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-            # using full-rank
-            self.C = FullRankCovariance(**covfunc_dict)
+            if rank is "Full" :
+                # using full-rank
+                self.C = FullRankCovariance(**covfunc_dict)
+            elif rank is "NearlyFull" :
+                # using nearly full-rank
+                self.C = NearlyFullRankCovariance(**covfunc_dict)
         else:
             pass
             raise RuntimeError("Sorry, RM part not implemented yet")
@@ -122,7 +126,7 @@ class PRH(object):
 if __name__ == "__main__":    
     import lcio as IO
 
-    lcfile = "mock.dat"
+    lcfile = "mock_realistic.dat"
     lclist = IO.readlc_3c(lcfile)
 
     zylc = zyLC(zylclist=lclist)

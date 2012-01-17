@@ -1,22 +1,3 @@
-#!/usr/bin/env python
-#------------------------------------------------------------------------------
-# Filename: psd.py
-#  Purpose: Various Routines Related to Spectral Estimation
-#   Author: Tobias Megies
-#    Email: tobias.megies@geophysik.uni-muenchen.de
-#
-# Copyright (C) 2011 Tobias Megies
-#------------------------------------------------------------------------------
-"""
-Various Routines Related to Spectral Estimation
-
-:copyright:
-    The ObsPy Development Team (devs@obspy.org)
-:license:
-    GNU Lesser General Public License, Version 3
-    (http://www.gnu.org/copyleft/lesser.html)
-"""
-
 from __future__ import with_statement
 import os
 import warnings

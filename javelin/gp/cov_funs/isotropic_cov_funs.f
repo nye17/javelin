@@ -954,11 +954,13 @@ cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
-      DOUBLE PRECISION tcut, vcut, coef
+      DOUBLE PRECISION tcut, vcut, coef, pow
       LOGICAL symm
 
+      pow = 1.5D0
+
       vcut = dexp(-dabs(tcut))
-      coef = (1.0D0 - vcut)/sqrt(tcut)
+      coef = (1.0D0 - vcut)/tcut**pow
       
       if (cmax.EQ.-1) then
           cmax = ny
@@ -974,7 +976,7 @@ cf2py threadsafe
                 C(i,j) = dexp(-dabs(t))
             else
 C     below the cutoff timescale
-                C(i,j) = 1.0D0 - coef*sqrt(t)
+                C(i,j) = 1.0D0 - coef*t**pow
             endif
           enddo
         enddo
@@ -987,7 +989,7 @@ C     below the cutoff timescale
             if (t .GT. tcut) then
                 C(i,j) = dexp(-dabs(t))
             else
-                C(i,j) = 1.0D0 - coef*sqrt(t)
+                C(i,j) = 1.0D0 - coef*t**pow
             endif
           enddo
         enddo

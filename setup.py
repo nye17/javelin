@@ -82,6 +82,7 @@ if __name__ == '__main__':
             Ongoing effort to combine an integral GP module to the AGN variablility study.
             """,
             packages=["javelin", 
+                      "javelin/bayesian/", 
                       "javelin/gp", 
                       "javelin/gp/cov_funs" ],
             **(config_dict)

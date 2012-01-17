@@ -18,7 +18,7 @@ class Predict(object):
     both mean and covariance, and observed data points.
     """
     def __init__(self, lcmean=0.0, jdata=None, mdata=None, edata=None,
-            covfunc="pow_exp", **covparams):
+            covfunc="pow_exp", rank="Full", **covparams):
         try :
             const = float(lcmean)
             meanfunc = lambda x: const*(x*0.0+1.0)
@@ -30,8 +30,10 @@ class Predict(object):
                 raise RuntimeError("lcmean is neither a Mean obj or a const")
         
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-#        self.C  = FullRankCovariance(**covfunc_dict)
-        self.C  = NearlyFullRankCovariance(**covfunc_dict)
+        if rank is "Full" :
+            self.C  = FullRankCovariance(**covfunc_dict)
+        elif rank is "NearlyFull" :
+            self.C  = NearlyFullRankCovariance(**covfunc_dict)
 
         if ((jdata is not None) and (mdata is not None) and (edata is not None)):
             print("Constrained Realization...")

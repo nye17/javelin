@@ -1,4 +1,4 @@
-#Last-modified: 17 Jan 2012 05:13:12 PM
+#Last-modified: 18 Jan 2012 01:50:24 AM
 
 from zylc import zyLC
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -16,7 +16,7 @@ my_neg_inf = float(-1.0e+300)
 class PRH(object):
     """
     """
-    def __init__(self, zylc, covfunc, rank="Full", **covparams):
+    def __init__(self, zylc):
         if not isinstance(zylc, zyLC):
             raise RuntimeError("zylc has to be a zyLC object")
         # initialize zylc
@@ -38,6 +38,8 @@ class PRH(object):
             self.set_single = True
         else:
             self.set_single = False
+
+    def loglike_prh(self, covfunc, rank="Full", retq=True, **covparams):
         # set up covariance function
         if self.set_single:
             covfunc_dict = get_covfunc_dict(covfunc, **covparams)
@@ -50,10 +52,6 @@ class PRH(object):
         else:
             pass
             raise RuntimeError("Sorry, RM part not implemented yet")
-
-
-
-    def loglike_prh(self, retq=True):
         # cholesky decompose S+N so that U^T U = S+N = C
         if self.set_single :
             # using intrinsic method of C without explicitly writing out cmatrix
@@ -74,7 +72,7 @@ class PRH(object):
                 return(my_neg_inf, my_neg_inf, my_neg_inf, 
                         my_neg_inf, my_neg_inf)
             else:
-                return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
+                return(my_neg_inf)
 
         detC_log = chodet_from_tri(U, retlog=True)
         # solve for C a = y so that a = C^-1 y 
@@ -118,19 +116,24 @@ class PRH(object):
             # q[0] to take the scalar value from the 0-d array
             return(_log_like, _chi2, _compl_pen, _wmean_pen, q[0])
         else:
-            return(_log_like, _chi2, _compl_pen, _wmean_pen)
+            return(_log_like)
+
+    def logp(self, covfunc, rank="Full", tauprior=None, sigprior=None, **covparams):
+        #FIXME
+        if tauprior is None :
+            _logp_tau = 0.0
+        else :
+            pass
 
 
 
 
 if __name__ == "__main__":    
     import lcio as IO
-
-    lcfile = "mock_realistic.dat"
+    lcfile = "dat/mock_realistic.dat"
     lclist = IO.readlc_3c(lcfile)
-
     zylc = zyLC(zylclist=lclist)
-    prh = PRH(zylc, covfunc="pow_exp", tau=200.0, sigma=0.05, nu=0.5)
-    print(prh.loglike_prh())
+    prh = PRH(zylc)
+    print(prh.loglike_prh(covfunc="pow_exp", tau=200.0, sigma=0.05, nu=0.5))
     
 

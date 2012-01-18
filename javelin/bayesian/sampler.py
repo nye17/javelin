@@ -1,4 +1,4 @@
-#Last-modified: 17 Jan 2012 11:46:08 PM
+#Last-modified: 18 Jan 2012 01:37:19 AM
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -19,8 +19,9 @@ def getPlike(zydata, par, covfunc, rank="Full", set_verbose=False):
         print("**************************************")
         print("Input  sigma, tau, nu")
         print(pretty_array(par))
-    prh = PRH(zydata, covfunc=covfunc, rank=rank, sigma=par[0], tau=par[1], nu=par[2])
-    out = prh.loglike_prh()
+    prh = PRH(zydata)
+    out = prh.loglike_prh(covfunc=covfunc, rank=rank, sigma=par[0], tau=par[1],
+            nu=par[2], retq=True)
     if set_verbose:
         print("--------------------------------------")
         print("Output logL, -chi2/2, complexity, drift, [q]")
@@ -207,7 +208,7 @@ def show_loglike_map(x, y, z, ax, cax=None,
 def pretty_array(x):
     """ Return a string from list or array for nice print format.
     """
-    return('[%s]' % ', '.join('%.2f' % x_i for x_i in x))
+    return('[%s]' % ', '.join('%14.6f' % x_i for x_i in x))
 
 def is_number(s):
     """ Check if s is a number or not.
@@ -217,125 +218,3 @@ def is_number(s):
         return(True)
     except ValueError:
         return(False)
-
-def ogle_example_1():
-    """ Use mock light curves from OGLE as an example of 1-D grid optimization, everything
-    is in data/OGLE_example directory.
-    """
-    tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
-    truetau  = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
-    truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
-
-    for ttau in truetau:
-        for tnu in truenu:
-            lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
-            print("reading %s"%lcfile)
-            zydata  = get_data(lcfile)
-            record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_hires.dat"
-            print("writing %s"%record)
-            varying_tau(record, zydata, tauarray)
-    print("done!")
-
-def ogle_example_2():
-    """ another OGLE example, testing 2D grid optimization using 'varying_tau_nu'.
-    """
-    tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
-    print(tauarray)
-    nuarray  = np.arange(0.0, 2.0, 0.2)
-    print(nuarray)
-    ttau = 200.0
-    tnu = 1.4
-    lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
-    print("reading %s"%lcfile)
-    zydata  = get_data(lcfile)
-    record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
-    print("writing %s"%record)
-    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pow_exp", set_verbose=False)
-    print("done!")
-
-def ogle_example_3():
-    """ yet another example, testing 2D grid visualization and peak finding.
-    """
-    ttau = 200.0
-    tnu = 1.4
-    record   = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
-    griddict = read_grid_tau_nu(record)
-    print(griddict.keys())
-    fig = plt.figure(figsize=(6, 10))
-    ax1  = fig.add_axes([0.2, 0.1, 0.55, 0.25])
-    cax1 = fig.add_axes([0.75, 0.1, 0.02, 0.25])
-    ax2  = fig.add_axes([0.2, 0.4, 0.55, 0.25])
-    cax2 = fig.add_axes([0.75, 0.4, 0.02, 0.25])
-    ax3  = fig.add_axes([0.2, 0.7, 0.55, 0.25])
-    cax3 = fig.add_axes([0.75, 0.7, 0.02, 0.25])
-    p1 = griddict['loglike']
-    p2 = griddict['chi2']
-    p3 = griddict['complexity']
-    detected_peaks1 = peakdet2d(p1)
-    peakpos1 = np.where(detected_peaks1)
-    detected_peaks2 = peakdet2d(p2)
-    peakpos2 = np.where(detected_peaks2)
-    detected_peaks3 = peakdet2d(p3)
-    peakpos3 = np.where(detected_peaks3)
-    show_loglike_map(griddict['nu'], np.log10(griddict['tau']), p1, ax1, cax=cax1, 
-                     set_contour=True, clevels=None,
-                     vmin=-10, vmax=0, 
-                     xlabel="$\\nu$", ylabel="$\log\\tau$", zlabel="$\ln \mathcal{L}$",
-                     set_normalize=True, peakpos=peakpos1, cmap='jet')
-    show_loglike_map(griddict['nu'], np.log10(griddict['tau']), p2, ax2, cax=cax2, 
-                     set_contour=True, clevels=None,
-                     vmin=-10, vmax=0, 
-                     xlabel="$\\nu$", ylabel="$\log\\tau$", zlabel="$\chi^2/2$",
-                     set_normalize=True, peakpos=peakpos2, cmap='jet')
-    show_loglike_map(griddict['nu'], np.log10(griddict['tau']), p3, ax3, cax=cax3, 
-                     set_contour=True, clevels=None,
-                     vmin=-10, vmax=0, 
-                     xlabel="$\\nu$", ylabel="$\log\\tau$", zlabel="$\mathrm{complexity}$",
-                     set_normalize=True, peakpos=peakpos3, cmap='jet')
-    plt.show()
-
-def ogle_example_4():
-    """ another OGLE example, testing 1d grid optimization using 'varying_tau' but with nu fixed.
-    """
-    tauarray = np.power(10.0, np.arange(0, 4.2, 0.1))
-    truetau  = np.array([80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0])
-    truenu   = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8])
-    fixednu = 1.0
-    ttau = 200.0
-    tnu = 1.4
-    for ttau in truetau:
-        for tnu in truenu:
-            lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
-            print("reading %s"%lcfile)
-            zydata  = get_data(lcfile)
-            record = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".testtau_DRW.dat"
-            print("writing %s"%record)
-            varying_tau(record, zydata, tauarray, fixednu=fixednu, set_verbose=False)
-    print("done!")
-
-
-def ogle_example_5():
-    """ testing 2D grid optimization using 'varying_tau_nu' with matern and pareto_exp.
-    """
-#    tauarray = np.power(10.0, np.arange(0,  4.2, 0.1))
-#    nuarray  = np.power(10.0, np.arange(-1, 0.4, 0.1))
-    tauarray = [10000,]
-#    nuarray  = np.power(10.0, np.linspace(-1, 0.4, 2))
-    nuarray  = [2.,]
-    ttau = 200.0
-    tnu = 1.4
-    lcfile = "dat/OGLE_example/pow_exp_T"+str(ttau)+"_N"+str(tnu)+".dat"
-    print("reading %s"%lcfile)
-    zydata  = get_data(lcfile)
-    record = "dat/OGLE_example/matern_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
-#    record = "dat/OGLE_example/pow_pareto_T"+str(ttau)+"_N"+str(tnu)+".test2dgrid.dat"
-    print("writing %s"%record)
-    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="matern", set_verbose=True)
-#    varying_tau_nu(record, zydata, tauarray, nuarray, covfunc="pareto_exp", set_verbose=True)
-
-if __name__ == "__main__":    
-    ogle_example_5()
-
-
-
-

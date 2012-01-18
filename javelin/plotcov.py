@@ -1,4 +1,4 @@
-#Last-modified: 17 Jan 2012 04:18:35 PM
+#Last-modified: 18 Jan 2012 01:10:35 AM
 
 
 import matplotlib.pyplot as plt
@@ -57,7 +57,7 @@ def plot_powtail(ax):
 
 def plot_keplerexp(ax):
     covfunc = "kepler_exp"
-    nuarr= np.arange(0.0, 0.5, 0.05)
+    nuarr= np.arange(0.0, 0.9, 0.05)
     for i, nu in enumerate(nuarr):
         print("plot %s for tcut %10.5f"%(covfunc, nu))
         plotcov(ax, covfunc=covfunc, color=cm.jet(1.*i/len(nuarr)), 

@@ -1,8 +1,8 @@
-#Last-modified: 16 Jan 2012 08:25:04 PM
+#Last-modified: 18 Jan 2012 01:29:39 PM
 
 all = ['get_covfunc_dict', 'covname_dict']
 
-from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp
+from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail
 
 """
 Wrapping the all the covariance functions together.
@@ -14,6 +14,7 @@ covname_dict = {
                 "drw"       :   pow_exp.euclidean,
                 "pareto_exp":pareto_exp.euclidean,
                 "kepler_exp":kepler_exp.euclidean,
+                "pow_tail"  :  pow_tail.euclidean,
                }
 
 
@@ -35,6 +36,8 @@ def get_covfunc_dict(covfunc, **covparams):
         _cov_dict['alpha']       = covparams['nu']
     elif covfunc is "kepler_exp" : 
         _cov_dict['tcut']        = covparams['nu']
+    elif covfunc is "pow_tail" : 
+        _cov_dict['beta']        = covparams['nu']
     else :
         print("covfuncs currently implemented:")
         print(" ".join(covfunc_dict.keys))

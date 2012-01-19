@@ -902,8 +902,11 @@ cf2py threadsafe
 
       INTEGER nx,ny,i,j,cmin,cmax
       DOUBLE PRECISION C(nx,ny), t
-      DOUBLE PRECISION beta
+      DOUBLE PRECISION beta, pivot, coef
       LOGICAL symm
+
+      pivot = 2.0D0
+      coef = dexp(dabs(pivot)**beta-dabs(pivot))
       
       if (cmax.EQ.-1) then
           cmax = ny
@@ -916,10 +919,10 @@ cf2py threadsafe
           C(j,j)=1.0D0         
           do i=1,j-1
             t = C(i,j)
-            if (t .LT. 1.0D0) then
+            if (t .LT. pivot) then
                 C(i,j) = dexp(-dabs(t))
             else
-                C(i,j) = dexp(-dabs(t)**beta)
+                C(i,j) = coef*dexp(-dabs(t)**beta)
             endif
           enddo
         enddo
@@ -929,10 +932,10 @@ cf2py threadsafe
         do j=cmin+1,cmax
           do i=1,nx
             t = C(i,j)
-            if (t .LT. 1.0D0) then
+            if (t .LT. pivot) then
                 C(i,j) = dexp(-dabs(t))
             else
-                C(i,j) = dexp(-dabs(t)**beta)
+                C(i,j) = coef*dexp(-dabs(t)**beta)
             endif
           enddo
         enddo

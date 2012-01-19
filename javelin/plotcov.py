@@ -1,4 +1,4 @@
-#Last-modified: 18 Jan 2012 01:10:35 AM
+#Last-modified: 18 Jan 2012 09:36:09 PM
 
 
 import matplotlib.pyplot as plt
@@ -81,10 +81,12 @@ def main(set_log=False):
     plot_drw(ax2)
     ax2.text(0.9, 0.9,'matern',      ha='right', va='top', transform = ax2.transAxes)
 #    plot_paretoexp(ax3)
-    plot_keplerexp(ax3)
+#    plot_keplerexp(ax3)
+    plot_powtail(ax3)
     plot_drw(ax3)
 #    ax3.text(0.9, 0.9,'pareto exp',  ha='right', va='top', transform = ax3.transAxes)
-    ax3.text(0.9, 0.9,'kepler exp',  ha='right', va='top', transform = ax3.transAxes)
+#    ax3.text(0.9, 0.9,'kepler exp',  ha='right', va='top', transform = ax3.transAxes)
+    ax3.text(0.9, 0.9,'pow tail',  ha='right', va='top', transform = ax3.transAxes)
     axes = [ax1, ax2, ax3]
     for ax in axes:
         ax.set_xlabel("$\Delta t/\\tau_d$")

@@ -1,9 +1,8 @@
-#Last-modified: 18 Jan 2012 01:18:50 AM
+#Last-modified: 26 Jan 2012 06:23:30 PM
 import numpy as np
 from predict import Predict
 from psd import psd
 import matplotlib.pyplot as plt
-
 
 """
 Test from scratch.

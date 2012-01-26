@@ -11,6 +11,8 @@ JAVELIN stands (reluctantly) as Just Another Version of Estimating LIne
 reverberatioN. As a lighter version of SPEAR, it is also completely re-written
 in Python, providing much more flexibility in extension and visualization.
 
+JAVELIN is still an ongoing project that has not reached a full release version yet.
+
 
 Install JAVELIN
 ===============

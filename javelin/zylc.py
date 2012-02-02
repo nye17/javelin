@@ -25,7 +25,10 @@ class zyLC(object):
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
         self.cont_std      = np.std(self.mlist[0])
-        self.cont_SN       = self.cont_std/self.cont_mean_err
+        if self.cont_mean_err != 0.0 :
+            self.cont_SN       = self.cont_std/self.cont_mean_err
+        else :
+            print("Warning: zero mean error in the continuum?")
         self.cont_cad      = jdmedlc(list(self.jlist[0]))
 
         if set_subtractmean:

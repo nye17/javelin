@@ -1,4 +1,4 @@
-# Last-modified: 16 Jan 2012 08:41:33 PM
+# Last-modified: 03 Feb 2012 12:45:58 AM
 
 """ 
 Functions related to the processing of quasar light curves. Numpy is not used
@@ -16,7 +16,7 @@ except ImportError:
     print "graphic modules will not work." 
 
 
-def combinelc(lctxt,lcdata):
+def combinelc(lctxt, lcdata):
     """ Write a list of 3-column based light curve files into the ZY light curve data file.
 
     Parameters

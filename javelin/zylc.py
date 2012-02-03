@@ -3,6 +3,8 @@ import numpy as np
 __all__ = ['zyLC', 'get_data']
 
 from lcio import jdrangelc, jdmedlc, readlc, readlc_3c
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 """ load light curve files into a zyLC object.
 """
@@ -10,10 +12,19 @@ from lcio import jdrangelc, jdmedlc, readlc, readlc_3c
 class zyLC(object):
     """ zyLC object.
     """
-    def __init__(self, zylclist, set_subtractmean=True):
+    def __init__(self, zylclist, names=None, set_subtractmean=True):
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
+
         self.nlc = len(zylclist)
+        if names is None :
+            # simply use the light curve ids as their names
+            self.names = [str(i) for i in xrange(self.nlc)]
+        else :
+            if len(names) != self.nlc :
+                raise RuntimeError("names should match the dimension of zylclist")
+            else :
+                self.names = names
 
         if(self.nlc == 1):
             self.issingle = True
@@ -45,6 +56,29 @@ class zyLC(object):
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
         self.rj = jdrangelc(zylclist)[-1] - jdrangelc(zylclist)[0]
+
+    def plot(self):
+        fig  = plt.figure(figsize=(10, 3*self.nlc))
+        #axes = []
+        height = 0.90/self.nlc
+        for i in xrange(self.nlc) :
+            ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
+            #axes.append(ax)
+            mfc = cm.jet(1.*(i-1)/self.nlc)
+            ax.errorbar(self.jlist[i], self.mlist[i], yerr=self.elist[i], 
+                    ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
+                    label=self.names[i])
+            ax.set_xlim(self.jarr[0], self.jarr[-1])
+            if i == 0 :
+                ax.set_xlabel("JD")
+            else :
+                ax.set_xticklabels([])
+            ax.legend(loc=1)
+        plt.show()
+            
+            
+
+
 
     def meansubtraction(self):
         blist = []
@@ -88,12 +122,27 @@ class zyLC(object):
         return(jarr[p], marr[p], earr[p], iarr[p])
 
 
-def get_data(lcfile):
-    try :
-        lclist = readlc_3c(lcfile)
-    except :
-        lclist = readlc(lcfile)
-    zydata = zyLC(lclist)
+def get_data(lcfile, names=None, set_subtractmean=True):
+    if isinstance(lcfile, basestring):
+        nlc = 1
+        # lcfile should be a single file
+        try :
+            # either a 3-column single lc file
+            lclist = readlc_3c(lcfile)
+        except :
+            # or a zylc file
+            lclist = readlc(lcfile)
+    else :
+        # lcfile should be a list or tuple of 3-column files
+        try :
+            nlc = len(lcfile)
+        except :
+            raise RuntimeError("input is neither a list/tuple nor a string?")
+        lclist = []
+        for lcf in lcfile :
+            lc = readlc_3c(lcf)
+            lclist.append(lc[0])
+    zydata = zyLC(lclist, names=names, set_subtractmean=set_subtractmean)
     return(zydata)
 
 

@@ -9,14 +9,14 @@ from nsmatern import *
 
 
 extra_parameters = {
-                'gaussian': {'': ''},
-                'pow_exp': {'pow': 'The exponent in the exponential.'},
+                'gaussian':   {'': ''},
+                'pow_exp':    {'pow': 'The exponent in the exponential.'},
                 'exponential':{'':''},
-                'matern': {'diff_degree': 'The degree of differentiability of realizations.'},
-                'sphere': {'': ''},
-                'quadratic': {'phi': 'The characteristic (scaled) distance of decorrelation.'},
+                'matern':     {'diff_degree': 'The degree of differentiability of realizations.'},
+                'sphere':     {'': ''},
+                'quadratic':  {'phi': 'The characteristic (scaled) distance of decorrelation.'},
                 'pareto_exp': {'alpha': 'The pareto index.'},
-                'pow_tail': {'beta': 'the exponent in the exponential of the tail'},
+                'pow_tail':   {'beta': 'the exponent in the exponential of the tail'},
                 'kepler_exp': {'tcut': 'The cutoff time scale divided by tau_drw'},
                 }
 

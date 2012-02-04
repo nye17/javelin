@@ -1,4 +1,4 @@
-#Last-modified: 03 Feb 2012 01:17:22 AM
+#Last-modified: 03 Feb 2012 05:33:32 PM
 import numpy as np
 from predict import Predict
 from psd import psd
@@ -32,7 +32,7 @@ def genMockLC(jwant, lcmean, emean, covfunc='drw', **covparams):
     mwant  = P.generate(jwant, nlc=1, ewant=ewant, errcov=0.0)
     return(mwant, ewant)
 
-def genContinuum(tau=250.0, sigma=0.5, lcmean=10.0, frac_err=0.05):
+def genContinuum(tau=400.0, sigma=0.5, lcmean=10.0, frac_err=0.05):
     """ generate a DRW continuum light curve
     """
     # an example of observation epochs, five seasons with weekly cadence
@@ -41,6 +41,7 @@ def genContinuum(tau=250.0, sigma=0.5, lcmean=10.0, frac_err=0.05):
                             np.arange(2*160+2*180,     3*160+2*180, 6),
                             np.arange(3*160+3*180,     4*160+3*180, 6),
                             np.arange(4*160+4*180,     5*160+4*180, 6),
+                            np.arange(5*160+5*180,     6*160+5*180, 6),
                             ])
     emean = lcmean*frac_err
     mwant, ewant = genMockLC(jwant, lcmean, emean, covfunc="drw", tau=tau, sigma=sigma)
@@ -67,7 +68,7 @@ def main(set_plot=True):
         writelc(lclist, lccon)
 
     # Read the continuum file into a zyLC object
-    datacon = get_data(lccon, names=["continuum"])
+    datacon = get_data(lccon, names=["continuum"], set_subtractmean=False)
     if set_plot :
         datacon.plot()
 

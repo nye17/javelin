@@ -1,6 +1,6 @@
-#Last-modified: 18 Jan 2012 01:50:24 AM
+#Last-modified: 03 Feb 2012 05:40:27 PM
 
-from zylc import zyLC
+from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
@@ -129,11 +129,9 @@ class PRH(object):
 
 
 if __name__ == "__main__":    
-    import lcio as IO
-    lcfile = "dat/mock_realistic.dat"
-    lclist = IO.readlc_3c(lcfile)
-    zylc = zyLC(zylclist=lclist)
-    prh = PRH(zylc)
+    lcfile = "dat/loopdeloop_con.dat"
+    zylc   = get_data(lcfile)
+    prh    = PRH(zylc)
     print(prh.loglike_prh(covfunc="pow_exp", tau=200.0, sigma=0.05, nu=0.5))
     
 

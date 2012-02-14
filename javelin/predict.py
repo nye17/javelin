@@ -1,20 +1,101 @@
 from gp import Mean, Covariance, observe, Realization, GPutils
 from gp import NearlyFullRankCovariance, FullRankCovariance
+from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
+from spear import spear
 
 
 """ Generate random realizations based on the covariance function.
 """
 
 class PredictRmap(object):
-    #FIXME
-    def __init__(self, lcmean=[0.0, 0.0], zydata=None):
-        # make zero mean and add the input mean in the end
-        meanfunc = lambda x: 0.0
-        self.M = Mean(meanfunc)
-        #FIXME need C
+    """ Predict light curves for spear.
+    """
+    def __init__(self, zydata=None, **covparams):
+        self.zydata = zydata
+        self.covparams = covparams
+        self.jd = self.zydata.jarr
+        # has to be the true mean instead of the samle mean
+        self.md = self.zydata.marr
+        self.id = self.zydata.iarr
+        self.vd = np.power(self.zydata.earr, 2.)
+        # preparation
+        self._get_covmat()
+        self._get_cholesky()
+        self._get_cplusninvdoty()
+
+    def generate(self, zylclist) :
+        """ presumably zylclist has our input j, e, and i, and the values in m
+         should be the mean."""
+        nlc = len(zylclist)
+        jlist = []
+        mlist = []
+        elist = []
+        ilist = []
+        for ilc, lclist in enumerate(zylclist):
+            if (len(lclist) == 3):
+                jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
+                if (np.min(msubarr) != np.max(msubarr)) : 
+                    print("WARNING: input zylclist has inequal m elements in\
+                           light curve %d, please make sure the m elements\
+                           are filled with the desired mean of the mock\
+                           light curves, now reset to zero"%ilc)
+                    msubarr = msubarr * 0.0
+                nptlc = len(jsubarr)
+                # sort the date, safety
+                p = jsubarr.argsort()
+                jlist.append(jsubarr[p])
+                mlist.append(msubarr[p])
+                elist.append(esubarr[p])
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+        for ilc in xrange(nlc) :
+            m, v = self.mve_var(jlist[ilc], ilist[ilc])
+            ediag = np.diag(e*e)
+            temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
+            temp2 = (temp1*temp1.T - ediag)*errcov
+            ecovmat = ediag + temp2
+            mlist[ilc] = mlist[ilc] + multivariate_normal(np.zeros(nwant), ecovmat)
+            #FIXME
+
+        pass
+
+    def mve_var(self, jwant, iwant):
+        return(self._fastpredict(jwant, iwant)
+
+    def _get_covmat(self) :
+        self.cmatrix = spear(self.jd,self.jd,self.id,self.id, **self.covparams)
+        print("covariance matrix calculated")
+
+    def _get_cholesky(self) :
+        self.U = cholesky(self.cmatrix, nugget=self.vd, inplace=True, raiseinfo=True)
+        print("covariance matrix decomposed and updated by U")
+
+    def _get_cplusninvdoty(self) :
+        # now we want cpnmatrix^(-1)*mag = x, which is the same as
+        #    mag = cpnmatrix*x, so we solve this equation for x
+        self.cplusninvdoty = chosolve_from_tri(self.U, self.md, nugget=None, inplace=False)
+
+    def _fastpredict(self, jw, iw) :
+        """ jw : jwant
+            iw : iwant
+        """
+        mw = np.zeros_like(jw)
+        vw = np.zeros_like(jw)
+        for i, (jwant, iwant) in enumerate(zip(jw, iw)):
+            covar = spear(jwant,self.jd,iwant,self.id, **self.covparams)
+            cplusninvdotcovar = chosolve_from_tri(self.U, covar, nugget=None, inplace=False)
+            vw[i] = spear(jwant, jwant, iwant, iwant, **self.covparams)
+            mw[i] = np.dot(covar, cplusninvdoty)
+            vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
+        return(mw, vw)
+
+
+
+        
+
+
 
 
 class Predict(object):

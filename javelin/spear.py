@@ -1,4 +1,4 @@
-#Last-modified: 13 Feb 2012 07:01:49 PM
+#Last-modified: 13 Feb 2012 11:04:29 PM
 
 from spear_covfunc import spear_covfunc as SCF
 import numpy as np
@@ -64,7 +64,7 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
 
 
 if __name__ == "__main__":    
-    npt = 10000
+    npt = 100
     x   = np.arange(0, npt, 1)
     idx = np.ones(npt,dtype="int")
     idx[2] = 2
@@ -81,5 +81,5 @@ if __name__ == "__main__":
     scales= np.array([1., 2.])
 #    C = spear_w(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None)
     C = spear(x,y,1,1,sigma,tau,lags,wids,scales,symm=None)
-    print(C[:5,:5])
+    print(C[:3,:3])
 #    print(C)

@@ -8,6 +8,14 @@ from cov import get_covfunc_dict
 """ Generate random realizations based on the covariance function.
 """
 
+class PredictRmap(object):
+    #FIXME
+    def __init__(self, lcmean=[0.0, 0.0], zydata=None):
+        # make zero mean and add the input mean in the end
+        meanfunc = lambda x: 0.0
+        self.M = Mean(meanfunc)
+        #FIXME need C
+
 
 class Predict(object):
     """

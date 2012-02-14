@@ -1,4 +1,4 @@
-#Last-modified: 13 Feb 2012 11:04:29 PM
+#Last-modified: 14 Feb 2012 11:28:56 AM
 
 from spear_covfunc import spear_covfunc as SCF
 import numpy as np
@@ -64,7 +64,7 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
 
 
 if __name__ == "__main__":    
-    npt = 100
+    npt = 1000
     x   = np.arange(0, npt, 1)
     idx = np.ones(npt,dtype="int")
     idx[2] = 2

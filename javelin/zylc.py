@@ -12,7 +12,7 @@ import matplotlib.cm as cm
 class zyLC(object):
     """ zyLC object.
     """
-    def __init__(self, zylclist, names=None, set_subtractmean=True):
+    def __init__(self, zylclist, names=None, set_subtractmean=True, qlist=None):
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
 
@@ -26,12 +26,21 @@ class zyLC(object):
             else :
                 self.names = names
 
+        if qlist is None :
+            self.qlist = self.nlc*[0.0]
+        else :
+            if len(qlist) != self.nlc :
+                raise RuntimeError("qlist should match the dimension of zylclist")
+            else :
+                self.qlist = qlist
+
+
         if(self.nlc == 1):
             self.issingle = True
         else:
             self.issingle = False
 
-        self.jlist, self.mlist, self.elist = self.sorteddatalist(zylclist)
+        self.jlist, self.mlist, self.elist, self.ilist = self.sorteddatalist(zylclist)
 
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
@@ -84,6 +93,7 @@ class zyLC(object):
         blist = []
         for i in xrange(self.nlc):
             bar = np.mean(self.mlist[i])
+            bar = bar + qlist[i] 
             blist.append(bar)
             self.mlist[i] = self.mlist[i] - bar
         return(blist)
@@ -92,23 +102,26 @@ class zyLC(object):
         jlist = []
         mlist = []
         elist = []
-        for lclist in zylclist:
+        ilist = []
+        for ilc, lclist in enumerate(zylclist):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
+                nptlc = len(jsubarr)
                 # sort the date
                 p = jsubarr.argsort()
                 jlist.append(jsubarr[p])
                 mlist.append(msubarr[p])
                 elist.append(esubarr[p])
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
             else:
                 raise RuntimeError("each sub-zylclist has to be a list of lists or arrays")
-        return(jlist, mlist, elist)
+        return(jlist, mlist, elist, ilist)
         
     def combineddataarr(self):
         jarr = np.empty(self.npt)
         marr = np.empty(self.npt)
         earr = np.empty(self.npt)
-        iarr = np.empty(self.npt, dtype=int)
+        iarr = np.empty(self.npt, dtype="int")
         larr = np.zeros((self.nlc, self.npt))
         start = 0
         for i, nptlc in enumerate(self.nptlist):
@@ -116,7 +129,8 @@ class zyLC(object):
             marr[start:start+nptlc] = self.mlist[i]
             earr[start:start+nptlc] = self.elist[i]
             # comply with the fortran version, where i starts from 1 rather than 0.
-            iarr[start:start+nptlc] = i + 1
+            #iarr[start:start+nptlc] = i + 1
+            iarr[start:start+nptlc] = self.ilist[i]
             start = start+nptlc
         p = jarr.argsort()
         return(jarr[p], marr[p], earr[p], iarr[p])

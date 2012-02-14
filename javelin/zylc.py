@@ -64,7 +64,8 @@ class zyLC(object):
 
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
-        self.rj = jdrangelc(zylclist)[-1] - jdrangelc(zylclist)[0]
+        #self.rj = jdrangelc(zylclist)[-1] - jdrangelc(zylclist)[0]
+        self.rj = self.jarr[-1] - self.jarr[0]
 
     def plot(self):
         fig  = plt.figure(figsize=(10, 3*self.nlc))
@@ -93,7 +94,7 @@ class zyLC(object):
         blist = []
         for i in xrange(self.nlc):
             bar = np.mean(self.mlist[i])
-            bar = bar + qlist[i] 
+            bar = bar + self.qlist[i] 
             blist.append(bar)
             self.mlist[i] = self.mlist[i] - bar
         return(blist)
@@ -161,6 +162,22 @@ def get_data(lcfile, names=None, set_subtractmean=True):
 
 
 if __name__ == "__main__":    
-    zylclist= [[[2.0, 1.0, 5.0, 10.0], [5.0, 5.5, 4.3, 5.6], [0.1, 0.1, 0.1, 0.4]], [[1.5], [5.0], [0.1]], [[8.0, 9.0], [3.0, 1.5], [0.2, 0.1]]]
+    zylclist= [
+               [
+                [2.0, 1.0, 5.0, 10.0], 
+                [5.0, 5.5, 4.3,  5.6], 
+                [0.1, 0.1, 0.1,  0.4]
+               ], 
+               [
+                [1.5], 
+                [5.0], 
+                [0.1]
+               ], 
+               [
+                [8.0, 9.0], 
+                [3.0, 1.5], 
+                [0.2, 0.1]
+               ]
+              ]
     zylc = zyLC(zylclist=zylclist)
     print(zylc.cont_cad)

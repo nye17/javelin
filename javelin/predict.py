@@ -5,10 +5,35 @@ import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
 from spear import spear
+from zylc import zyLC
 
 
 """ Generate random realizations based on the covariance function.
 """
+
+
+def predictLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
+    """ Convolve with the top-hat kernel to get line light curve, however, the
+    input continuum signal has to be dense enough and regularly sampled.
+    """
+    djc = jc[1:] - jc[:-1]
+    if (np.abs(np.min(djc) - np.max(djc))>0.01) :
+        raise RuntimeError("input jc has to be regularly sampled %.10g %.10g"%(np.min(djc) , np.max(djc)))
+    # scale time unit to djc
+    junit = djc[0]
+    window_len = np.floor(0.5*wid/junit)
+    # continuum signal 
+    sc = mc - mc_mean
+    if wid < 0.0 :
+        wid = np.abs(wid)
+        print("WARNING: negative wid? reset to abs(wid) %10.4f"%wid)
+    if scale < 0.0 :
+        scale = np.abs(scale)
+        print("WARNING: negative scale? reset to abs(scale) %10.4f"%scale)
+    sl = smooth(sc,window_len=window_len,window='flat')
+    ml = ml_mean + sl*scale
+    jl = jc + lag
+    return(jl, ml)
 
 class PredictRmap(object):
     """ Predict light curves for spear.
@@ -38,10 +63,10 @@ class PredictRmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) : 
-                    print("WARNING: input zylclist has inequal m elements in\
-                           light curve %d, please make sure the m elements\
-                           are filled with the desired mean of the mock\
-                           light curves, now reset to zero"%ilc)
+                    print("WARNING: input zylclist has inequal m elements in "+
+                          "light curve %d, please make sure the m elements "+
+                          "are filled with the desired mean of the mock "+
+                          "light curves, now reset to zero"%ilc)
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -50,19 +75,26 @@ class PredictRmap(object):
                 mlist.append(msubarr[p])
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+        zylclist_new = []
         for ilc in xrange(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
-            ediag = np.diag(e*e)
-            temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
-            temp2 = (temp1*temp1.T - ediag)*errcov
-            ecovmat = ediag + temp2
-            mlist[ilc] = mlist[ilc] + multivariate_normal(np.zeros(nwant), ecovmat)
-            #FIXME
-
-        pass
+            # no covariance considered here
+            vcovmat = np.diag(v)
+            if (np.min(elist[ilc]) < 0.0):
+                raise RuntimeError("error for light curve %d should be either"+
+                        " 0 or postive"%ilc)
+            elif np.alltrue(elist[ilc]==0.0):
+                set_error_on_mocklc = False
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
+            else:
+                set_error_on_mocklc = True
+                ecovmat = np.diag(elist[ilc]*elist[ilc])
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) + multivariate_normal(np.zeros_like(m), ecovmat)
+            zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
+        return(zylclist_new)
 
     def mve_var(self, jwant, iwant):
-        return(self._fastpredict(jwant, iwant)
+        return(self._fastpredict(jwant, iwant))
 
     def _get_covmat(self) :
         self.cmatrix = spear(self.jd,self.jd,self.id,self.id, **self.covparams)
@@ -90,10 +122,6 @@ class PredictRmap(object):
             mw[i] = np.dot(covar, cplusninvdoty)
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
-
-
-
-        
 
 
 
@@ -173,6 +201,69 @@ class Predict(object):
         return(m,v)
 
 
+def smooth(x,window_len=11,window='flat'):
+    """smooth the data using a window with requested size.
+
+    from: http://www.scipy.org/Cookbook/SignalSmooth
+    
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal 
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+    
+    input:
+        x: the input signal 
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+        
+    example:
+
+    t=linspace(-2,2,0.1)
+    x=sin(t)+randn(len(t))*0.1
+    y=smooth(x)
+    
+    see also: 
+    
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+ 
+    TODO: the window parameter could be the window itself if an array instead of a string   
+    """ 
+     
+    if x.ndim != 1:
+        raise ValueError, "smooth only accepts 1 dimension arrays."
+
+    if x.size < window_len:
+        raise ValueError, "Input vector needs to be bigger than window size."
+        
+
+    if window_len<3:
+        return x
+    
+    
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+    
+
+    s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
+    #print(len(s))
+    if window == 'flat': #moving average
+        w=np.ones(window_len,'d')
+    else:
+        w=eval('np.'+window+'(window_len)')
+    
+    y=np.convolve(w/w.sum(),s,mode='valid')
+    return y
+
+
+
+def test_PredictRmap():
+    pass
+#    P = PredictRmap(zydata=None, **covparams):
 
 
 def test_Predict():
@@ -207,6 +298,20 @@ def test_simlc():
     mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
     np.savetxt("mock.dat", np.vstack((j, mwant, ewant)).T)
 
+def test_simtophat():
+    covfunc = "drw"
+    tau, sigma = (20.0, 2.0)
+    jc = np.linspace(0., 100, 500)
+    lcmean = 10.0
+    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma)
+    mc = P.generate(jc, ewant=0.0)
+    lag, wid, scale = (20.0, 10.0, 0.5)
+    jl, ml = predictLine(jc, mc, lag, wid, scale, mc_mean=lcmean, ml_mean=5.0)
+    zylclist = [[jc, mc, np.zeros_like(mc)], [jl, ml, np.zeros_like(ml)]]
+    zydata = zyLC(zylclist, names=["continuum", "line"], set_subtractmean=True, qlist=None)
+    zydata.plot()
+
 if __name__ == "__main__":    
 #    test_simlc()
-    test_Predict()
+#    test_Predict()
+    test_simtophat()

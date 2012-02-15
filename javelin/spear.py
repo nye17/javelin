@@ -1,10 +1,11 @@
-#Last-modified: 14 Feb 2012 11:28:56 AM
+#Last-modified: 15 Feb 2012 12:56:58 AM
 
 from spear_covfunc import spear_covfunc as SCF
 import numpy as np
 
 from javelin.threadpool import get_threadpool_size, map_noreturn
 from javelin.gp import isotropic_cov_funs 
+from javelin.gp.GPutils import regularize_array
 
 
 """ The SPEAR covariance function, called by gp.Covariance.
@@ -25,6 +26,9 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
 
     if (symm is None) :
         symm = (x is y) and (idx is idy)
+
+    x = regularize_array(x)
+    y = regularize_array(y)
 
     nx = x.shape[0]
     ny = y.shape[0]
@@ -67,18 +71,18 @@ if __name__ == "__main__":
     npt = 1000
     x   = np.arange(0, npt, 1)
     idx = np.ones(npt,dtype="int")
-    idx[2] = 2
+#    idx[2] = 2
     y   = x
     idy = idx
 
     sigma = 1.
     tau   = 1.
-#    lags  = np.array([0.])
-#    wids  = np.array([0.])
-#    scales= np.array([1.])
-    lags  = np.array([0., 2.])
-    wids  = np.array([0., 2.])
-    scales= np.array([1., 2.])
+    lags  = np.array([0.])
+    wids  = np.array([0.])
+    scales= np.array([1.])
+#    lags  = np.array([0., 2.])
+#    wids  = np.array([0., 2.])
+#    scales= np.array([1., 2.])
 #    C = spear_w(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None)
     C = spear(x,y,1,1,sigma,tau,lags,wids,scales,symm=None)
     print(C[:3,:3])

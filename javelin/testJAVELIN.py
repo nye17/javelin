@@ -1,4 +1,4 @@
-#Last-modified: 13 Feb 2012 11:38:03 PM
+#Last-modified: 15 Feb 2012 01:07:22 AM
 import numpy as np
 from predict import Predict
 from psd import psd
@@ -55,6 +55,7 @@ def genTophat(tau=100.0, sigma=0.5, lcmean=10.0, frac_err=0.05,
                             np.arange(3*160+3*180,     4*160+3*180, 6),
                             np.arange(4*160+4*180,     5*160+4*180, 6),
                             np.arange(5*160+5*180,     6*160+5*180, 6),
+                           ])
     j1    = j0 + 0.50
     lcmean0 = lcmean
     lcmean1 = lcmean0*scale

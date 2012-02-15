@@ -84,7 +84,8 @@ class zyLC(object):
             else :
                 ax.set_xticklabels([])
             ax.legend(loc=1)
-        plt.show()
+        #plt.show()
+        plt.draw()
             
             
 

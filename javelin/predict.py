@@ -7,6 +7,9 @@ from cov import get_covfunc_dict
 from spear import spear
 from zylc import zyLC
 
+np.set_printoptions(precision=3)
+
+
 
 """ Generate random realizations based on the covariance function.
 """
@@ -34,6 +37,11 @@ def predictLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     ml = ml_mean + sl*scale
     jl = jc + lag
     return(jl, ml)
+
+def generateErrorTerm(e):
+    ecovmat = np.diag(e*e)
+    et = multivariate_normal(np.zeros_like(e), ecovmat)
+    return(et)
 
 class PredictRmap(object):
     """ Predict light curves for spear.
@@ -117,9 +125,9 @@ class PredictRmap(object):
         vw = np.zeros_like(jw)
         for i, (jwant, iwant) in enumerate(zip(jw, iw)):
             covar = spear(jwant,self.jd,iwant,self.id, **self.covparams)
-            cplusninvdotcovar = chosolve_from_tri(self.U, covar, nugget=None, inplace=False)
+            cplusninvdotcovar = chosolve_from_tri(self.U, covar.T, nugget=None, inplace=False)
             vw[i] = spear(jwant, jwant, iwant, iwant, **self.covparams)
-            mw[i] = np.dot(covar, cplusninvdoty)
+            mw[i] = np.dot(covar, self.cplusninvdoty)
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
 
@@ -250,7 +258,6 @@ def smooth(x,window_len=11,window='flat'):
     
 
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-    #print(len(s))
     if window == 'flat': #moving average
         w=np.ones(window_len,'d')
     else:
@@ -261,19 +268,12 @@ def smooth(x,window_len=11,window='flat'):
 
 
 
-def test_PredictRmap():
-    pass
-#    P = PredictRmap(zydata=None, **covparams):
-
 
 def test_Predict():
     from pylab import fill, plot, show
-    jdata = np.array([25., 100, 175.])
-    mdata = np.array([0.7, 0.1, 0.4])
-    edata = np.array([0.07, 0.02, 0.05])
+    zydata = test_simsingle(set_plot=False)
     j = np.arange(0, 200, 1)
-    P = Predict(jdata=jdata, mdata=mdata, edata=edata, covfunc="pow_exp",
-            tau=10.0, sigma=0.2, nu=1.0)
+    P = Predict(jdata=zydata.jarr, mdata=zydata.marr, edata=zydata.earr, covfunc="drw", tau=10.0, sigma=0.2)
     mve, var = P.mve_var(j)
     sig = np.sqrt(var)
     x=np.concatenate((j, j[::-1]))
@@ -285,33 +285,76 @@ def test_Predict():
         plot(j, m)
     show()
 
-def test_simlc():
-    covfunc = "kepler_exp"
-    tau, sigma, nu = (10.0, 2.0, 0.2)
-    j = np.linspace(0., 200, 256)
-    lcmean = 10.0
-    emean  = lcmean*0.05
-    print("observed light curve mean mag is %10.3f"%lcmean)
-    print("observed light curve mean err is %10.3f"%emean)
-    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma, nu=nu)
-    ewant = emean*np.ones_like(j)
-    mwant = P.generate(j, nlc=1, ewant=ewant, errcov=0.0)
-    np.savetxt("mock.dat", np.vstack((j, mwant, ewant)).T)
+def test_simsingle(set_plot=True):
+    covfunc = "drw"
+    tau, sigma = (20.0, 2.0)
+    jwant = np.linspace(0., 200, 50)
+    lcmean  = 10.0
+    errfrac = 0.05
+    emean   = lcmean*errfrac
+    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma)
+    ewant = emean*np.ones_like(jwant)
+    mwant = P.generate(jwant, ewant=ewant)
+    zylclist = [[jwant, mwant, ewant],]
+    zydata = zyLC(zylclist, names=["continuum",], set_subtractmean=True, qlist=None)
+    if set_plot :
+        zydata.plot()
+    return(zydata)
 
-def test_simtophat():
+def test_PredictRmap():
+    zydata = test_simtophat(set_plot=True, stride=5)
+    tau, sigma = (20.0, 2.0)
+    lag, wid, scale = (20.0, 10.0, 0.5)
+    lags   = [0.0, lag]
+    wids   = [0.0, wid]
+    scales = [1.0, scale]
+    P = PredictRmap(zydata=zydata, sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales)
+    mcmean  = 10.0
+    mlmean  =  5.0
+    errfrac = 0.05
+    jc = np.linspace(0., 100, 100)
+    jl = jc
+    mc = np.zeros_like(jc)+mcmean
+    ml = np.zeros_like(jl)+mlmean
+    ec = mc*errfrac
+    el = ml*errfrac
+    zylclist = [[jc, mc, ec], [jl, ml, el]]
+    zylclist_new = P.generate(zylclist)
+    zydata_new = zyLC(zylclist_new, names=["continuum", "line"], set_subtractmean=True, qlist=None)
+    zydata_new.plot()
+
+def test_simtophat(set_plot=True, stride=None):
     covfunc = "drw"
     tau, sigma = (20.0, 2.0)
     jc = np.linspace(0., 100, 500)
-    lcmean = 10.0
-    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma)
-    mc = P.generate(jc, ewant=0.0)
+    mcmean  = 10.0
+    mlmean  =  5.0
+    errfrac = 0.05
+    P = Predict(lcmean=mcmean, covfunc=covfunc, tau=tau, sigma=sigma)
+    sc = P.generate(jc, ewant=0.0)
     lag, wid, scale = (20.0, 10.0, 0.5)
-    jl, ml = predictLine(jc, mc, lag, wid, scale, mc_mean=lcmean, ml_mean=5.0)
-    zylclist = [[jc, mc, np.zeros_like(mc)], [jl, ml, np.zeros_like(ml)]]
+    jl, sl = predictLine(jc, sc, lag, wid, scale, mc_mean=mcmean, ml_mean=mlmean)
+    ec = np.zeros_like(sc) + mcmean*errfrac
+    el = np.zeros_like(sl) + mlmean*errfrac
+    mc = sc + generateErrorTerm(ec)
+    ml = sl + generateErrorTerm(el)
+    if stride is None :
+        zylclist = [[jc, mc, ec], [jl, ml, el]]
+    else :
+        indx = np.arange(0, 500, stride)
+        zylclist = [[jc[indx], mc[indx], ec[indx]], [jl[indx], ml[indx], el[indx]]]
+    
     zydata = zyLC(zylclist, names=["continuum", "line"], set_subtractmean=True, qlist=None)
-    zydata.plot()
+    if set_plot :
+        zydata.plot()
+    return(zydata)
+
 
 if __name__ == "__main__":    
-#    test_simlc()
+    import matplotlib.pyplot as plt
+#    test_simsingle()
 #    test_Predict()
-    test_simtophat()
+#    test_simtophat()
+    test_PredictRmap()
+    plt.show()
+    pass

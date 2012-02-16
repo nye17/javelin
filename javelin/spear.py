@@ -1,6 +1,6 @@
-#Last-modified: 15 Feb 2012 12:56:58 AM
+#Last-modified: 15 Feb 2012 12:14:00 PM
 
-from spear_covfunc import spear_covfunc as SCF
+from javelin.spear_covfunc import spear_covfunc as SCF
 import numpy as np
 
 from javelin.threadpool import get_threadpool_size, map_noreturn

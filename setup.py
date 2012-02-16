@@ -50,6 +50,8 @@ extra_info=lapack_info)
 
 config.add_extension(name='gp.cov_funs.distances',sources=['javelin/gp/cov_funs/distances.f'], extra_info=lapack_info)
 
+config.add_extension(name='spear_covfunc',sources=['javelin/spear_covfunc.f90'], extra_info=lapack_info)
+
 
 config_dict = config.todict()
 try:

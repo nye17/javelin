@@ -13,13 +13,15 @@ class zyLC(object):
     """ zyLC object.
     """
     def __init__(self, zylclist, names=None, set_subtractmean=True, qlist=None):
+        """
+        """
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
 
         self.nlc = len(zylclist)
         if names is None :
-            # simply use the light curve ids as their names
-            self.names = [str(i) for i in xrange(self.nlc)]
+            # simply use the light curve ids as their names (start from 1)
+            self.names = [str(i+1) for i in xrange(self.nlc)]
         else :
             if len(names) != self.nlc :
                 raise RuntimeError("names should match the dimension of zylclist")
@@ -34,7 +36,6 @@ class zyLC(object):
             else :
                 self.qlist = qlist
 
-
         if(self.nlc == 1):
             self.issingle = True
         else:
@@ -42,29 +43,33 @@ class zyLC(object):
 
         self.jlist, self.mlist, self.elist, self.ilist = self.sorteddatalist(zylclist)
 
+        # continuum properties, useful in determining continuum variability
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
         self.cont_std      = np.std(self.mlist[0])
+        self.cont_cad      = jdmedlc(list(self.jlist[0]))
         if self.cont_mean_err != 0.0 :
             self.cont_SN       = self.cont_std/self.cont_mean_err
         else :
             print("Warning: zero mean error in the continuum?")
-        self.cont_cad      = jdmedlc(list(self.jlist[0]))
 
+        # subtract the mean
+        # usually good for the code health, smaller means means less 
+        # possibility of large round-off errors in the matrix computations.
+        # note tha it also modifies self.mlist.
         if set_subtractmean:
-            # usually good for the code health, smaller means means less 
-            # possibility of large round-off errors in the matrix computations.
-            # note tha it all modifies self.mlist.
             self.blist = self.meansubtraction()
         else:
             self.blist = [0.0]*self.nlc
 
+        # number statistics
         self.nptlist = np.array([a.size for a in self.jlist])
         self.npt = sum(self.nptlist)
-
+        
+        # combine all information into one vector
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
-        #self.rj = jdrangelc(zylclist)[-1] - jdrangelc(zylclist)[0]
+        # baseline of all the light curves
         self.rj = self.jarr[-1] - self.jarr[0]
 
     def plot(self):
@@ -88,7 +93,14 @@ class zyLC(object):
         plt.draw()
             
             
-
+    def update_qlist(self, qlist):
+        # add      q to   blist
+        # subtract q from mlist
+        for i in xrange(self.nlc):
+            self.blist[i] += qlist[i]
+            self.mlist[i] -= qlist[i]
+        # redo combineddataarr
+        self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
 
     def meansubtraction(self):

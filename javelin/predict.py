@@ -10,58 +10,157 @@ from zylc import zyLC
 np.set_printoptions(precision=3)
 
 
-
 """ Generate random realizations based on the covariance function.
 """
 
+def generateError(e, errcov=0.0):
+    """ generate Gaussian errors.
 
-def predictLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
+    Parameters
+    ----------
+    e: array_like
+        Diagonal errors.
+
+    errcov: scalar, optional
+        Correlation coefficient of errors (default: 0)
+    """
+    if np.isscalar(e) :
+        print("Warning: e is a scalar, proceed as 1-element array")
+        e = np.atleast_1d(e)
+    ediag = np.diag(e*e)
+    if errcov == 0.0 :
+        ecovmat = ediag
+    else :
+        temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
+        temp2 = (temp1*temp1.T - ediag)*errcov
+        ecovmat = ediag + temp2
+    et = multivariate_normal(np.zeros_like(e), ecovmat)
+    return(et)
+
+def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     """ Convolve with the top-hat kernel to get line light curve, however, the
     input continuum signal has to be dense enough and regularly sampled.
+
+    Parameters
+    ----------
+    jc: array_like
+        Continuum epochs, must be regularly sampled.
+
+    mc: array_like
+        Continuum signal.
+
+    lag: scalar
+        Time lag.
+
+    wid: scalar
+        Width of the transfer function.
+
+    scale: scalar
+        Ratio of line signal and continuum signal.
+
+    mc_mean: scalar
+        Subtracted by mc to get the truth signal (default: 0).
+
+    ml_mean: scalar
+        Added to the line signal to get observed line light curve signal
+        (.default: 0)
+
+    Returns
+    -------
+
+    jl: array_like
+        Epochs of line light curve, displaced version of 'jc'.
+
+    ml: array_like
+        Line light curve.
+        
     """
     djc = jc[1:] - jc[:-1]
     if (np.abs(np.min(djc) - np.max(djc))>0.01) :
-        raise RuntimeError("input jc has to be regularly sampled %.10g %.10g"%(np.min(djc) , np.max(djc)))
+        raise RuntimeError("input jc has to be regularly sampled")
     # scale time unit to djc
     junit = djc[0]
     window_len = np.floor(0.5*wid/junit)
     # continuum signal 
     sc = mc - mc_mean
     if wid < 0.0 :
+        print("WARNING: negative wid? set to abs(wid) %10.4f"%wid)
         wid = np.abs(wid)
-        print("WARNING: negative wid? reset to abs(wid) %10.4f"%wid)
     if scale < 0.0 :
+        print("WARNING: negative scale? set to abs(scale) %10.4f"%scale)
         scale = np.abs(scale)
-        print("WARNING: negative scale? reset to abs(scale) %10.4f"%scale)
     sl = smooth(sc,window_len=window_len,window='flat')
     ml = ml_mean + sl*scale
     jl = jc + lag
     return(jl, ml)
 
-def generateErrorTerm(e):
-    ecovmat = np.diag(e*e)
-    et = multivariate_normal(np.zeros_like(e), ecovmat)
-    return(et)
-
 class PredictRmap(object):
     """ Predict light curves for spear.
     """
     def __init__(self, zydata=None, **covparams):
+        """ PredictRmap object.
+
+        Parameters
+        ----------
+        zydata: zyLC object, optional
+            Observed light curve in zyLC format, set to 'None' if no observation
+            is done. Note that the true means of light curves should be
+            subtracted (default: Done).
+
+        covparams: kwargs
+            Parameters for the spear covariance function.
+
+        """
         self.zydata = zydata
         self.covparams = covparams
         self.jd = self.zydata.jarr
-        # has to be the true mean instead of the samle mean
+        # has to be the true mean instead of the sample mean
         self.md = self.zydata.marr
         self.id = self.zydata.iarr
+        # variance
         self.vd = np.power(self.zydata.earr, 2.)
         # preparation
         self._get_covmat()
         self._get_cholesky()
         self._get_cplusninvdoty()
 
+    def mve_var(self, jwant, iwant):
+        """ Generate the minimum variance estimate and its associated variance.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        iwant: array_like
+            Desired ids for simulated light curve.
+
+        Returns
+        -------
+        m: array_like
+            Minimum variance estimate of the underlying signal.
+
+        v: array_like
+            Variance at simulated point.
+        """
+        return(self._fastpredict(jwant, iwant))
+
     def generate(self, zylclist) :
-        """ presumably zylclist has our input j, e, and i, and the values in m
-         should be the mean."""
+        """ Presumably zylclist has our input j, e, and i, and the values in m
+        should be the mean.
+
+        Parameters
+        ----------
+        zylclist: list of 3-list light curves 
+            Pre-simulated light curves in zylclist, with the values in m-column as
+            the light curve mean.
+
+        Returns
+        -------
+        zylclist_new: list of 3-list light curves
+            Simulated light curves in zylclist.
+
+        """
         nlc = len(zylclist)
         jlist = []
         mlist = []
@@ -101,9 +200,6 @@ class PredictRmap(object):
             zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
         return(zylclist_new)
 
-    def mve_var(self, jwant, iwant):
-        return(self._fastpredict(jwant, iwant))
-
     def _get_covmat(self) :
         self.cmatrix = spear(self.jd,self.jd,self.id,self.id, **self.covparams)
         print("covariance matrix calculated")
@@ -132,18 +228,36 @@ class PredictRmap(object):
         return(mw, vw)
 
 
-
-
-class Predict(object):
+class PredictSignal(object):
     """
-    Predict light curves at given input epoches in two possible scenarios.
-    1) random realizations of the underlying process defined by both 
-    mean and covariance.
-    2) constrained realizations of the underlying process defined by 
-    both mean and covariance, and observed data points.
+    Predict continuum light curves.
     """
-    def __init__(self, lcmean=0.0, jdata=None, mdata=None, edata=None,
-            covfunc="pow_exp", rank="Full", **covparams):
+    def __init__(self, zydata=None, lcmean=0.0, covfunc="drw", 
+            rank="Full", **covparams):
+        """ PredictSignal object for simulating continuum light curves.
+
+        Parameters
+        ----------
+        zydata: zyLC object, optional
+            Observed light curve in zyLC format, set to 'None' if no observation
+            is done (default: Done)
+
+        lcmean: scalar or a Mean object, optional
+            Mean amplitude of the underlying signal (default: 0).
+
+        covfunc: string, optional
+            Name of the covariance function (default: drw).
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        covparams: kwargs
+            Parameters for 'covfunc'.
+
+        """
+        # make the Mean object
         try :
             const = float(lcmean)
             meanfunc = lambda x: const*(x*0.0+1.0)
@@ -153,21 +267,62 @@ class Predict(object):
                 self.M = lcmean
             else:
                 raise RuntimeError("lcmean is neither a Mean obj or a const")
-        
+        # generate covariance parameters
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
         if rank is "Full" :
             self.C  = FullRankCovariance(**covfunc_dict)
         elif rank is "NearlyFull" :
             self.C  = NearlyFullRankCovariance(**covfunc_dict)
-
-        if ((jdata is not None) and (mdata is not None) and (edata is not None)):
-            print("Constrained Realization...")
-            observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
+        # observe zydata
+        if zydata is None :
+            print("No *zydata* Observed, Unconstrained Realization")
         else:
-            print("No Data Input or Some of jdata/mdata/edata Are None")
-            print("Unconstrained Realization...")
+            print("Observed *zydata*, Constrained Realization")
+            observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
 
-    def generate(self, jwant, ewant=0.0, nlc=1, errcov=0.0):
+    def mve_var(self, jwant):
+        """ Generate the minimum variance estimate and its associated variance.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        Returns
+        -------
+        m: array_like
+            Minimum variance estimate of the underlying signal.
+
+        v: array_like
+            Variance at simulated point.
+
+        """
+        m, v = GPutils.point_eval(self.M, self.C, jwant)
+        return(m,v)
+
+    def generate(self, jwant, ewant=0.0, num=1, errcov=0.0):
+        """ Draw random realizations as simulated light curves.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        ewant: scalar or array_like, optional
+            Errors in the simulated light curve (default: 0.0).
+
+        errcov: scalar, optional
+            Correlation coefficient of errors (default: 0.0).
+
+        num: scalar, optional
+            Number of simulated light curves to be generated.
+        
+        Returns
+        -------
+        mwant: array_like (num=1) or list of arrays (num>1)
+            Simulated light curve(s)
+
+        """
         if (np.min(ewant) < 0.0):
             raise RuntimeError("ewant should be either 0  or postive")
         elif np.alltrue(ewant==0.0):
@@ -175,38 +330,38 @@ class Predict(object):
         else:
             set_error_on_mocklc = True
 
+        # number of desired epochs
         nwant = len(jwant)
 
         if np.isscalar(ewant):
             e = np.zeros(nwant) + ewant
-        elif len(ewant) == nwant:
+        else :
             e = ewant
-        else:
-            raise RuntimeError("ewant should be either a const or array with same shape as jwant")
 
+        # generate covariance function
         ediag = np.diag(e*e)
-        temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
-        temp2 = (temp1*temp1.T - ediag)*errcov
-        ecovmat = ediag + temp2
+        if errcov == 0.0 :
+            ecovmat = ediag
+        else :
+            temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
+            temp2 = (temp1*temp1.T - ediag)*errcov
+            ecovmat = ediag + temp2
 
-        if nlc == 1:
+        if num == 1:
             f = Realization(self.M, self.C)
             mwant = f(jwant)
             if set_error_on_mocklc:
-                mwant = mwant + multivariate_normal(np.zeros(nwant), ecovmat)
+                mwant += multivariate_normal(np.zeros(nwant), ecovmat)
             return(mwant)
         else:
             mwant_list = []
-            for i in xrange(nlc):
+            for i in xrange(num):
                 f = Realization(self.M, self.C)
                 mwant = f(jwant)
-                mwant = mwant + multivariate_normal(np.zeros(nwant), ecovmat)
+                if set_error_on_mocklc:
+                    mwant += multivariate_normal(np.zeros(nwant), ecovmat)
                 mwant_list.append(mwant)
             return(mwant_list)
-
-    def mve_var(self, jwant):
-        m, v = GPutils.point_eval(self.M, self.C, jwant)
-        return(m,v)
 
 
 def smooth(x,window_len=11,window='flat'):
@@ -241,126 +396,20 @@ def smooth(x,window_len=11,window='flat'):
  
     TODO: the window parameter could be the window itself if an array instead of a string   
     """ 
-     
     if x.ndim != 1:
         raise ValueError, "smooth only accepts 1 dimension arrays."
-
     if x.size < window_len:
         raise ValueError, "Input vector needs to be bigger than window size."
-        
-
     if window_len<3:
         return x
-    
-    
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
-    
-
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
     if window == 'flat': #moving average
         w=np.ones(window_len,'d')
     else:
         w=eval('np.'+window+'(window_len)')
-    
     y=np.convolve(w/w.sum(),s,mode='valid')
-    return y
+    return(y)
 
 
-def genSingle(covfunc, zydata=None, **covparams):
-    pass
-
-def genTophat():
-    pass
-
-
-
-def test_Predict():
-    from pylab import fill, plot, show
-    zydata = test_simsingle(set_plot=False)
-    j = np.arange(0, 200, 1)
-    P = Predict(jdata=zydata.jarr, mdata=zydata.marr, edata=zydata.earr, covfunc="drw", tau=10.0, sigma=0.2)
-    mve, var = P.mve_var(j)
-    sig = np.sqrt(var)
-    x=np.concatenate((j, j[::-1]))
-    y=np.concatenate((mve-sig, (mve+sig)[::-1]))
-    fill(x,y,facecolor='.8',edgecolor='1.')
-    plot(j, mve, 'k-.')
-    mlist = P.generate(j, nlc=3, ewant=0.0)
-    for m in mlist:
-        plot(j, m)
-    show()
-
-def test_simsingle(set_plot=True):
-    covfunc = "drw"
-    tau, sigma = (20.0, 2.0)
-    jwant = np.linspace(0., 200, 50)
-    lcmean  = 10.0
-    errfrac = 0.05
-    emean   = lcmean*errfrac
-    P = Predict(lcmean=lcmean, covfunc=covfunc, tau=tau, sigma=sigma)
-    ewant = emean*np.ones_like(jwant)
-    mwant = P.generate(jwant, ewant=ewant)
-    zylclist = [[jwant, mwant, ewant],]
-    zydata = zyLC(zylclist, names=["continuum",], set_subtractmean=True, qlist=None)
-    if set_plot :
-        zydata.plot()
-    return(zydata)
-
-def test_PredictRmap():
-    zydata = test_simtophat(set_plot=True, stride=5)
-    tau, sigma = (20.0, 2.0)
-    lag, wid, scale = (20.0, 10.0, 0.5)
-    lags   = [0.0, lag]
-    wids   = [0.0, wid]
-    scales = [1.0, scale]
-    P = PredictRmap(zydata=zydata, sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales)
-    mcmean  = 10.0
-    mlmean  =  5.0
-    errfrac = 0.05
-    jc = np.linspace(0., 100, 100)
-    jl = jc
-    mc = np.zeros_like(jc)+mcmean
-    ml = np.zeros_like(jl)+mlmean
-    ec = mc*errfrac
-    el = ml*errfrac
-    zylclist = [[jc, mc, ec], [jl, ml, el]]
-    zylclist_new = P.generate(zylclist)
-    zydata_new = zyLC(zylclist_new, names=["continuum", "line"], set_subtractmean=True, qlist=None)
-    zydata_new.plot()
-
-def test_simtophat(set_plot=True, stride=None):
-    covfunc = "drw"
-    tau, sigma = (20.0, 2.0)
-    jc = np.linspace(0., 100, 500)
-    mcmean  = 10.0
-    mlmean  =  5.0
-    errfrac = 0.05
-    P = Predict(lcmean=mcmean, covfunc=covfunc, tau=tau, sigma=sigma)
-    sc = P.generate(jc, ewant=0.0)
-    lag, wid, scale = (20.0, 10.0, 0.5)
-    jl, sl = predictLine(jc, sc, lag, wid, scale, mc_mean=mcmean, ml_mean=mlmean)
-    ec = np.zeros_like(sc) + mcmean*errfrac
-    el = np.zeros_like(sl) + mlmean*errfrac
-    mc = sc + generateErrorTerm(ec)
-    ml = sl + generateErrorTerm(el)
-    if stride is None :
-        zylclist = [[jc, mc, ec], [jl, ml, el]]
-    else :
-        indx = np.arange(0, 500, stride)
-        zylclist = [[jc[indx], mc[indx], ec[indx]], [jl[indx], ml[indx], el[indx]]]
-    
-    zydata = zyLC(zylclist, names=["continuum", "line"], set_subtractmean=True, qlist=None)
-    if set_plot :
-        zydata.plot()
-    return(zydata)
-
-
-if __name__ == "__main__":    
-    import matplotlib.pyplot as plt
-#    test_simsingle()
-#    test_Predict()
-#    test_simtophat()
-    test_PredictRmap()
-    plt.show()
-    pass

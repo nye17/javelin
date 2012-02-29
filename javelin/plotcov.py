@@ -1,4 +1,4 @@
-#Last-modified: 02 Feb 2012 10:45:19 PM
+#Last-modified: 28 Feb 2012 09:39:34 PM
 
 
 import matplotlib.pyplot as plt
@@ -21,7 +21,6 @@ def plotcov(ax, covfunc="pow_exp", color="k", ls="-", lw=1,
     C = Covariance(**covfunc_dict)
     y = C(x,0)
     ax.plot(x,y,color=color, ls=ls, lw=lw, alpha=transparency, label=label)
-
 
 def plot_powexp(ax):
     covfunc = "pow_exp"

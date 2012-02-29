@@ -1,4 +1,4 @@
-#Last-modified: 17 Feb 2012 04:23:27 PM
+#Last-modified: 28 Feb 2012 10:03:13 PM
 import numpy as np
 from predict import Predict
 from psd import psd
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 """
 Test from scratch.
 """
+
 def file_exists(fname) :
     try :
         f = open(fname, "r")
@@ -18,11 +19,11 @@ def file_exists(fname) :
         return(False)
 
 
-def main(set_plot=True):
+def genTrueLC(set_plot=True):
     # create a `truth' mode light curve set with one continuum and two lines
     # object name: loopdeloop
     # line1 : yelm
-    # line2 : zuunium
+    # line2 : zing
     sigma, tau = (0.10, 100.0)
     lagy, widy, scaley = (150.0, 3.0, 2.0)
     lagz, widz, scalez = (200.0, 6.0, 0.5)

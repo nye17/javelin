@@ -86,7 +86,9 @@ if __name__ == '__main__':
             packages=["javelin", 
                       "javelin/bayesian/", 
                       "javelin/gp", 
-                      "javelin/gp/cov_funs" ],
+                      "javelin/gp/cov_funs" 
+                      "javelin/emcee" 
+                      ],
             **(config_dict)
             )
 

@@ -1,4 +1,4 @@
-! Last-modified: 15 Feb 2012 12:46:34 AM
+! Last-modified: 29 Feb 2012 05:53:28 PM
 
 MODULE spear_covfunc
 implicit none

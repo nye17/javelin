@@ -81,6 +81,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     # scale time unit to djc
     junit = djc[0]
     window_len = np.floor(0.5*wid/junit)
+    print(window_len)
     # continuum signal 
     sc = mc - mc_mean
     if wid < 0.0 :
@@ -92,6 +93,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     sl = smooth(sc,window_len=window_len,window='flat')
     ml = ml_mean + sl*scale
     jl = jc + lag
+    print(len(ml))
     return(jl, ml)
 
 class PredictRmap(object):
@@ -368,6 +370,7 @@ def smooth(x,window_len=11,window='flat'):
     """smooth the data using a window with requested size.
 
     from: http://www.scipy.org/Cookbook/SignalSmooth
+    with some minor modifications.
     
     This method is based on the convolution of a scaled window with the signal.
     The signal is prepared by introducing reflected copies of the signal 
@@ -404,12 +407,12 @@ def smooth(x,window_len=11,window='flat'):
         return x
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+    # increment the original array 
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
     if window == 'flat': #moving average
         w=np.ones(window_len,'d')
     else:
         w=eval('np.'+window+'(window_len)')
-    y=np.convolve(w/w.sum(),s,mode='valid')
-    return(y)
-
-
+    y=np.convolve(w/w.sum(),s,mode='same')
+    # chop off the wings to maintain array size before return
+    return(y[window_len-1:-window_len+1])

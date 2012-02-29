@@ -1,73 +1,125 @@
-#Last-modified: 03 Feb 2012 05:40:27 PM
+#Last-modified: 29 Feb 2012 06:19:46 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
+from spear import spear
 from gp import FullRankCovariance, NearlyFullRankCovariance
+from emcee import *
 
 """ PRH likelihood calculation.
 """
-
 
 my_neg_inf = float(-1.0e+300)
 
 class PRH(object):
     """
+    PressRybickiHewitt
     """
     def __init__(self, zylc):
+        """ PRH (initials of W.H. Press, G.B. Rybicki, and J.N. Hewitt) object.
+
+        Parameters
+        ----------
+        zylc: zyLC object
+            Light curve data.
+        """
         if not isinstance(zylc, zyLC):
             raise RuntimeError("zylc has to be a zyLC object")
         # initialize zylc
         self.zylc = zylc
-        self.npt  = zylc.npt
         self.nlc  = zylc.nlc
+        self.npt  = zylc.npt
         self.jarr = zylc.jarr
         self.marr = zylc.marr.T  # make it a vector
         self.earr = zylc.earr
         self.iarr = zylc.iarr
         self.varr = np.power(zylc.earr, 2.)
+        # construct the linear response matrix
         self.larr = np.zeros((self.npt, self.nlc))
         for i in xrange(self.npt):
             lcid = self.iarr[i] - 1
             self.larr[i, lcid] = 1.0
         self.larrTr = self.larr.T
-        # decide dimension of the problem
-        if (self.nlc == 1):
-            self.set_single = True
-        else:
-            self.set_single = False
+        # dimension of the problem
+        self.set_single = zylc.issingle
 
-    def loglike_prh(self, covfunc, rank="Full", retq=True, **covparams):
+    def lnlikefn(self, covfunc=None, rank="Full", retq=True, **covparams):
+        """ PRH log-likelihood function
+        
+        Parameters
+        ----------
+        covfunc: string, optional
+            Name of the covariance function (default: None, i.e., use 'drw' for
+            single light curve, and 'spear' for multiple light curves ).
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        retq: bool, optional
+            Return the value(s) of q along with each component of the
+            log-likelihood if True (default: True).
+
+        covparams: kwargs
+            Parameters for 'covfunc'. For 'spear', they are positional
+            arguments: sigma,tau,lags,wids,scales.
+
+        Returns
+        -------
+        log_like: float
+            Log likelihood.
+
+        chi2: float
+            Chi^2 component (setq=True).
+
+        compl_pen: float
+            Det component (setq=True).
+
+        wmean_pen: float
+            Var(q) component (setq=True).
+
+        q: array_like
+            Minimum variance estimate of qs, note that for single light curve
+            fitting, q is then an one-element array (setq=True).
+
+        """
         # set up covariance function
         if self.set_single:
+            if covfunc is None :
+                covfunc = 'drw'
             covfunc_dict = get_covfunc_dict(covfunc, **covparams)
             if rank is "Full" :
                 # using full-rank
-                self.C = FullRankCovariance(**covfunc_dict)
+                C = FullRankCovariance(**covfunc_dict)
             elif rank is "NearlyFull" :
                 # using nearly full-rank
-                self.C = NearlyFullRankCovariance(**covfunc_dict)
+                C = NearlyFullRankCovariance(**covfunc_dict)
         else:
-            pass
-            raise RuntimeError("Sorry, RM part not implemented yet")
+            if ((covfunc is None) or (covfunc == "spear")) :
+                C = spear(self.jarr,self.jarr,self.iarr,self.iarr, **covparams)
+#                print(self.jarr[:5])
+#                print(self.iarr[:5])
+#                print(C[:5,:5])
+            else :
+                raise RuntimeError("unknown covfunc name %s"%covfunc)
+
         # cholesky decompose S+N so that U^T U = S+N = C
         if self.set_single :
             # using intrinsic method of C without explicitly writing out cmatrix
             try :
-                U = self.C.cholesky(self.jarr, observed=False, nugget=self.varr)
+                U = C.cholesky(self.jarr, observed=False, nugget=self.varr)
                 info = 0
             except :
                 info = 1
-            #cmatrix = self.C(self.jarr, self.jarr)
-            #U, info = cholesky(cmatrix, nugget=self.varr, 
-            #        inplace=True, raiseinfo=False)
         else :
-            raise RuntimeError("require U of cpnmatrix for more RM purposes")
+            U, info = cholesky(C, nugget=self.varr, inplace=True, raiseinfo=False)
 
         if info > 0 :
-            print("warning: cmatrix non positive-definite")
+            print("Warning: non positive-definite covariance")
             if retq:
                 return(my_neg_inf, my_neg_inf, my_neg_inf, 
                         my_neg_inf, my_neg_inf)
@@ -114,24 +166,32 @@ class PRH(object):
         if retq:
             q = np.dot(d, a)
             # q[0] to take the scalar value from the 0-d array
-            return(_log_like, _chi2, _compl_pen, _wmean_pen, q[0])
+#            return(_log_like, _chi2, _compl_pen, _wmean_pen, q[0])
+            return(_log_like, _chi2, _compl_pen, _wmean_pen, q)
         else:
             return(_log_like)
-
-    def logp(self, covfunc, rank="Full", tauprior=None, sigprior=None, **covparams):
-        #FIXME
-        if tauprior is None :
-            _logp_tau = 0.0
-        else :
-            pass
 
 
 
 
 if __name__ == "__main__":    
-    lcfile = "dat/loopdeloop_con.dat"
-    zylc   = get_data(lcfile)
-    prh    = PRH(zylc)
-    print(prh.loglike_prh(covfunc="pow_exp", tau=200.0, sigma=0.05, nu=0.5))
+    sigma, tau = (2.00, 100.0)
+    lagy, widy, scaley = (150.0,  3.0, 2.0)
+    lagz, widz, scalez = (200.0,  9.0, 0.5)
+    lags   = np.array([0.0,   lagy,   lagz])
+    wids   = np.array([0.0,   widy,   widz])
+    scales = np.array([1.0, scaley, scalez])
+
+    if True :
+        lcfile = "dat/loopdeloop_con.dat"
+        zylc   = get_data(lcfile)
+        prh    = PRH(zylc)
+        print(prh.lnlikefn(tau=tau, sigma=sigma))
+
+    if True :
+        lcfile = "dat/loopdeloop_con_y_z.dat"
+        zylc   = get_data(lcfile)
+        prh    = PRH(zylc)
+        print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales))
     
 

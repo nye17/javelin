@@ -1,4 +1,4 @@
-# Last-modified: 28 Feb 2012 06:49:32 PM
+# Last-modified: 29 Feb 2012 12:50:02 PM
 
 """ 
 Functions related to the processing of quasar light curves. Numpy is not used
@@ -175,7 +175,7 @@ def writelc(lightcurvearray, lcdata, fmt="10.5f"):
         f = lcdata
     nlc = len(lightcurvearray)
     f.write(str(nlc)+"\n")
-    for ilc in range(nlc):
+    for ilc in xrange(nlc):
         lightcurve = lightcurvearray[ilc]
         assert len(lightcurve) == 3, "Input list not consist of 3-column sublists"
         jd, pt, er = lightcurve

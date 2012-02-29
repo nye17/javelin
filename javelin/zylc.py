@@ -2,7 +2,7 @@ import numpy as np
 
 __all__ = ['zyLC', 'get_data']
 
-from lcio import jdrangelc, jdmedlc, readlc, readlc_3c
+from lcio import jdmedlc, readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -31,6 +31,8 @@ class zyLC(object):
         """
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
+        else :
+            self.zylclist = zylclist
         # number of light curves
         self.nlc = len(zylclist)
         if names is None :
@@ -100,7 +102,7 @@ class zyLC(object):
             ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
             #axes.append(ax)
             mfc = cm.jet(1.*(i-1)/self.nlc)
-            ax.errorbar(self.jlist[i], self.mlist[i], yerr=self.elist[i], 
+            ax.errorbar(self.jlist[i], self.mlist[i]+self.blist[i]+self.qlist[i], yerr=self.elist[i], 
                     ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
                     label=self.names[i])
             ax.set_xlim(self.jarr[0], self.jarr[-1])
@@ -111,7 +113,27 @@ class zyLC(object):
             ax.legend(loc=1)
         #plt.show()
         plt.draw()
-            
+
+    def save(self, fname, set_overwrite=True):
+        """ save zydata into zylc file format.
+        """
+        try :
+            f=open(fname, "r")
+            if not set_overwrite :
+                raise RuntimeError("%s exists, exit"%fname)
+        except IOError :
+            writelc(self.zylclist, fname)
+
+    def save_continuum(self, fname, set_overwrite=True):
+        """ save the continuum part of zydata into zylc file format.
+        """
+        try :
+            f=open(fname, "r")
+            if not set_overwrite :
+                raise RuntimeError("%s exists, exit"%fname)
+        except IOError :
+            writelc([self.zylclist[0]], fname)
+
     def update_qlist(self, qlist):
         """ update the zyLC object with a newly acquired qlist values.
 

@@ -10,14 +10,28 @@ import matplotlib.cm as cm
 """
 
 class zyLC(object):
-    """ zyLC object.
-    """
     def __init__(self, zylclist, names=None, set_subtractmean=True, qlist=None):
-        """
+        """ zyLC object for encapsulating light curve data.
+
+        Parameters
+        ----------
+        zylclist: list of lists/ndarrays
+            List of light curves.
+
+        names: list of strings, optional
+            Names of each individual light curve (default: None).
+
+        set_subtractmean: bool, optional
+            True if light curve means are subtracted (default: True).
+
+        qlist: list of q values, optional
+            Best-fit q values from javelin fitting, used to obtain the truth
+            mean of light curves (default: None).
+
         """
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
-
+        # number of light curves
         self.nlc = len(zylclist)
         if names is None :
             # simply use the light curve ids as their names (start from 1)
@@ -28,6 +42,7 @@ class zyLC(object):
             else :
                 self.names = names
 
+        # q values for the *true* means of light curves
         if qlist is None :
             self.qlist = self.nlc*[0.0]
         else :
@@ -36,11 +51,13 @@ class zyLC(object):
             else :
                 self.qlist = qlist
 
+        # issingle makes a difference in what you can do with the light curves
         if(self.nlc == 1):
             self.issingle = True
         else:
             self.issingle = False
 
+        # jlist/mlist/elist/ilist: list of j, m, e, i of each individual light curve 
         self.jlist, self.mlist, self.elist, self.ilist = self.sorteddatalist(zylclist)
 
         # continuum properties, useful in determining continuum variability
@@ -49,11 +66,13 @@ class zyLC(object):
         self.cont_std      = np.std(self.mlist[0])
         self.cont_cad      = jdmedlc(list(self.jlist[0]))
         if self.cont_mean_err != 0.0 :
+            # a rough estimate of the continuum variability signal-to-noise
+            # ratio
             self.cont_SN       = self.cont_std/self.cont_mean_err
         else :
             print("Warning: zero mean error in the continuum?")
 
-        # subtract the mean
+        # subtract the mean to get *blist*
         # usually good for the code health, smaller means means less 
         # possibility of large round-off errors in the matrix computations.
         # note tha it also modifies self.mlist.
@@ -62,11 +81,12 @@ class zyLC(object):
         else:
             self.blist = [0.0]*self.nlc
 
-        # number statistics
+        # number statistics: nptlist, npt
         self.nptlist = np.array([a.size for a in self.jlist])
         self.npt = sum(self.nptlist)
         
-        # combine all information into one vector
+        # combine all information into one vector, those are the primariy
+        # vectors we are gonna use in spear covariance.
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
         # baseline of all the light curves
@@ -92,8 +112,14 @@ class zyLC(object):
         #plt.show()
         plt.draw()
             
-            
     def update_qlist(self, qlist):
+        """ update the zyLC object with a newly acquired qlist values.
+
+        Parameters
+        ----------
+        qlist: list
+            Best-fit light curve mean modulation factors.
+        """
         # add      q to   blist
         # subtract q from mlist
         for i in xrange(self.nlc):
@@ -104,6 +130,13 @@ class zyLC(object):
 
 
     def meansubtraction(self):
+        """ Subtract the mean.
+
+        Returns
+        -------
+        blist: list
+            list of light curve means.
+        """
         blist = []
         for i in xrange(self.nlc):
             bar = np.mean(self.mlist[i])
@@ -151,6 +184,26 @@ class zyLC(object):
 
 
 def get_data(lcfile, names=None, set_subtractmean=True):
+    """ Read light curve file(s) into a zyLC object.
+
+    Parameters
+    ----------
+    lcfile: string or list of strings
+        Input files, could be a single or multiple 3-column light curve files, or
+        a single zylc format light curve file.
+
+    names: list of strings
+        Names of each files in *lcfile* (default: None).
+
+    set_subtractmean: bool
+        Subtract mean in zyLC if True (default: True).
+
+    Returns
+    -------
+    zydata: zyLC object
+        Combined data in a zyLC object
+
+    """
     if isinstance(lcfile, basestring):
         nlc = 1
         # lcfile should be a single file

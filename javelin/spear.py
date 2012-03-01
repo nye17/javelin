@@ -1,4 +1,4 @@
-#Last-modified: 29 Feb 2012 05:46:11 PM
+#Last-modified: 01 Mar 2012 01:06:05 AM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -12,14 +12,6 @@ from javelin.gp.GPutils import regularize_array
 """ The SPEAR covariance function, called by gp.Covariance.
 """
 
-# Requirements
-# 3. needs to resolve the covariance btw os_mesh and x
-# 4. needs to take in 'symm'
-# 5. need to think of multi-threading later, e.g., filling the matrix
-# simultaneously. check http://www.scipy.org/Dynetrekk/f2py_OpenMP_draft
-
-# basic function is to take x, y (vectors or scalars), along with their ids,
-# DRW parameters, transfer function parameters, etc., and return the matrix.
 
 def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
     if (sigma<0. or tau<0.) :

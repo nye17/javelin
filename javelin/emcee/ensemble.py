@@ -9,7 +9,11 @@ Goodman & Weare, Ensemble Samplers With Affine Invariance
 
 __all__ = ['EnsembleSampler']
 
-import multiprocessing
+#import multiprocessing
+import multiprocessing, logging
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(multiprocessing.SUBDEBUG)
+
 import numpy as np
 
 try:

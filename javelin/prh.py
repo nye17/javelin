@@ -1,4 +1,4 @@
-#Last-modified: 29 Feb 2012 06:19:46 PM
+#Last-modified: 29 Feb 2012 07:02:35 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -18,7 +18,7 @@ class PRH(object):
     """
     PressRybickiHewitt
     """
-    def __init__(self, zylc):
+    def __init__(self, zylc, set_warning=False):
         """ PRH (initials of W.H. Press, G.B. Rybicki, and J.N. Hewitt) object.
 
         Parameters
@@ -45,8 +45,9 @@ class PRH(object):
         self.larrTr = self.larr.T
         # dimension of the problem
         self.set_single = zylc.issingle
+        self.set_warning = set_warning
 
-    def lnlikefn(self, covfunc=None, rank="Full", retq=True, **covparams):
+    def lnlikefn(self, covfunc=None, rank="Full", retq=False, **covparams):
         """ PRH log-likelihood function
         
         Parameters
@@ -119,7 +120,8 @@ class PRH(object):
             U, info = cholesky(C, nugget=self.varr, inplace=True, raiseinfo=False)
 
         if info > 0 :
-            print("Warning: non positive-definite covariance")
+            if self.set_warning :
+                print("Warning: non positive-definite covariance")
             if retq:
                 return(my_neg_inf, my_neg_inf, my_neg_inf, 
                         my_neg_inf, my_neg_inf)
@@ -172,6 +174,16 @@ class PRH(object):
             return(_log_like)
 
 
+class ContinuumDRW(object) :
+    def __init__(self, zylc) :
+        self.prh = PRH(zylc)
+    def __call__(self, p):
+        sigma = p[0]
+        tau   = p[1]
+        logp = self.prh.lnlikefn(sigma=sigma, tau=tau)
+#        print(logp)
+        return(logp)
+
 
 
 if __name__ == "__main__":    
@@ -182,16 +194,38 @@ if __name__ == "__main__":
     wids   = np.array([0.0,   widy,   widz])
     scales = np.array([1.0, scaley, scalez])
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con.dat"
         zylc   = get_data(lcfile)
         prh    = PRH(zylc)
         print(prh.lnlikefn(tau=tau, sigma=sigma))
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con_y_z.dat"
         zylc   = get_data(lcfile)
         prh    = PRH(zylc)
         print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales))
+
+    if True:
+        lcfile = "dat/loopdeloop_con.dat"
+        zylc   = get_data(lcfile)
+        cont   =ContinuumDRW(zylc)
+        nwalkers = 100
+        p0 = np.random.rand(nwalkers*2).reshape(nwalkers, 2)
+        p0[:,1] = np.abs(p0[:,1]) + 100.0
+        p0[:,0] = np.abs(p0[:,0]) + 1.0
+        sampler = EnsembleSampler(nwalkers, 2, cont, threads=2)
+        pos, prob, state = sampler.run_mcmc(p0, 2)
+        raw_input("burn-in finished, press Enter to resume\n")
+        sampler.reset()
+        sampler.run_mcmc(pos, 1000, rstate0=state)
+        af = sampler.acceptance_fraction
+        print(af)
+        np.savetxt("test.out", sampler.flatchain)
+#        f = open("test.out", "w")
+#            f.write("\n".join(["\t".join([str(q) for q in p]) for p in pos]))
+#            f.write("\n")
+#        f.close()
+
     
 

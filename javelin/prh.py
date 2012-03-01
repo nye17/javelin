@@ -1,4 +1,4 @@
-#Last-modified: 01 Mar 2012 02:29:05 AM
+#Last-modified: 01 Mar 2012 02:48:46 AM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -7,13 +7,9 @@ from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
 from spear import spear
 from gp import FullRankCovariance, NearlyFullRankCovariance
-from emcee import *
-
 
 """ PRH likelihood calculation.
 """
-
-
 
 my_neg_inf = float(-1.0e+300)
 
@@ -107,9 +103,6 @@ class PRH(object):
         else:
             if ((covfunc is None) or (covfunc == "spear")) :
                 C = spear(self.jarr,self.jarr,self.iarr,self.iarr, **covparams)
-#                print(self.jarr[:5])
-#                print(self.iarr[:5])
-#                print(C[:5,:5])
             else :
                 raise RuntimeError("unknown covfunc name %s"%covfunc)
 
@@ -211,14 +204,15 @@ class ContinuumDRW(object) :
 def func(p, prh):
     return(prh(p))
 
+#makeContextFunctions()
+
 
 
 
 if __name__ == "__main__":    
     import matplotlib.pyplot as plt
     import pickle
-
-
+    from emcee import *
 
     sigma, tau = (2.00, 100.0)
     lagy, widy, scaley = (150.0,  3.0, 2.0)
@@ -237,9 +231,10 @@ if __name__ == "__main__":
         lcfile = "dat/loopdeloop_con_y_z.dat"
         zylc   = get_data(lcfile)
         prh    = PRH(zylc)
-        print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales))
+        print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, 
+            lags=lags, wids=wids, scales=scales))
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con.dat"
         zylc   = get_data(lcfile)
 #        cont   = ContinuumDRW(zylc)
@@ -270,11 +265,12 @@ if __name__ == "__main__":
 
     if False :
         import multiprocessing as mp
-        pool = mp.Pool()
         lcfile = "dat/loopdeloop_con.dat"
+        pool = mp.Pool()
         zylc   = get_data(lcfile)
         cont   = PRH(zylc)
-        pool.apply_async(func, args=[cont,])
+#        pool.map(func, args=[cont,])
+        pool.map(cont)
         pool.close()
         pool.join()
 

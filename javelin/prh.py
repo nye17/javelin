@@ -1,4 +1,4 @@
-#Last-modified: 29 Feb 2012 07:02:35 PM
+#Last-modified: 29 Feb 2012 07:10:11 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -214,9 +214,9 @@ if __name__ == "__main__":
         p0 = np.random.rand(nwalkers*2).reshape(nwalkers, 2)
         p0[:,1] = np.abs(p0[:,1]) + 100.0
         p0[:,0] = np.abs(p0[:,0]) + 1.0
-        sampler = EnsembleSampler(nwalkers, 2, cont, threads=2)
-        pos, prob, state = sampler.run_mcmc(p0, 2)
-        raw_input("burn-in finished, press Enter to resume\n")
+        sampler = EnsembleSampler(nwalkers, 2, cont, threads=1)
+        pos, prob, state = sampler.run_mcmc(p0, 200)
+#        raw_input("burn-in finished, press Enter to resume\n")
         sampler.reset()
         sampler.run_mcmc(pos, 1000, rstate0=state)
         af = sampler.acceptance_fraction

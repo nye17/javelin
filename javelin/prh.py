@@ -1,4 +1,4 @@
-#Last-modified: 29 Feb 2012 07:10:11 PM
+#Last-modified: 01 Mar 2012 02:29:05 AM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -9,14 +9,17 @@ from spear import spear
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from emcee import *
 
+
 """ PRH likelihood calculation.
 """
+
+
 
 my_neg_inf = float(-1.0e+300)
 
 class PRH(object):
     """
-    PressRybickiHewitt
+    Press+Rybicki+Hewitt
     """
     def __init__(self, zylc, set_warning=False):
         """ PRH (initials of W.H. Press, G.B. Rybicki, and J.N. Hewitt) object.
@@ -46,6 +49,8 @@ class PRH(object):
         # dimension of the problem
         self.set_single = zylc.issingle
         self.set_warning = set_warning
+        # cadence
+        self.cont_cad = zylc.cont_cad
 
     def lnlikefn(self, covfunc=None, rank="Full", retq=False, **covparams):
         """ PRH log-likelihood function
@@ -173,20 +178,48 @@ class PRH(object):
         else:
             return(_log_like)
 
+    def __call__(self, p):
+        sigma = np.exp(p[0])
+        tau   = np.exp(p[1])
+        logp  = self.lnlikefn(sigma=sigma, tau=tau)
+        if tau > self.cont_cad :
+            prior = - np.log(tau/self.cont_cad) - np.log(sigma)
+        else :
+            prior = - np.log(self.cont_cad/tau) - np.log(sigma)
+        logp = logp + prior
+        print(logp)
+        return(logp)
+
 
 class ContinuumDRW(object) :
     def __init__(self, zylc) :
         self.prh = PRH(zylc)
+        self.cont_cad = self.prh.cont_cad
     def __call__(self, p):
-        sigma = p[0]
-        tau   = p[1]
-        logp = self.prh.lnlikefn(sigma=sigma, tau=tau)
-#        print(logp)
+        sigma = np.exp(p[0])
+        tau   = np.exp(p[1])
+        logp  = self.prh.lnlikefn(sigma=sigma, tau=tau)
+        if tau > self.cont_cad :
+            prior = - np.log(tau/self.cont_cad) - np.log(sigma)
+        else :
+            prior = - np.log(self.cont_cad/tau) - np.log(sigma)
+        logp = logp + prior
+        print(logp)
         return(logp)
+
+
+def func(p, prh):
+    return(prh(p))
+
 
 
 
 if __name__ == "__main__":    
+    import matplotlib.pyplot as plt
+    import pickle
+
+
+
     sigma, tau = (2.00, 100.0)
     lagy, widy, scaley = (150.0,  3.0, 2.0)
     lagz, widz, scalez = (200.0,  9.0, 0.5)
@@ -206,26 +239,45 @@ if __name__ == "__main__":
         prh    = PRH(zylc)
         print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, lags=lags, wids=wids, scales=scales))
 
-    if True:
+    if True :
         lcfile = "dat/loopdeloop_con.dat"
         zylc   = get_data(lcfile)
-        cont   =ContinuumDRW(zylc)
+#        cont   = ContinuumDRW(zylc)
+        cont   = PRH(zylc)
         nwalkers = 100
         p0 = np.random.rand(nwalkers*2).reshape(nwalkers, 2)
-        p0[:,1] = np.abs(p0[:,1]) + 100.0
-        p0[:,0] = np.abs(p0[:,0]) + 1.0
-        sampler = EnsembleSampler(nwalkers, 2, cont, threads=1)
-        pos, prob, state = sampler.run_mcmc(p0, 200)
-#        raw_input("burn-in finished, press Enter to resume\n")
+        p0[:,0] = np.abs(p0[:,0]) - 0.5
+        p0[:,1] = np.abs(p0[:,1]) + 1.0
+#        sampler = EnsembleSampler(nwalkers, 2, cont, threads=1)
+#        sampler = EnsembleSampler(nwalkers, 2, cont, threads=2)
+        sampler = EnsembleSampler(nwalkers, 2, func, args=[cont,], threads=2)
+
+
+#        sampler = EnsembleSampler(nwalkers, 2, PRH(zylc), threads=2)
+        pos, prob, state = sampler.run_mcmc(p0, 100)
+        np.savetxt("burn.out", sampler.flatchain)
+        print("burn-in finished\n")
         sampler.reset()
-        sampler.run_mcmc(pos, 1000, rstate0=state)
+        sampler.run_mcmc(pos, 100, rstate0=state)
         af = sampler.acceptance_fraction
         print(af)
         np.savetxt("test.out", sampler.flatchain)
-#        f = open("test.out", "w")
-#            f.write("\n".join(["\t".join([str(q) for q in p]) for p in pos]))
-#            f.write("\n")
-#        f.close()
+#        plt.hist(np.exp(sampler.flatchain[:,0]), 100)
+#        plt.show()
+#        plt.hist(np.exp(sampler.flatchain[:,1]), 100)
+#        plt.show()
+
+
+    if False :
+        import multiprocessing as mp
+        pool = mp.Pool()
+        lcfile = "dat/loopdeloop_con.dat"
+        zylc   = get_data(lcfile)
+        cont   = PRH(zylc)
+        pool.apply_async(func, args=[cont,])
+        pool.close()
+        pool.join()
+
 
     
 

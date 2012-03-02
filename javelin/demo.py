@@ -1,4 +1,4 @@
-#Last-modified: 29 Feb 2012 03:01:42 PM
+#Last-modified: 01 Mar 2012 06:24:41 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -106,12 +106,17 @@ if __name__ == "__main__":
 
     # downsample the truth to get more realistic light curves
     confile = "dat/loopdeloop_con.dat"
+    topfile = "dat/loopdeloop_con_y.dat"
     doufile = "dat/loopdeloop_con_y_z.dat"
-    zydata = True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], 
+    zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], 
         errfac=[0.05, 0.05, 0.05], set_seasongap=True)
-    zydata.save_continuum(confile)
-    zydata.save(doufile)
+    zydata_dou.save_continuum(confile)
+    zydata_dou.save(doufile)
+    zylclist_top = zydata_dou.zylclist[:2]
+    zydata_top = zyLC(zylclist_top)
+    zydata_top.save(topfile)
     if set_plot :
-        zydata.plot()
+        zydata_top.plot()
+        zydata_dou.plot()
 
     plt.show()

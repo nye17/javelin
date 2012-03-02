@@ -1,4 +1,4 @@
-#Last-modified: 02 Mar 2012 02:03:41 PM
+#Last-modified: 02 Mar 2012 05:48:51 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -589,10 +589,13 @@ if __name__ == "__main__":
 #        p_ini = [np.log(2.0), np.log(100.0), 130, 3, 2]
 #        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
 
-        rmap.do_mcmc(cont.hpd, nwalkers=500, nburn=100, nchain=100, 
-                fburn="burn3.dat", fchain="chain3.dat")
+#        rmap.do_mcmc(cont.hpd, nwalkers=500, nburn=100, nchain=100, 
+#                fburn="burn3.dat", fchain="chain3.dat")
+#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50, nchain=50, 
+#                fburn="burn4.dat", fchain="chain4.dat")
 
 #        rmap.load_chain("chain2.dat")
-#        rmap.get_hpd()
-#        rmap.show_hist()
+        rmap.load_chain("burn3.dat")
+        rmap.get_hpd()
+        rmap.show_hist()
 

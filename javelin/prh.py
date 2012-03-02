@@ -1,4 +1,4 @@
-#Last-modified: 02 Mar 2012 04:16:55 AM
+#Last-modified: 02 Mar 2012 04:40:59 AM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -387,7 +387,7 @@ class DRW_Model(object) :
         
 
 class Rmap_Model(object) :
-    def __init__(self, zylc) :
+    def __init__(self, zylc=None) :
         if zylc is None :
             pass
         else :
@@ -395,7 +395,7 @@ class Rmap_Model(object) :
             self.cont_cad = self.prh.cont_cad
             self.nlc = self.prh.nlc
             # number of parameters
-            self.ndim = 2 + self.nlc*3
+            self.ndim = 2 + (self.nlc-1)*3
             self.names = self.prh.names
             self.vars = ["sigma", "tau"]
             self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
@@ -535,6 +535,7 @@ class Rmap_Model(object) :
         if set_verbose :
             print("load MCMC chain from %s"%fchain)
         self.flatchain = np.genfromtxt(fchain)
+        self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
@@ -581,86 +582,14 @@ if __name__ == "__main__":
         zylc   = get_data(lcfile)
         cont   = DRW_Model()
         cont.load_chain("chain.dat")
-        print(cont.hpd)
+#        print(cont.hpd)
         rmap   = Rmap_Model(zylc)
-        p_ini = [np.log(2.0), np.log(100.0), 130, 3, 2]
+#        p_ini = [np.log(2.0), np.log(100.0), 130, 3, 2]
 #        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
-        rmap.do_mcmc(nwalkers=100, nburn=50, nchain=50, 
+
+        rmap.do_mcmc(nwalkers=500, nburn=100, nchain=100, 
                 fburn="burn2.dat", fchain="chain2.dat")
-
-    if False :
-        lcfile = "dat/loopdeloop_con_y.dat"
-        zylc   = get_data(lcfile)
-        rmap   = Rmap_Model(zylc)
-        nwalkers = 100
-        ndim   = 5
-        p0 = np.random.rand(nwalkers*ndim).reshape(nwalkers, ndim)
-        p0[:,0] = p0[:,0] - 0.5
-        p0[:,1] = p0[:,1] + 1.0
-        p0[:,2] = p0[:,2] + 1.2
-        p0[:,3] = p0[:,3] + 0.6
-        p0[:,4] = p0[:,4] + 0.5
-        sampler = EnsembleSampler(nwalkers, ndim, rmap, threads=1)
-        pos, prob, state = sampler.run_mcmc(p0, 100)
-        np.savetxt("burn_top.out", sampler.flatchain)
-        print("burn-in finished\n")
-        sampler.reset()
-        sampler.run_mcmc(pos, 100, rstate0=state)
-        af = sampler.acceptance_fraction
-        print(af)
-        np.savetxt("test_top.out", sampler.flatchain)
-        plt.hist(np.exp(sampler.flatchain[:,0]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,1]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,2]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,3]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,4]), 100)
-        plt.show()
-
-    if False :
-        lcfile = "dat/loopdeloop_con_y_z.dat"
-        zylc   = get_data(lcfile)
-        rmap   = Rmap_Model(zylc)
-        nwalkers = 100
-        ndim   = 8
-        p0 = np.random.rand(nwalkers*ndim).reshape(nwalkers, ndim)
-        p0[:,0] = p0[:,0] - 0.5
-        p0[:,1] = p0[:,1] + 1.0
-        p0[:,2] = p0[:,2] + 1.2
-        p0[:,3] = p0[:,3] + 0.6
-        p0[:,4] = p0[:,4] + 0.5
-        p0[:,5] = p0[:,5] + 1.2
-        p0[:,6] = p0[:,6] + 0.6
-        p0[:,7] = p0[:,7] + 0.5
-        sampler = EnsembleSampler(nwalkers, ndim, rmap, threads=1)
-        pos, prob, state = sampler.run_mcmc(p0, 100)
-        np.savetxt("burn_dou.out", sampler.flatchain)
-        print("burn-in finished\n")
-        sampler.reset()
-        sampler.run_mcmc(pos, 100, rstate0=state)
-        af = sampler.acceptance_fraction
-        print(af)
-        np.savetxt("test_dou.out", sampler.flatchain)
-        plt.hist(np.exp(sampler.flatchain[:,0]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,1]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,2]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,3]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,4]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,5]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,6]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,7]), 100)
-        plt.show()
-
-
-
+#        rmap.load_chain("burn2.dat")
+#        rmap.get_hpd()
+#        rmap.show_hist()
 

@@ -1,4 +1,4 @@
-#Last-modified: 02 Mar 2012 04:40:59 AM
+#Last-modified: 02 Mar 2012 02:03:41 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -407,36 +407,33 @@ class Rmap_Model(object) :
                 self.texs.append( "".join([r"$w_{", self.names[i] ,r"}$"]))
                 self.texs.append( "".join([r"$s_{", self.names[i] ,r"}$"]))
 
-    def __call__(self, p, conthpd=None):
+    def __call__(self, p, conthpd):
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no __call__ can be done")
             return("__call__ error ")
         sigma = np.exp(p[0])
         tau   = np.exp(p[1])
         # assemble lags/wids/scales
-        lags   = [0.0, ]
-        wids   = [0.0, ]
-        scales = [1.0, ]
+        lags   = np.zeros(self.nlc)
+        wids   = np.zeros(self.nlc)
+        scales =  np.ones(self.nlc)
         for i in xrange(1, self.nlc) : 
-            lags.append(p[2+(i-1)*3])
-            wids.append(p[3+(i-1)*3])
-            scales.append(p[4+(i-1)*3])
+            lags[i]   = p[2+(i-1)*3]
+            wids[i]   = p[3+(i-1)*3]
+            scales[i] = p[4+(i-1)*3]
         logl = self.prh.lnlikefn_spear(sigma, tau, lags, wids, scales, retq=False)
-        if conthpd is not None :
-            # conthpd is in ln
-            # for sigma
-            if p[0] < conthpd[1,0] :
-                prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
-            else :
-                prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
-            # for tau
-            if p[1] < conthpd[1,1] :
-                prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
-            else :
-                prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
-            prior = -0.5*(prior0*prior0+prior1*prior1)
+        # conthpd is in natural log
+        # for sigma
+        if p[0] < conthpd[1,0] :
+            prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
         else :
-            prior = 0.0
+            prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+        # for tau
+        if p[1] < conthpd[1,1] :
+            prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+        else :
+            prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+        prior = -0.5*(prior0*prior0+prior1*prior1)
         logp = logl + prior
         return(logp)
 
@@ -463,17 +460,22 @@ class Rmap_Model(object) :
             print("with logp  %10.5g "%-v_bst)
         return(-v_bst, p_bst)
 
-    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100, fburn=None,
-            fchain=None, set_verbose=True):
+    def do_mcmc(self, conthpd, nwalkers=100, nburn=100, nchain=100,
+            fburn=None, fchain=None, set_verbose=True):
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no mcmc can be done")
             return(1)
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        p0[:, 0] *= 2.*conthpd[1,0]
+        p0[:, 1] *= 2.*conthpd[1,1]
         if set_verbose :
             print("start burn-in")
+            print("using priors on sigma and tau from the continuum fitting")
+            print(np.exp(conthpd))
             print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
                 (nburn, nwalkers, nburn*nwalkers))
-        sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__, threads=1)
+        sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__,
+                args=(conthpd,), threads=1)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if fburn is not None :
             if set_verbose :
@@ -587,9 +589,10 @@ if __name__ == "__main__":
 #        p_ini = [np.log(2.0), np.log(100.0), 130, 3, 2]
 #        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
 
-        rmap.do_mcmc(nwalkers=500, nburn=100, nchain=100, 
-                fburn="burn2.dat", fchain="chain2.dat")
-#        rmap.load_chain("burn2.dat")
+        rmap.do_mcmc(cont.hpd, nwalkers=500, nburn=100, nchain=100, 
+                fburn="burn3.dat", fchain="chain3.dat")
+
+#        rmap.load_chain("chain2.dat")
 #        rmap.get_hpd()
 #        rmap.show_hist()
 

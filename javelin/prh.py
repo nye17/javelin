@@ -1,4 +1,4 @@
-#Last-modified: 01 Mar 2012 10:04:06 PM
+#Last-modified: 02 Mar 2012 04:16:55 AM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -8,6 +8,7 @@ from cov import get_covfunc_dict
 from spear import spear
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from scipy.optimize import fmin
+import matplotlib.pyplot as plt
 
 """ PRH likelihood calculation.
 """
@@ -31,6 +32,7 @@ class PRH(object):
         # initialize zylc
         self.zylc = zylc
         self.nlc  = zylc.nlc
+        self.names= zylc.names
         self.npt  = zylc.npt
         self.jarr = zylc.jarr
         self.marr = zylc.marr.T  # make it a vector
@@ -84,13 +86,13 @@ class PRH(object):
             Log likelihood.
 
         chi2: float
-            Chi^2 component (setq=True).
+            Chi^2 component (retq=True).
 
         compl_pen: float
-            Det component (setq=True).
+            Det component (retq=True).
 
         wmean_pen: float
-            Var(q) component (setq=True).
+            Var(q) component (retq=True).
 
         q: float
             Minimum variance estimate of 'q'.
@@ -119,7 +121,7 @@ class PRH(object):
                    errmsg="Warning: non positive-definite covariance C", 
                    set_verbose=self.set_warning))
 
-        retval = self._lnlike_from_U(self, U, setq=setq)
+        retval = self._lnlike_from_U(U, retq=retq)
         return(retval)
 
 
@@ -155,13 +157,13 @@ class PRH(object):
             Log likelihood.
 
         chi2: float
-            Chi^2 component (setq=True).
+            Chi^2 component (retq=True).
 
         compl_pen: float
-            Det component (setq=True).
+            Det component (retq=True).
 
         wmean_pen: float
-            Var(q) component (setq=True).
+            Var(q) component (retq=True).
 
         qlist: list
             Minimum variance estimates of 'q's.
@@ -169,6 +171,11 @@ class PRH(object):
         """
         if self.set_single:
             raise RuntimeError("lnlikefn_spear does not work for single mode")
+
+        if sigma<=0.0 or tau<=0.0 or np.min(wids)<0.0 or np.min(scales)<=0.0 :
+           return(self._exit_with_retval(retq, 
+                  errmsg="Warning: illegal input of parameters", 
+                  set_verbose=self.set_warning))
 
         C = spear(self.jarr,self.jarr,self.iarr,self.iarr, sigma, tau, lags,
                 wids, scales)
@@ -257,11 +264,25 @@ class PRH(object):
         else:
             return(my_neg_inf)
 
+
+
 class DRW_Model(object) :
-    def __init__(self, zylc) :
-        self.prh = PRH(zylc)
-        self.cont_cad = self.prh.cont_cad
+    def __init__(self, zylc=None) :
+        if zylc is None :
+            pass
+        else :
+            self.prh = PRH(zylc)
+            self.cont_cad = self.prh.cont_cad
+            self.nlc = self.prh.nlc
+        # number of parameters
+        self.ndim = 2
+        self.vars = ["sigma", "tau"]
+        self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
+
     def __call__(self, p, set_prior=True, rank="Full"):
+        if not hasattr(self, "prh") :
+            print("Warning: no PRH object found, no __call__ can be done")
+            return("__call__ error ")
         sigma = np.exp(p[0])
         tau   = np.exp(p[1])
         logl  = self.prh.lnlikefn_single(covfunc="drw", sigma=sigma, tau=tau,
@@ -269,22 +290,127 @@ class DRW_Model(object) :
         if set_prior :
             if tau > self.cont_cad :
                 prior = - np.log(tau/self.cont_cad) - np.log(sigma)
+            elif tau < 0.00001 :
+                prior = my_neg_inf
             else :
                 prior = - np.log(self.cont_cad/tau) - np.log(sigma)
         else :
             prior = 0.0
         logp = logl + prior
         return(logp)
-    def minimize(self, pini, set_prior=True, rank="Full"):
-        #FIXME
-        fmin(self._call_, pini, args) 
+
+    def do_map(self, p_ini, fixed=None, set_prior=True, rank="Full", 
+            set_verbose=True):
+        p_ini = np.asarray(p_ini)
+        if fixed is not None :
+            fixed = np.asarray(fixed)
+            func = lambda _p : -self.__call__(_p*fixed+p_ini*(1.-fixed),
+                    set_prior=set_prior, rank=rank)
+        else :
+            func = lambda _p : -self.__call__(_p,
+                    set_prior=set_prior, rank=rank)
+        p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        if set_verbose :
+            print("best-fit parameters are")
+            print("sigma %8.3f tau %8.3f"%tuple(np.exp(p_bst)))
+            print("with logp  %10.5g "%-v_bst)
+        return(-v_bst, p_bst)
+
+    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100, fburn=None,
+            fchain=None, set_verbose=True):
+        if not hasattr(self, "prh") :
+            print("Warning: no PRH object found, no mcmc can be done")
+            return(1)
+        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        if set_verbose :
+            print("start burn-in")
+            print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
+                (nburn, nwalkers, nburn*nwalkers))
+        sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__, threads=1)
+        pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if fburn is not None :
+            if set_verbose :
+                print("save burn-in chains to %s"%fburn)
+            np.savetxt(fburn, sampler.flatchain)
+        if set_verbose :
+            print("burn-in finished")
+        sampler.reset()
+        if set_verbose :
+            print("start sampling")
+        sampler.run_mcmc(pos, nchain, rstate0=state)
+        if set_verbose :
+            print("sampling finished")
+        af = sampler.acceptance_fraction
+        if set_verbose :
+            print("acceptance fractions are\n")
+        print(af)
+        if fchain is not None :
+            if set_verbose :
+                print("save MCMC chains to %s"%fchain)
+            np.savetxt(fchain, sampler.flatchain)
+        # make chain an attritue
+        self.flatchain = sampler.flatchain
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def get_hpd(self, set_verbose=True):
+        hpd = np.zeros((3, self.ndim))
+        chain_len = self.flatchain.shape[0]
+        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+        medlowhig = pct1sig.astype(np.int32)
+        for i in xrange(self.ndim):
+            vsort = np.sort(self.flatchain[:,i])
+            hpd[:,i] = vsort[medlowhig]
+            if set_verbose :
+                print("HPD of %s"%self.vars[i])
+                print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+        # register hpd to attr
+        self.hpd = hpd
+
+    def show_hist(self):
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        ln10 = np.log(10.0)
+        for i in xrange(self.ndim) :
+            plt.hist(self.flatchain[:,i]/ln10, 100)
+            plt.xlabel(self.texs[i])
+            plt.ylabel("N")
+            plt.show()
+
+    def load_chain(self, fchain, set_verbose=True):
+        if set_verbose :
+            print("load MCMC chain from %s"%fchain)
+        self.flatchain = np.genfromtxt(fchain)
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+        
 
 class Rmap_Model(object) :
     def __init__(self, zylc) :
-        self.prh = PRH(zylc)
-        self.cont_cad = self.prh.cont_cad
-        self.nlc = self.prh.nlc
-    def __call__(self, p, set_prior=True):
+        if zylc is None :
+            pass
+        else :
+            self.prh = PRH(zylc)
+            self.cont_cad = self.prh.cont_cad
+            self.nlc = self.prh.nlc
+            # number of parameters
+            self.ndim = 2 + self.nlc*3
+            self.names = self.prh.names
+            self.vars = ["sigma", "tau"]
+            self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
+            for i in xrange(1, self.nlc) :
+                self.vars.append("_".join(["lag",   self.names[i]]))
+                self.vars.append("_".join(["wid",   self.names[i]]))
+                self.vars.append("_".join(["scale", self.names[i]]))
+                self.texs.append( "".join([r"$t_{", self.names[i] ,r"}$"]))
+                self.texs.append( "".join([r"$w_{", self.names[i] ,r"}$"]))
+                self.texs.append( "".join([r"$s_{", self.names[i] ,r"}$"]))
+
+    def __call__(self, p, conthpd=None):
+        if not hasattr(self, "prh") :
+            print("Warning: no PRH object found, no __call__ can be done")
+            return("__call__ error ")
         sigma = np.exp(p[0])
         tau   = np.exp(p[1])
         # assemble lags/wids/scales
@@ -295,18 +421,122 @@ class Rmap_Model(object) :
             lags.append(p[2+(i-1)*3])
             wids.append(p[3+(i-1)*3])
             scales.append(p[4+(i-1)*3])
-
-        logl  = self.prh.lnlikefn_spear(sigma, tau, lags, wids, scales, retq=False)
-        if set_prior :
-            if tau > self.cont_cad :
-                prior = - np.log(tau/self.cont_cad) - np.log(sigma)
+        logl = self.prh.lnlikefn_spear(sigma, tau, lags, wids, scales, retq=False)
+        if conthpd is not None :
+            # conthpd is in ln
+            # for sigma
+            if p[0] < conthpd[1,0] :
+                prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
             else :
-                prior = - np.log(self.cont_cad/tau) - np.log(sigma)
+                prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+            # for tau
+            if p[1] < conthpd[1,1] :
+                prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+            else :
+                prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+            prior = -0.5*(prior0*prior0+prior1*prior1)
         else :
             prior = 0.0
         logp = logl + prior
         return(logp)
 
+    def do_map(self, p_ini, fixed=None, conthpd=None, set_verbose=True):
+        p_ini = np.asarray(p_ini)
+        if fixed is not None :
+            fixed = np.asarray(fixed)
+            func = lambda _p : -self.__call__(_p*fixed+p_ini*(1.-fixed),
+                    conthpd=conthpd)
+        else :
+            func = lambda _p : -self.__call__(_p, conthpd=conthpd)
+
+        p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        if set_verbose :
+            print("best-fit parameters are")
+            print("sigma %8.3f tau %8.3f"%tuple(np.exp(p_bst[0:2])))
+            for i in xrange(1,self.nlc) :
+                ip = 2+(i-1)*3
+                print("%s %8.3f %s %8.3f %s %8.3f"%(
+                    self.vars[ip+0], p_bst[ip+0],
+                    self.vars[ip+1], p_bst[ip+1],
+                    self.vars[ip+2], p_bst[ip+2],
+                    ))
+            print("with logp  %10.5g "%-v_bst)
+        return(-v_bst, p_bst)
+
+    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100, fburn=None,
+            fchain=None, set_verbose=True):
+        if not hasattr(self, "prh") :
+            print("Warning: no PRH object found, no mcmc can be done")
+            return(1)
+        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        if set_verbose :
+            print("start burn-in")
+            print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
+                (nburn, nwalkers, nburn*nwalkers))
+        sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__, threads=1)
+        pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if fburn is not None :
+            if set_verbose :
+                print("save burn-in chains to %s"%fburn)
+            np.savetxt(fburn, sampler.flatchain)
+        if set_verbose :
+            print("burn-in finished")
+        sampler.reset()
+        if set_verbose :
+            print("start sampling")
+        sampler.run_mcmc(pos, nchain, rstate0=state)
+        if set_verbose :
+            print("sampling finished")
+        af = sampler.acceptance_fraction
+        if set_verbose :
+            print("acceptance fractions are\n")
+        print(af)
+        if fchain is not None :
+            if set_verbose :
+                print("save MCMC chains to %s"%fchain)
+            np.savetxt(fchain, sampler.flatchain)
+        # make chain an attritue
+        self.flatchain = sampler.flatchain
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def get_hpd(self, set_verbose=True):
+        hpd = np.zeros((3, self.ndim))
+        chain_len = self.flatchain.shape[0]
+        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+        medlowhig = pct1sig.astype(np.int32)
+        for i in xrange(self.ndim):
+            vsort = np.sort(self.flatchain[:,i])
+            hpd[:,i] = vsort[medlowhig]
+            if set_verbose :
+                print("HPD of %s"%self.vars[i])
+                if i < 2 :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                else :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+        # register hpd to attr
+        self.hpd = hpd
+
+    def show_hist(self):
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        ln10 = np.log(10.0)
+        for i in xrange(self.ndim) :
+            if i < 2 :
+                plt.hist(self.flatchain[:,i]/ln10, 100)
+            else : 
+                plt.hist(self.flatchain[:,i], 100)
+            plt.xlabel(self.texs[i])
+            plt.ylabel("N")
+            plt.show()
+
+    def load_chain(self, fchain, set_verbose=True):
+        if set_verbose :
+            print("load MCMC chain from %s"%fchain)
+        self.flatchain = np.genfromtxt(fchain)
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
 
 
 
@@ -340,25 +570,23 @@ if __name__ == "__main__":
         lcfile = "dat/loopdeloop_con.dat"
         zylc   = get_data(lcfile)
         cont   = DRW_Model(zylc)
-        nwalkers = 100
-        ndim   = 2
-        p0 = np.random.rand(nwalkers*2).reshape(nwalkers, 2)
-        p0[:,0] = p0[:,0] - 0.5
-        p0[:,1] = p0[:,1] + 1.0
-        # cannot use multiprocessing in Continuum models
-        sampler = EnsembleSampler(nwalkers, 2, cont, threads=1)
-        pos, prob, state = sampler.run_mcmc(p0, 100)
-        np.savetxt("burn_drw.out", sampler.flatchain)
-        print("burn-in finished\n")
-        sampler.reset()
-        sampler.run_mcmc(pos, 100, rstate0=state)
-        af = sampler.acceptance_fraction
-        print(af)
-        np.savetxt("test_drw.out", sampler.flatchain)
-        plt.hist(np.exp(sampler.flatchain[:,0]), 100)
-        plt.show()
-        plt.hist(np.exp(sampler.flatchain[:,1]), 100)
-        plt.show()
+#        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, 
+#                fburn="burn.dat", fchain="chain.dat")
+        p_ini = [0.0, 1.0]
+        cont.do_map(p_ini, fixed=None, set_prior=False, rank="Full", 
+            set_verbose=True)
+
+    if True :
+        lcfile = "dat/loopdeloop_con_y.dat"
+        zylc   = get_data(lcfile)
+        cont   = DRW_Model()
+        cont.load_chain("chain.dat")
+        print(cont.hpd)
+        rmap   = Rmap_Model(zylc)
+        p_ini = [np.log(2.0), np.log(100.0), 130, 3, 2]
+#        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
+        rmap.do_mcmc(nwalkers=100, nburn=50, nchain=50, 
+                fburn="burn2.dat", fchain="chain2.dat")
 
     if False :
         lcfile = "dat/loopdeloop_con_y.dat"
@@ -392,7 +620,7 @@ if __name__ == "__main__":
         plt.hist(np.exp(sampler.flatchain[:,4]), 100)
         plt.show()
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con_y_z.dat"
         zylc   = get_data(lcfile)
         rmap   = Rmap_Model(zylc)

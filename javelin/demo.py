@@ -1,4 +1,4 @@
-#Last-modified: 01 Mar 2012 06:24:41 PM
+#Last-modified: 01 Mar 2012 11:43:27 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     confile = "dat/loopdeloop_con.dat"
     topfile = "dat/loopdeloop_con_y.dat"
     doufile = "dat/loopdeloop_con_y_z.dat"
-    zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], 
+    zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
         errfac=[0.05, 0.05, 0.05], set_seasongap=True)
     zydata_dou.save_continuum(confile)
     zydata_dou.save(doufile)

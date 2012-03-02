@@ -1,4 +1,4 @@
-#Last-modified: 01 Mar 2012 09:23:38 PM
+#Last-modified: 01 Mar 2012 10:04:06 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -7,6 +7,7 @@ from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
 from spear import spear
 from gp import FullRankCovariance, NearlyFullRankCovariance
+from scipy.optimize import fmin
 
 """ PRH likelihood calculation.
 """
@@ -274,6 +275,9 @@ class DRW_Model(object) :
             prior = 0.0
         logp = logl + prior
         return(logp)
+    def minimize(self, pini, set_prior=True, rank="Full"):
+        #FIXME
+        fmin(self._call_, pini, args) 
 
 class Rmap_Model(object) :
     def __init__(self, zylc) :
@@ -356,7 +360,7 @@ if __name__ == "__main__":
         plt.hist(np.exp(sampler.flatchain[:,1]), 100)
         plt.show()
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con_y.dat"
         zylc   = get_data(lcfile)
         rmap   = Rmap_Model(zylc)
@@ -388,7 +392,7 @@ if __name__ == "__main__":
         plt.hist(np.exp(sampler.flatchain[:,4]), 100)
         plt.show()
 
-    if False :
+    if True :
         lcfile = "dat/loopdeloop_con_y_z.dat"
         zylc   = get_data(lcfile)
         rmap   = Rmap_Model(zylc)

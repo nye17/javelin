@@ -1,4 +1,4 @@
-#Last-modified: 02 Mar 2012 07:31:02 PM
+#Last-modified: 02 Mar 2012 08:59:40 PM
 
 from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
@@ -272,8 +272,10 @@ class DRW_Model(object) :
             pass
         else :
             self.prh = PRH(zylc)
-            self.cont_cad = self.prh.cont_cad
-            self.nlc = self.prh.nlc
+            self.cont_cad = zylc.cont_cad
+            self.cont_std = zylc.cont_std
+            self.nlc = zylc.nlc
+            self.rj  = zylc.rj
         # number of parameters
         self.ndim = 2
         self.vars = ["sigma", "tau"]
@@ -316,12 +318,15 @@ class DRW_Model(object) :
             print("with logp  %10.5g "%-v_bst)
         return(-v_bst, p_bst)
 
-    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100, fburn=None,
-            fchain=None, set_verbose=True):
+    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100,
+            fburn=None, fchain=None, set_verbose=True):
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no mcmc can be done")
             return(1)
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        #FIXME
+        p0[:,0] = p0[:,0] + self.cont_std - 0.5 
+        p0[:,1] = np.log(self.rj*0.5*p0[:,1])
         if set_verbose :
             print("start burn-in")
             print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
@@ -392,8 +397,9 @@ class Rmap_Model(object) :
             pass
         else :
             self.prh = PRH(zylc)
-            self.cont_cad = self.prh.cont_cad
-            self.nlc = self.prh.nlc
+            self.nlc = zylc.nlc
+            self.cont_cad = zylc.cont_cad
+            self.rj  = zylc.rj
             # number of parameters
             self.ndim = 2 + (self.nlc-1)*3
             self.names = self.prh.names

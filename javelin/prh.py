@@ -1,14 +1,16 @@
-#Last-modified: 02 Mar 2012 08:59:40 PM
+#Last-modified: 04 Mar 2012 02:32:17 AM
 
-from zylc import zyLC, get_data
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
-from cov import get_covfunc_dict
-from spear import spear
-from gp import FullRankCovariance, NearlyFullRankCovariance
 from scipy.optimize import fmin
 import matplotlib.pyplot as plt
+
+from zylc import zyLC, get_data
+from cov import get_covfunc_dict
+from spear import spear
+from predict import PredictSignal, PredictRmap
+from gp import FullRankCovariance, NearlyFullRankCovariance
 
 """ PRH likelihood calculation.
 """
@@ -19,26 +21,26 @@ class PRH(object):
     """
     Press+Rybicki+Hewitt
     """
-    def __init__(self, zylc, set_warning=False):
+    def __init__(self, zydata, set_warning=False):
         """ PRH (initials of W.H. Press, G.B. Rybicki, and J.N. Hewitt) object.
 
         Parameters
         ----------
-        zylc: zyLC object
+        zydata: zyLC object
             Light curve data.
         """
-        if not isinstance(zylc, zyLC):
-            raise RuntimeError("zylc has to be a zyLC object")
-        # initialize zylc
-        self.zylc = zylc
-        self.nlc  = zylc.nlc
-        self.names= zylc.names
-        self.npt  = zylc.npt
-        self.jarr = zylc.jarr
-        self.marr = zylc.marr.T  # make it a vector
-        self.earr = zylc.earr
-        self.iarr = zylc.iarr
-        self.varr = np.power(zylc.earr, 2.)
+        if not isinstance(zydata, zyLC):
+            raise RuntimeError("zydata has to be a zyLC object")
+        # initialize zydata
+        self.zydata = zydata
+        self.nlc  = zydata.nlc
+        self.names= zydata.names
+        self.npt  = zydata.npt
+        self.jarr = zydata.jarr
+        self.marr = zydata.marr.T  # make it a vector
+        self.earr = zydata.earr
+        self.iarr = zydata.iarr
+        self.varr = np.power(zydata.earr, 2.)
         # construct the linear response matrix
         self.larr = np.zeros((self.npt, self.nlc))
         for i in xrange(self.npt):
@@ -46,10 +48,17 @@ class PRH(object):
             self.larr[i, lcid] = 1.0
         self.larrTr = self.larr.T
         # dimension of the problem
-        self.set_single = zylc.issingle
-        self.set_warning = set_warning
+        self.set_single = zydata.issingle
+        if not self.set_single :
+            self.lags   = np.zeros(self.nlc)
+            self.wids   = np.zeros(self.nlc)
+            self.scales =  np.ones(self.nlc)
         # cadence
-        self.cont_cad = zylc.cont_cad
+        self.cont_cad = zydata.cont_cad
+        # baseline
+        self.rj       = zydata.rj
+        # warning (mainly matrix related)
+        self.set_warning = set_warning
 
 
     def lnlikefn_single(self, covfunc="drw", rank="Full", retq=False,
@@ -94,8 +103,8 @@ class PRH(object):
         wmean_pen: float
             Var(q) component (retq=True).
 
-        q: float
-            Minimum variance estimate of 'q'.
+        q: list
+            Minimum variance estimate of 'q' in a single-element list.
 
         """
         if not self.set_single:
@@ -125,7 +134,7 @@ class PRH(object):
         return(retval)
 
 
-    def lnlikefn_spear(self, sigma, tau, lags, wids, scales, retq=False) :
+    def lnlikefn_spear(self, sigma, tau, llags, lwids, lscales, retq=False) :
         """ PRH log-likelihood function for the reverbeartion mapping model.
 
         Parameters
@@ -136,16 +145,14 @@ class PRH(object):
         tau: float
             DRW time scale.
 
-        lags: array_like
-            Lags of each light curves, lags[0] is default to 0.0 for continuum.
+        llags: array_like
+            Lags of each line light curves.
 
-        wids: array_like
-            Widths of each transfer function, wids[0] is default to 0.0 for
-            continuum.
+        lwids: array_like
+            Widths of each transfer function.
 
-        scales: array_like
-            Scales of each transfer function, scales[0] is default to 1.0 for
-            continuum.
+        lscales: array_like
+            Scales of each transfer function.
 
         retq: bool, optional
             Return the values of q in a list 'qlist' along with each component of the
@@ -172,14 +179,19 @@ class PRH(object):
         if self.set_single:
             raise RuntimeError("lnlikefn_spear does not work for single mode")
 
-        if sigma<=0.0 or tau<=0.0 or np.min(wids)<0.0 or np.min(scales)<=0.0 :
+        if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<=0.0
+                       or np.max(np.abs(llags))>self.rj) :
            return(self._exit_with_retval(retq, 
                   errmsg="Warning: illegal input of parameters", 
                   set_verbose=self.set_warning))
 
-        C = spear(self.jarr,self.jarr,self.iarr,self.iarr, sigma, tau, lags,
-                wids, scales)
-#test        C = np.diag(np.ones(self.npt))
+        # assemble lags/wids/scales
+        self.lags[1:]   = llags
+        self.wids[1:]   = lwids
+        self.scales[1:] = lscales
+
+        C = spear(self.jarr,self.jarr,self.iarr,self.iarr, 
+                sigma, tau, self.lags, self.wids, self.scales)
 
         U, info = cholesky(C, nugget=self.varr, inplace=True, raiseinfo=False)
 
@@ -239,11 +251,7 @@ class PRH(object):
         _log_like = _chi2 + _compl_pen + _wmean_pen
         if retq:
             q = np.dot(d, a)
-            if self.set_single:
-                # q[0] to take the scalar value from the 0-d array
-                return(_log_like, _chi2, _compl_pen, _wmean_pen, q[0])
-            else :
-                return(_log_like, _chi2, _compl_pen, _wmean_pen, q)
+            return(_log_like, _chi2, _compl_pen, _wmean_pen, q)
         else:
             return(_log_like)
 
@@ -257,25 +265,27 @@ class PRH(object):
             if set_verbose:
                 print("Exit: %s"%errmsg)
         if retq:
-            if self.issingle :
-                return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf)
-            else :
-                return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, [my_neg_inf]*self.nlc)
+            return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, [my_neg_inf]*self.nlc)
         else:
             return(my_neg_inf)
 
 
 
 class DRW_Model(object) :
-    def __init__(self, zylc=None) :
-        if zylc is None :
+    def __init__(self, zydata=None) :
+        self.zydata = zydata
+        if zydata is None :
             pass
         else :
-            self.prh = PRH(zylc)
-            self.cont_cad = zylc.cont_cad
-            self.cont_std = zylc.cont_std
-            self.nlc = zylc.nlc
-            self.rj  = zylc.rj
+            self.prh = PRH(zydata)
+            self.cont_cad = zydata.cont_cad
+            self.cont_std = zydata.cont_std
+            self.nlc = zydata.nlc
+            self.npt = zydata.npt
+            self.cont_npt = zydata.nptlist[0]
+            self.rj  = zydata.rj
+            self.jstart = zydata.jstart
+            self.jend   = zydata.jend
         # number of parameters
         self.ndim = 2
         self.vars = ["sigma", "tau"]
@@ -324,8 +334,9 @@ class DRW_Model(object) :
             print("Warning: no PRH object found, no mcmc can be done")
             return(1)
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
-        #FIXME
-        p0[:,0] = p0[:,0] + self.cont_std - 0.5 
+        # initial values of sigma scattering around cont_std
+        p0[:,0] = p0[:,0] - 0.5 + np.log(self.cont_std)
+        # initial values of tau   filling 0 - 0.5rj
         p0[:,1] = np.log(self.rj*0.5*p0[:,1])
         if set_verbose :
             print("start burn-in")
@@ -389,17 +400,45 @@ class DRW_Model(object) :
         self.flatchain = np.genfromtxt(fchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+
+    def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
+            set_overwrite=True) :
+        sigma = np.exp(p_bst[0])
+        tau   = np.exp(p_bst[1])
+        qlist  = self.prh.lnlikefn_single(covfunc="drw", 
+                    sigma=sigma, tau=tau, rank=rank, retq=True)[4]
+        self.zydata.update_qlist(qlist)
+        lcmean=zydata.blist[0]
+        P = PredictSignal(zydata=self.zydata, lcmean=zydata.blist[0],
+                rank=rank, covfunc="drw", 
+                sigma=sigma, tau=tau)
+        nwant = dense*self.cont_npt
+        jwant0 = self.jstart - 0.1*self.rj
+        jwant1 = self.jend   + 0.1*self.rj
+        jwant = np.linspace(jwant0, jwant1, nwant)
+        mve, var = P.mve_var(jwant)
+        sig = np.sqrt(var)
+        zylclist_pred = [[jwant, mve, sig],]
+        zydata_pred   = zyLC(zylclist_pred)
+        if fpred is not None :
+            zydata_pred.save(fpred, set_overwrite=set_overwrite)
+        return(zydata_pred)
         
 
 class Rmap_Model(object) :
-    def __init__(self, zylc=None) :
-        if zylc is None :
+    def __init__(self, zydata=None) :
+        self.zydata = zydata
+        if zydata is None :
             pass
         else :
-            self.prh = PRH(zylc)
-            self.nlc = zylc.nlc
-            self.cont_cad = zylc.cont_cad
-            self.rj  = zylc.rj
+            self.prh = PRH(zydata)
+            self.nlc = zydata.nlc
+            self.npt = zydata.npt
+            self.cont_npt = zydata.nptlist[0]
+            self.cont_cad = zydata.cont_cad
+            self.rj  = zydata.rj
+            self.jstart = zydata.jstart
+            self.jend   = zydata.jend
             # number of parameters
             self.ndim = 2 + (self.nlc-1)*3
             self.names = self.prh.names
@@ -419,15 +458,14 @@ class Rmap_Model(object) :
             return("__call__ error ")
         sigma = np.exp(p[0])
         tau   = np.exp(p[1])
-        # assemble lags/wids/scales
-        lags   = np.zeros(self.nlc)
-        wids   = np.zeros(self.nlc)
-        scales =  np.ones(self.nlc)
-        for i in xrange(1, self.nlc) : 
-            lags[i]   = p[2+(i-1)*3]
-            wids[i]   = p[3+(i-1)*3]
-            scales[i] = p[4+(i-1)*3]
-        logl = self.prh.lnlikefn_spear(sigma, tau, lags, wids, scales, retq=False)
+        llags   = np.zeros(self.nlc-1)
+        lwids   = np.zeros(self.nlc-1)
+        lscales =  np.ones(self.nlc-1)
+        for i in xrange(self.nlc-1) : 
+            llags[i]   = p[2+i*3]
+            lwids[i]   = p[3+i*3]
+            lscales[i] = p[4+i*3]
+        logl = self.prh.lnlikefn_spear(sigma, tau, llags, lwids, lscales, retq=False)
         # conthpd is in natural log
         # for sigma
         if p[0] < conthpd[1,0] :
@@ -466,7 +504,7 @@ class Rmap_Model(object) :
             print("with logp  %10.5g "%-v_bst)
         return(-v_bst, p_bst)
 
-    def do_mcmc(self, conthpd, lags_ini=None, nwalkers=100, nburn=100, nchain=100,
+    def do_mcmc(self, conthpd, nwalkers=100, nburn=100, nchain=100,
             fburn=None, fchain=None, set_verbose=True):
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no mcmc can be done")
@@ -474,18 +512,12 @@ class Rmap_Model(object) :
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         p0[:, 0] += conthpd[1,0]-0.5
         p0[:, 1] += conthpd[1,1]-0.5
-        if lags_ini is not None :
-            for i in xrange(1, self.nlc) :
-                # lags_ini also starts with continuum lag, which is by
-                # definition 0.0
-                p0[:, 2+(i-1)*3] += lags_ini[i]-0.499
+        for i in xrange(self.nlc-1) :
+            p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*0.5
         if set_verbose :
             print("start burn-in")
             print("using priors on sigma and tau from the continuum fitting")
             print(np.exp(conthpd))
-            if lags_ini is not None :
-                print("using initial lags as")
-                print(lags_ini)
             print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
                 (nburn, nwalkers, nburn*nwalkers))
         sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__,
@@ -541,11 +573,20 @@ class Rmap_Model(object) :
         for i in xrange(self.ndim) :
             if i < 2 :
                 plt.hist(self.flatchain[:,i]/ln10, 100)
-            else : 
+#            elif "lag" in self.vars[i] : 
+#                plt.hist(self.flatchain[:,i], 100, range=(0, self.rj))
+#                plt.hist(self.flatchain[:,i], 100, range=(100, 300))
+            else :
                 plt.hist(self.flatchain[:,i], 100)
             plt.xlabel(self.texs[i])
             plt.ylabel("N")
             plt.show()
+
+    def break_chain(self):
+        """ break the chain.
+        """
+        hist_raw, edges = np.histogram(self.flatchain[:, 2], bins=10, range=None, normed=False, weights=None)
+        pass
 
     def load_chain(self, fchain, set_verbose=True):
         if set_verbose :
@@ -554,6 +595,44 @@ class Rmap_Model(object) :
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+
+    def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
+            set_overwrite=True) :
+        sigma = np.exp(p_bst[0])
+        tau   = np.exp(p_bst[1])
+        llags   = np.zeros(self.nlc-1)
+        lwids   = np.zeros(self.nlc-1)
+        lscales =  np.ones(self.nlc-1)
+        lags    = np.zeros(self.nlc)
+        wids    = np.zeros(self.nlc)
+        scales  =  np.ones(self.nlc)
+        for i in xrange(self.nlc-1) : 
+            llags[i]   = p_bst[2+i*3]
+            lwids[i]   = p_bst[3+i*3]
+            lscales[i] = p_bst[4+i*3]
+            lags[i+1]  = p_bst[2+i*3]
+            wids[i+1]  = p_bst[3+i*3]
+            scales[i+1]= p_bst[4+i*3]
+        qlist  = self.prh.lnlikefn_spear(sigma, tau, llags, lwids, lscales, 
+                retq=True)[4]
+        self.zydata.update_qlist(qlist)
+        P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
+                lags=lags, wids=wids, scales=scales)
+        nwant = dense*self.cont_npt
+        jwant0 = self.jstart - 0.1*self.rj
+        jwant1 = self.jend   + 0.1*self.rj
+        jwant = np.linspace(jwant0, jwant1, nwant)
+        zylclist_pred = []
+        for i in xrange(self.nlc) :
+            iwant = np.ones(nwant)*(i+1)
+            mve, var = P.mve_var(jwant, iwant)
+            sig = np.sqrt(var)
+            zylclist_pred.append([jwant, mve, sig])
+        zydata_pred   = zyLC(zylclist_pred)
+        if fpred is not None :
+            zydata_pred.save(fpred, set_overwrite=set_overwrite)
+        return(zydata_pred)
+        
 
 
 
@@ -572,42 +651,107 @@ if __name__ == "__main__":
 
     if False :
         lcfile = "dat/loopdeloop_con.dat"
-        zylc   = get_data(lcfile)
-        prh    = PRH(zylc)
+        zydata   = get_data(lcfile)
+        prh    = PRH(zydata)
         print(prh.lnlikefn(tau=tau, sigma=sigma))
 
     if False :
         lcfile = "dat/loopdeloop_con_y_z.dat"
-        zylc   = get_data(lcfile)
-        prh    = PRH(zylc)
+        zydata   = get_data(lcfile)
+        prh    = PRH(zydata)
         print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, 
             lags=lags, wids=wids, scales=scales))
 
     if False :
         lcfile = "dat/loopdeloop_con.dat"
-        zylc   = get_data(lcfile)
-        cont   = DRW_Model(zylc)
-#        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, 
-#                fburn="burn.dat", fchain="chain.dat")
-        p_ini = [0.0, 1.0]
-        cont.do_map(p_ini, fixed=None, set_prior=False, rank="Full", 
-            set_verbose=True)
+        zydata   = get_data(lcfile)
+        cont   = DRW_Model(zydata)
+#        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn="burn0.dat",
+#                fchain="chain0.dat")
+#
+#        p_ini = [0.0, 1.0]
+#        cont.do_map(p_ini, fixed=None, set_prior=False, rank="Full", 
+#            set_verbose=True)
+#
+#        cont = DRW_Model()
+        cont.load_chain("chain0.dat")
+#        cont.show_hist()
+        p_bst = [cont.hpd[1, 0], cont.hpd[1,1]]
+        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
+        zypred.plot(set_pred=True, obs=zydata)
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con_y.dat"
-        zylc   = get_data(lcfile)
+        zydata   = get_data(lcfile)
+        rmap   = Rmap_Model(zydata)
+
         cont   = DRW_Model()
-        cont.load_chain("chain_con.dat")
-#        print(cont.hpd)
-        rmap   = Rmap_Model(zylc)
-#        p_ini = [np.log(2.0), np.log(100.0), 50, 3, 2]
+        cont.load_chain("chain0.dat")
+
+#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
+#                nchain=50, fburn="burn5.dat", fchain="chain5.dat")
+
+        rmap.load_chain("chain5.dat")
+        rmap.show_hist()
+
+#        p_ini = [np.log(3.043), np.log(170.8), 232.8, 0.868, 1.177]
 #        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
 
-        lags_ini = [0.0, 50.0]
-        rmap.do_mcmc(cont.hpd, lags_ini=lags_ini, nwalkers=100, nburn=100,
-                nchain=100, fburn="burntest.dat", fchain="chaintest.dat")
+#        p_bst = [np.log(3.043), np.log(170.8), 232.8, 0.868, 1.177]
+#        zypred = rmap.do_pred(p_bst, fpred="dat/loopdeloop_con_y.p.dat", dense=10)
+#        zypred.plot(set_pred=True, obs=zydata)
 
-#        rmap.load_chain("chain50.dat")
-#        rmap.get_hpd()
+    if False :
+        lcfile = "dat/loopdeloop_con_y_z.dat"
+        zydata   = get_data(lcfile)
+        rmap   = Rmap_Model(zydata)
+
+        cont   = DRW_Model()
+        cont.load_chain("chain0.dat")
+
+#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
+#                nchain=50, fburn="burndou1.dat", fchain="chaindou1.dat")
+
+        rmap.load_chain("chaindou1.dat")
+        rmap.show_hist()
+
+    if False :
+        lcfile = "dat/Arp151/Arp151_B.dat"
+        zydata   = get_data(lcfile)
+        cont   = DRW_Model(zydata)
+#        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn=None,
+#                fchain="chain_arp151_B.dat")
+#        cont.load_chain("chain_arp151_B.dat")
+#        cont.show_hist()
+
+    if True :
+        lcfile = "dat/Arp151/Arp151_B.dat"
+        zydata   = get_data(lcfile)
+        cont   = DRW_Model(zydata)
+        cont.load_chain("chain_arp151_B.dat")
+
+        lcfiles = ["dat/Arp151/Arp151_B.dat",
+                   "dat/Arp151/Arp151_V.dat",
+#                   "dat/Arp151/Arp151_Halpha.dat",
+#                   "dat/Arp151/Arp151_Hbeta.dat",
+#                   "dat/Arp151/Arp151_Hgamma.dat",
+                   ]
+        zydata   = get_data(lcfiles)
+        rmap   = Rmap_Model(zydata)
+#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
+#                nchain=50, fburn="burn_arp151_2.dat", fchain="chain_arp151_2.dat")
+
+        rmap.load_chain("chain_arp151_2.dat")
 #        rmap.show_hist()
 
+        p_bst = rmap.hpd[1,:]
+#        p_bst[0] = cont.hpd[1,0]
+#        p_bst[1] = cont.hpd[1,1]
+#        p_bst[2] = 0.0
+        zypred = rmap.do_pred(p_bst, fpred="dat/Arp151_2pred.dat", dense=10)
+        zypred.plot(set_pred=True, obs=zydata)
+        
+
+
+    plt.show()
+    exit()

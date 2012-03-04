@@ -36,22 +36,13 @@ class zyLC(object):
         # number of light curves
         self.nlc = len(zylclist)
         if names is None :
-            # simply use the light curve ids as their names (start from 1)
-            self.names = [str(i+1) for i in xrange(self.nlc)]
+            # simply use the sequences as their names (start from 0)
+            self.names = [str(i) for i in xrange(self.nlc)]
         else :
             if len(names) != self.nlc :
                 raise RuntimeError("names should match the dimension of zylclist")
             else :
                 self.names = names
-
-        # q values for the *true* means of light curves
-        if qlist is None :
-            self.qlist = self.nlc*[0.0]
-        else :
-            if len(qlist) != self.nlc :
-                raise RuntimeError("qlist should match the dimension of zylclist")
-            else :
-                self.qlist = qlist
 
         # issingle makes a difference in what you can do with the light curves
         if(self.nlc == 1):
@@ -92,20 +83,52 @@ class zyLC(object):
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
 
         # baseline of all the light curves
-        self.rj = self.jarr[-1] - self.jarr[0]
+        self.jstart = self.jarr[0]
+        self.jend   = self.jarr[-1]
+        self.rj = self.jend - self.jstart
 
-    def plot(self):
+        # q values for the *true* means of light curves
+        self.qlist = self.nlc*[0.0]
+        if qlist is None :
+            pass
+        else :
+            if len(qlist) != self.nlc :
+                raise RuntimeError("qlist should match the dimension of zylclist")
+            else :
+                self.update_qlist(qlist)
+
+
+    def plot(self, set_pred=False, obs=None):
         fig  = plt.figure(figsize=(10, 3*self.nlc))
         #axes = []
         height = 0.90/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
-            #axes.append(ax)
             mfc = cm.jet(1.*(i-1)/self.nlc)
-            ax.errorbar(self.jlist[i], self.mlist[i]+self.blist[i]+self.qlist[i], yerr=self.elist[i], 
+            if set_pred :
+                ax.plot(self.jlist[i], self.mlist[i]+self.blist[i],
+                    color=mfc, ls="-", lw=2,
+                    label=self.names[i])
+
+                ax.fill_between(self.jlist[i],
+                    y1=self.mlist[i]+self.blist[i]+self.elist[i], 
+                    y2=self.mlist[i]+self.blist[i]-self.elist[i], 
+                    color=mfc, alpha=0.5,
+                    label=self.names[i])
+                if obs is not None :
+                    ax.errorbar(obs.jlist[i], obs.mlist[i]+obs.blist[i], 
+                            yerr=obs.elist[i], 
+                            ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
+                            label=" ".join([self.names[i], "observed"]))
+            else :
+                ax.errorbar(self.jlist[i], self.mlist[i]+self.blist[i], 
+                    yerr=self.elist[i], 
                     ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
                     label=self.names[i])
-            ax.set_xlim(self.jarr[0], self.jarr[-1])
+
+            ax.set_xlim(self.jstart, self.jend)
+            ax.set_ylim(np.min(self.mlist[i])+self.blist[i]-np.min(self.elist[i]),
+                        np.max(self.mlist[i])+self.blist[i]+np.max(self.elist[i]))
             if i == 0 :
                 ax.set_xlabel("JD")
             else :
@@ -121,7 +144,11 @@ class zyLC(object):
             f=open(fname, "r")
             if not set_overwrite :
                 raise RuntimeError("%s exists, exit"%fname)
+            else :
+                print("save light curves to %s"%fname)
+                writelc(self.zylclist, fname)
         except IOError :
+            print("save light curves to %s"%fname)
             writelc(self.zylclist, fname)
 
     def save_continuum(self, fname, set_overwrite=True):
@@ -131,24 +158,34 @@ class zyLC(object):
             f=open(fname, "r")
             if not set_overwrite :
                 raise RuntimeError("%s exists, exit"%fname)
+            else :
+                print("save continuum light curves to %s"%fname)
+                writelc([self.zylclist[0]], fname)
         except IOError :
+            print("save continuum light curves to %s"%fname)
             writelc([self.zylclist[0]], fname)
 
-    def update_qlist(self, qlist):
-        """ update the zyLC object with a newly acquired qlist values.
+    def update_qlist(self, qlist_new):
+        """ update blist and mlist of the zyLC object according to the 
+        newly acquired qlist values. 
 
         Parameters
         ----------
-        qlist: list
+        qlist_new: list
             Best-fit light curve mean modulation factors.
         """
-        # add      q to   blist
-        # subtract q from mlist
         for i in xrange(self.nlc):
-            self.blist[i] += qlist[i]
-            self.mlist[i] -= qlist[i]
+            # recover original data when qlist=0
+            self.blist[i] -= self.qlist[i]
+            self.mlist[i] += self.qlist[i]
+            # add      q to   blist
+            # subtract q from mlist
+            self.blist[i] += qlist_new[i]
+            self.mlist[i] -= qlist_new[i]
         # redo combineddataarr
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
+        # update qlist
+        self.qlist = qlist_new
 
 
     def meansubtraction(self):
@@ -162,7 +199,6 @@ class zyLC(object):
         blist = []
         for i in xrange(self.nlc):
             bar = np.mean(self.mlist[i])
-            bar = bar + self.qlist[i] 
             blist.append(bar)
             self.mlist[i] = self.mlist[i] - bar
         return(blist)

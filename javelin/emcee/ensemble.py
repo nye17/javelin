@@ -155,6 +155,9 @@ class EnsembleSampler(Sampler):
         i0 = self.iterations
         for i in xrange(int(iterations)):
             self.iterations += 1
+            
+            if np.mod(self.iterations, 5) == 0 :
+                print(" ".join(["iter", format(self.iterations, ".10g")]))
 
             # Loop over the two ensembles, calculating the proposed positions.
             for k, ens in enumerate(self.ensembles):

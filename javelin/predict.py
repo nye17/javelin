@@ -99,15 +99,13 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
 class PredictRmap(object):
     """ Predict light curves for spear.
     """
-    def __init__(self, zydata=None, **covparams):
+    def __init__(self, zydata, **covparams):
         """ PredictRmap object.
 
         Parameters
         ----------
-        zydata: zyLC object, optional
-            Observed light curve in zyLC format, set to 'None' if no observation
-            is done. Note that the true means of light curves should be
-            subtracted (default: Done).
+        zydata: zyLC object
+            Observed light curve in zyLC format.
 
         covparams: kwargs
             Parameters for the spear covariance function.
@@ -119,6 +117,7 @@ class PredictRmap(object):
         # has to be the true mean instead of the sample mean
         self.md = self.zydata.marr
         self.id = self.zydata.iarr
+        self.blist = self.zydata.blist
         # variance
         self.vd = np.power(self.zydata.earr, 2.)
         # preparation
@@ -145,7 +144,10 @@ class PredictRmap(object):
         v: array_like
             Variance at simulated point.
         """
-        return(self._fastpredict(jwant, iwant))
+        m, v = self._fastpredict(jwant, iwant)
+        for i in xrange(len(jwant)) :
+            m[i] += self.blist[int(iwant[i])-1]
+        return(m, v)
 
     def generate(self, zylclist) :
         """ Presumably zylclist has our input j, e, and i, and the values in m
@@ -280,6 +282,9 @@ class PredictSignal(object):
             print("No *zydata* Observed, Unconstrained Realization")
         else:
             print("Observed *zydata*, Constrained Realization")
+            jdata = zydata.jarr
+            mdata = zydata.marr + zydata.blist[0]
+            edata = zydata.earr
             observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
 
     def mve_var(self, jwant):

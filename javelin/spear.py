@@ -1,4 +1,4 @@
-#Last-modified: 01 Mar 2012 01:06:05 AM
+#Last-modified: 03 Mar 2012 02:47:59 AM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -14,9 +14,10 @@ from javelin.gp.GPutils import regularize_array
 
 
 def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
+    """
+    """
     if (sigma<0. or tau<0.) :
         raise ValueError, 'The amp and scale parameters must be positive.'
-
     if (symm is None) :
         symm = (x is y) and (idx is idy)
 

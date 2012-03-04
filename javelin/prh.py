@@ -1,4 +1,4 @@
-#Last-modified: 04 Mar 2012 02:32:17 AM
+#Last-modified: 04 Mar 2012 03:14:38 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -477,7 +477,14 @@ class Rmap_Model(object) :
             prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
         else :
             prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
-        prior = -0.5*(prior0*prior0+prior1*prior1)
+        # for each lag
+        prior3 = 0.0
+        for i in xrange(self.nlc-1) :
+            if np.abs(llags[i]) > 0.5*self.rj :
+                # penalize long lags when they are larger than half of the
+                # baseline.
+                prior3 += np.log(np.abs(llags[i])/(0.5*self.rj))
+        prior = -0.5*(prior0*prior0+prior1*prior1) - prior3
         logp = logl + prior
         return(logp)
 
@@ -680,7 +687,7 @@ if __name__ == "__main__":
         zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
         zypred.plot(set_pred=True, obs=zydata)
 
-    if False :
+    if True :
         lcfile = "dat/loopdeloop_con_y.dat"
         zydata   = get_data(lcfile)
         rmap   = Rmap_Model(zydata)
@@ -689,8 +696,9 @@ if __name__ == "__main__":
         cont.load_chain("chain0.dat")
 
 #        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
-#                nchain=50, fburn="burn5.dat", fchain="chain5.dat")
+#                nchain=50, fburn=None, fchain="chain6.dat")
 
+#        rmap.load_chain("chain6.dat")
         rmap.load_chain("chain5.dat")
         rmap.show_hist()
 
@@ -724,7 +732,7 @@ if __name__ == "__main__":
 #        cont.load_chain("chain_arp151_B.dat")
 #        cont.show_hist()
 
-    if True :
+    if False :
         lcfile = "dat/Arp151/Arp151_B.dat"
         zydata   = get_data(lcfile)
         cont   = DRW_Model(zydata)

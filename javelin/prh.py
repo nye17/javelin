@@ -1,4 +1,4 @@
-#Last-modified: 04 Mar 2012 03:14:38 AM
+#Last-modified: 04 Mar 2012 12:52:55 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -388,6 +388,7 @@ class DRW_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
+#        fig = plt.figure((4*3, 4*self.nlc))
         for i in xrange(self.ndim) :
             plt.hist(self.flatchain[:,i]/ln10, 100)
             plt.xlabel(self.texs[i])

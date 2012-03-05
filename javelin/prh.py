@@ -1,4 +1,4 @@
-#Last-modified: 04 Mar 2012 12:52:55 PM
+#Last-modified: 04 Mar 2012 06:59:51 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -28,6 +28,10 @@ class PRH(object):
         ----------
         zydata: zyLC object
             Light curve data.
+
+        set_warning: bool, optional
+            True if the warning messages are printed, mainly for debugging
+            (default: False)
         """
         if not isinstance(zydata, zyLC):
             raise RuntimeError("zydata has to be a zyLC object")
@@ -388,12 +392,13 @@ class DRW_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-#        fig = plt.figure((4*3, 4*self.nlc))
+        fig  = plt.figure(figsize=(4*2, 4*self.nlc))
         for i in xrange(self.ndim) :
-            plt.hist(self.flatchain[:,i]/ln10, 100)
-            plt.xlabel(self.texs[i])
-            plt.ylabel("N")
-            plt.show()
+            ax = fig.add_subplot(1,2,i+1)
+            ax.hist(self.flatchain[:,i]/ln10, 100)
+            ax.set_xlabel(self.texs[i])
+            ax.set_ylabel("N")
+        plt.show()
 
     def load_chain(self, fchain, set_verbose=True):
         if set_verbose :
@@ -578,23 +583,37 @@ class Rmap_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        for i in xrange(self.ndim) :
-            if i < 2 :
-                plt.hist(self.flatchain[:,i]/ln10, 100)
-#            elif "lag" in self.vars[i] : 
-#                plt.hist(self.flatchain[:,i], 100, range=(0, self.rj))
-#                plt.hist(self.flatchain[:,i], 100, range=(100, 300))
-            else :
-                plt.hist(self.flatchain[:,i], 100)
-            plt.xlabel(self.texs[i])
-            plt.ylabel("N")
-            plt.show()
+        fig  = plt.figure(figsize=(6*3, 3*self.nlc))
+        for i in xrange(2) :
+            ax = fig.add_subplot(self.nlc,3,i+1)
+            ax.hist(self.flatchain[:,i]/ln10, 100)
+            ax.set_xlabel(self.texs[i])
+            ax.set_ylabel("N")
+        for k in xrange(self.nlc-1):
+            for i in xrange(2+k*3, 5+k*3) :
+                ax = fig.add_subplot(self.nlc,3,i+1+1) 
+                ax.hist(self.flatchain[:,i], 100)
+                ax.set_xlabel(self.texs[i])
+                ax.set_ylabel("N")
+        plt.show()
 
-    def break_chain(self):
+
+    def break_chain(self, llag_segments):
         """ break the chain.
         """
-        hist_raw, edges = np.histogram(self.flatchain[:, 2], bins=10, range=None, normed=False, weights=None)
-        pass
+        if (len(llag_segments) != self.nlc-1) :
+            print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
+            return(1)
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        for i, llag_seq in enumerate(llag_segments) : 
+            if llag_seq is None:
+                continue
+            indx = np.argsort(self.flatchain[:, 2+i*3])
+            imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
+            indx_cut = indx[imin : imax]
+            self.flatchain = self.flatchain[indx_cut, :]
 
     def load_chain(self, fchain, set_verbose=True):
         if set_verbose :
@@ -660,19 +679,6 @@ if __name__ == "__main__":
     if False :
         lcfile = "dat/loopdeloop_con.dat"
         zydata   = get_data(lcfile)
-        prh    = PRH(zydata)
-        print(prh.lnlikefn(tau=tau, sigma=sigma))
-
-    if False :
-        lcfile = "dat/loopdeloop_con_y_z.dat"
-        zydata   = get_data(lcfile)
-        prh    = PRH(zydata)
-        print(prh.lnlikefn(covfunc="spear", sigma=sigma, tau=tau, 
-            lags=lags, wids=wids, scales=scales))
-
-    if False :
-        lcfile = "dat/loopdeloop_con.dat"
-        zydata   = get_data(lcfile)
         cont   = DRW_Model(zydata)
 #        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn="burn0.dat",
 #                fchain="chain0.dat")
@@ -683,12 +689,12 @@ if __name__ == "__main__":
 #
 #        cont = DRW_Model()
         cont.load_chain("chain0.dat")
-#        cont.show_hist()
-        p_bst = [cont.hpd[1, 0], cont.hpd[1,1]]
-        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
-        zypred.plot(set_pred=True, obs=zydata)
+        cont.show_hist()
+#        p_bst = [cont.hpd[1, 0], cont.hpd[1,1]]
+#        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
+#        zypred.plot(set_pred=True, obs=zydata)
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con_y.dat"
         zydata   = get_data(lcfile)
         rmap   = Rmap_Model(zydata)
@@ -701,6 +707,8 @@ if __name__ == "__main__":
 
 #        rmap.load_chain("chain6.dat")
         rmap.load_chain("chain5.dat")
+        rmap.show_hist()
+        rmap.break_chain([[0, 400],])
         rmap.show_hist()
 
 #        p_ini = [np.log(3.043), np.log(170.8), 232.8, 0.868, 1.177]
@@ -723,6 +731,9 @@ if __name__ == "__main__":
 
         rmap.load_chain("chaindou1.dat")
         rmap.show_hist()
+        rmap.break_chain([[0,400],[0,400]])
+        rmap.show_hist()
+        rmap.get_hpd()
 
     if False :
         lcfile = "dat/Arp151/Arp151_B.dat"
@@ -733,31 +744,37 @@ if __name__ == "__main__":
 #        cont.load_chain("chain_arp151_B.dat")
 #        cont.show_hist()
 
-    if False :
+    if True :
         lcfile = "dat/Arp151/Arp151_B.dat"
         zydata   = get_data(lcfile)
         cont   = DRW_Model(zydata)
         cont.load_chain("chain_arp151_B.dat")
+        cont.get_hpd()
 
         lcfiles = ["dat/Arp151/Arp151_B.dat",
                    "dat/Arp151/Arp151_V.dat",
-#                   "dat/Arp151/Arp151_Halpha.dat",
-#                   "dat/Arp151/Arp151_Hbeta.dat",
-#                   "dat/Arp151/Arp151_Hgamma.dat",
+                   "dat/Arp151/Arp151_Halpha.dat",
+                   "dat/Arp151/Arp151_Hbeta.dat",
+                   "dat/Arp151/Arp151_Hgamma.dat",
                    ]
         zydata   = get_data(lcfiles)
         rmap   = Rmap_Model(zydata)
 #        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
 #                nchain=50, fburn="burn_arp151_2.dat", fchain="chain_arp151_2.dat")
 
-        rmap.load_chain("chain_arp151_2.dat")
+#        rmap.load_chain("chain_arp151_2.dat")
+        rmap.load_chain("chain_arp151_5.dat")
 #        rmap.show_hist()
+#        rmap.get_hpd()
+#        rmap.break_chain([[-10,10],])
+        rmap.break_chain([[-30,30], None, None, None])
+#        rmap.show_hist()
+        rmap.get_hpd()
 
-        p_bst = rmap.hpd[1,:]
-#        p_bst[0] = cont.hpd[1,0]
-#        p_bst[1] = cont.hpd[1,1]
-#        p_bst[2] = 0.0
-        zypred = rmap.do_pred(p_bst, fpred="dat/Arp151_2pred.dat", dense=10)
+        p_ini = rmap.hpd[1,:]
+        v, p_bst = rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
+
+        zypred = rmap.do_pred(p_bst, fpred="dat/Arp151_5pred.dat", dense=10)
         zypred.plot(set_pred=True, obs=zydata)
         
 

@@ -1,4 +1,4 @@
-#Last-modified: 04 Mar 2012 06:59:51 PM
+#Last-modified: 05 Mar 2012 02:08:53 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -11,6 +11,7 @@ from cov import get_covfunc_dict
 from spear import spear
 from predict import PredictSignal, PredictRmap
 from gp import FullRankCovariance, NearlyFullRankCovariance
+from err import *
 
 """ PRH likelihood calculation.
 """
@@ -31,50 +32,48 @@ class PRH(object):
 
         set_warning: bool, optional
             True if the warning messages are printed, mainly for debugging
-            (default: False)
+            (default: False).
+
         """
         if not isinstance(zydata, zyLC):
-            raise RuntimeError("zydata has to be a zyLC object")
+            raise InputError(zydata, "zydata has to be a zyLC object")
         # initialize zydata
         self.zydata = zydata
-        self.nlc  = zydata.nlc
-        self.names= zydata.names
-        self.npt  = zydata.npt
-        self.jarr = zydata.jarr
-        self.marr = zydata.marr.T  # make it a vector
-        self.earr = zydata.earr
-        self.iarr = zydata.iarr
-        self.varr = np.power(zydata.earr, 2.)
+        # description/basic statistics
+        self.nlc    = zydata.nlc
+        self.names  = zydata.names
+        self.npt    = zydata.npt
+        # actual data
+        self.jarr   = zydata.jarr
+        self.marr   = zydata.marr.T  # make it a vector
+        self.earr   = zydata.earr
+        self.iarr   = zydata.iarr
+        self.varr   = np.power(zydata.earr, 2.)
         # construct the linear response matrix
-        self.larr = np.zeros((self.npt, self.nlc))
+        self.larr   = np.zeros((self.npt, self.nlc))
         for i in xrange(self.npt):
             lcid = self.iarr[i] - 1
             self.larr[i, lcid] = 1.0
         self.larrTr = self.larr.T
         # dimension of the problem
-        self.set_single = zydata.issingle
-        if not self.set_single :
+        self.issingle = zydata.issingle
+        if not self.issingle :
+            # construct the lags/wids/scales array to be arguments for spear
             self.lags   = np.zeros(self.nlc)
             self.wids   = np.zeros(self.nlc)
             self.scales =  np.ones(self.nlc)
+        # warning (mainly matrix related)
+        self.set_warning = set_warning
         # cadence
         self.cont_cad = zydata.cont_cad
         # baseline
         self.rj       = zydata.rj
-        # warning (mainly matrix related)
-        self.set_warning = set_warning
 
 
-    def lnlikefn_single(self, covfunc="drw", rank="Full", retq=False,
-            **covparams) :
+    def lnlikefn_single(self, covfunc="drw", rank="Full", retq=False, **covparams) :
         """ PRH log-likelihood function for the single continuum variability
         fit. 
         
-        The reason I separate this from the spear likelihood is that the
-        single line fit may call functions to do incomplete Cholesky decomposition
-        for some covariance models, in which case the MCMC chains are ralatively
-        hard to parallel through simple multiprocessing.
-
         Parameters
         ----------
         covfunc: string, optional
@@ -111,11 +110,11 @@ class PRH(object):
             Minimum variance estimate of 'q' in a single-element list.
 
         """
-        if not self.set_single:
-            raise RuntimeError("lnlikefn_single only works for single mode")
-
+        if not self.issingle:
+            raise UsageError("lnlikefn_single only works for single mode")
         # set up covariance function
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
+        # choice of ranks
         if rank is "Full" :
             # using full-rank
             C = FullRankCovariance(**covfunc_dict)
@@ -123,7 +122,7 @@ class PRH(object):
             # using nearly full-rank
             C = NearlyFullRankCovariance(**covfunc_dict)
         else :
-            raise RuntimeError("No such option for rank %s"%rank)
+            raise InputError(rank, "No such option for rank ")
 
         # cholesky decompose S+N so that U^T U = S+N = C
         # using intrinsic method of C without explicitly writing out cmatrix
@@ -133,7 +132,7 @@ class PRH(object):
             return(self._exit_with_retval(retq, 
                    errmsg="Warning: non positive-definite covariance C", 
                    set_verbose=self.set_warning))
-
+        # calculate RPH likelihood
         retval = self._lnlike_from_U(U, retq=retq)
         return(retval)
 
@@ -180,30 +179,28 @@ class PRH(object):
             Minimum variance estimates of 'q's.
 
         """
-        if self.set_single:
-            raise RuntimeError("lnlikefn_spear does not work for single mode")
-
+        if self.issingle:
+            raise UsageError("lnlikefn_spear does not work for single mode")
+        # impossible scenarios
         if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<=0.0
                        or np.max(np.abs(llags))>self.rj) :
            return(self._exit_with_retval(retq, 
                   errmsg="Warning: illegal input of parameters", 
                   set_verbose=self.set_warning))
-
-        # assemble lags/wids/scales
+        # fill in lags/wids/scales
         self.lags[1:]   = llags
         self.wids[1:]   = lwids
         self.scales[1:] = lscales
-
-        C = spear(self.jarr,self.jarr,self.iarr,self.iarr, 
-                sigma, tau, self.lags, self.wids, self.scales)
-
+        # calculate covariance matrix
+        C = spear(self.jarr,self.jarr,
+                  self.iarr,self.iarr,sigma,tau,self.lags,self.wids,self.scales)
+        # decompose C inplace
         U, info = cholesky(C, nugget=self.varr, inplace=True, raiseinfo=False)
-
+        # handle exceptions here
         if info > 0 :
            return(self._exit_with_retval(retq, 
                   errmsg="Warning: non positive-definite covariance C", 
                   set_verbose=self.set_warning))
-
         retval = self._lnlike_from_U(U, retq=retq)
         return(retval)
 
@@ -212,6 +209,7 @@ class PRH(object):
         """ calculate the log-likelihoods from the upper triangle of cholesky
         decomposition.
         """
+        # log determinant of C^-1
         detC_log = chodet_from_tri(U, retlog=True)
         # solve for C a = y so that a = C^-1 y 
         a = chosolve_from_tri(U, self.marr)
@@ -219,9 +217,8 @@ class PRH(object):
         b = chosolve_from_tri(U, self.larr)
         # multiply L^T and b so that C_p = L^T C^-1 L = C_q^-1
         C_p = np.dot(self.larrTr, b)
-
-        # for 'set_single is True' case, C_p is a scalar.
-        if self.set_single:
+        # for 'issingle is True' case, C_p is a scalar.
+        if self.issingle:
             # for single-mode, cholesky of C_p is simply squre-root of C_p
             W = np.sqrt(C_p)
             detCp_log = np.log(C_p.squeeze())
@@ -237,7 +234,6 @@ class PRH(object):
             detCp_log = chodet_from_tri(W, retlog=True)
             # solve for C_p d = L^T so that d = C_p^-1 L^T = C_q L^T
             d = chosolve_from_tri(W, self.larrTr)
-
         # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y 
         e = np.dot(b, np.dot(d, a))
         # a minus e so that f = a - e = C^-1 y - C^-1 L C_p^-1 L^T C^-1 y
@@ -247,7 +243,8 @@ class PRH(object):
         h = np.dot(self.marr, f)
         # chi2_PRH = -0.5*h
         _chi2 = -0.5*h
-        # following Carl Rasmussen's term, a penalty on the complexity of the model
+        # following Carl Rasmussen's term, a penalty on the complexity of 
+        # the model
         _compl_pen = -0.5*detC_log
         # penalty on blatant linear drift
         _wmean_pen = -0.5*detCp_log
@@ -262,32 +259,40 @@ class PRH(object):
     def _exit_with_retval(self, retq, errmsg=None, set_verbose=False):
         """ Return failure elegantly.
         
-        When you are desperate and just want to leave the calculation with appropriate return values
-        that quietly speak out your angst.
+        When you are desperate and just want to leave the calculation with 
+        appropriate return values that quietly speak out your angst.
         """
         if errmsg is not None:
             if set_verbose:
                 print("Exit: %s"%errmsg)
         if retq:
-            return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, [my_neg_inf]*self.nlc)
+            return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, 
+                  [my_neg_inf]*self.nlc)
         else:
             return(my_neg_inf)
 
 
-
 class DRW_Model(object) :
     def __init__(self, zydata=None) :
+        """ DRW Model object.
+
+        Parameters
+        ----------
+        zydata: zyLC object, optional
+            Light curve data.
+
+        """
         self.zydata = zydata
         if zydata is None :
             pass
         else :
             self.prh = PRH(zydata)
-            self.cont_cad = zydata.cont_cad
-            self.cont_std = zydata.cont_std
             self.nlc = zydata.nlc
             self.npt = zydata.npt
+            self.cont_cad = zydata.cont_cad
+            self.cont_std = zydata.cont_std
             self.cont_npt = zydata.nptlist[0]
-            self.rj  = zydata.rj
+            self.rj     = zydata.rj
             self.jstart = zydata.jstart
             self.jend   = zydata.jend
         # number of parameters
@@ -296,6 +301,28 @@ class DRW_Model(object) :
         self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
 
     def __call__(self, p, set_prior=True, rank="Full"):
+        """ __call__ attribute of DRW_Model
+
+        Parameters
+        ----------
+        p : array_like
+            DRW_model parameters, [log(sigma), log(tau)].
+
+        set_prior : bool, optional
+            True if the logarithmic priors on sigma and tau are applied
+            (default: True)
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        Returns
+        -------
+        logp: float
+            log-posterior.
+
+        """
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no __call__ can be done")
             return("__call__ error ")
@@ -317,6 +344,41 @@ class DRW_Model(object) :
 
     def do_map(self, p_ini, fixed=None, set_prior=True, rank="Full", 
             set_verbose=True):
+        """ Do an optimization to find the Maximum a Posterior estimates.
+
+        Parameters
+        ----------
+        p_ini: array_like
+            DRW_Model parameters [log(sigma), log(tau)].
+
+        fixed: array_like, optional
+            Same dimension as p_ini, but with 0 for parameters that is fixed in
+            the optimization, and with 1 for parameters that is varying, e.g.,
+            fixed = [0, 1] means sigma is fixed while tau is varying. fixed=[1,
+            1] is equivalent to fixed=None (default:
+            None).
+
+        set_prior : bool, optional
+            True if the logarithmic priors on sigma and tau are applied
+            (default: True)
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        set_verbose: bool, optional
+            True if best-fit parameters are printed to std (default: True).
+
+        Returns
+        -------
+        p_bst : array_like
+            Best-fit parameters.
+
+        l: float
+            The maximum log-posterior.
+
+        """
         p_ini = np.asarray(p_ini)
         if fixed is not None :
             fixed = np.asarray(fixed)
@@ -327,33 +389,60 @@ class DRW_Model(object) :
                     set_prior=set_prior, rank=rank)
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
         if set_verbose :
-            print("best-fit parameters are")
+            print("Best-fit parameters are:")
             print("sigma %8.3f tau %8.3f"%tuple(np.exp(p_bst)))
             print("with logp  %10.5g "%-v_bst)
-        return(-v_bst, p_bst)
+        return(p_bst, -v_bst)
 
-    def do_mcmc(self, nwalkers=100, nburn=100, nchain=100,
+    def do_mcmc(self, nwalkers=100, nburn=50, nchain=50,
             fburn=None, fchain=None, set_verbose=True):
+        """ Do a MCMC search in the parameter space.
+
+        Parameters
+        ----------
+        nwalkers: int, optional
+            Number of random walkers for emcee sampler (default: 100).
+
+        nburn: int, optional
+            Number of iterations for burn-in process, note that the actual MCMC
+            steps would be nwalkers*nburn (default: 50).
+
+        nchain: int, optional
+            Number of iterations for sampling, note that the actual MCMC
+            steps would be nwalkers*nchain (default: 50).
+
+        fburn: string, optional
+            Name of the output file for saving the burn-in chain.
+
+        fchain: string, optional
+            Name of the output file for saving the MCMC chain.
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no mcmc can be done")
             return(1)
+        # initialize a multi-dim random number array 
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
-        # initial values of sigma scattering around cont_std
+        # initial values of sigma to be scattering around cont_std
         p0[:,0] = p0[:,0] - 0.5 + np.log(self.cont_std)
         # initial values of tau   filling 0 - 0.5rj
         p0[:,1] = np.log(self.rj*0.5*p0[:,1])
         if set_verbose :
             print("start burn-in")
-            print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
-                (nburn, nwalkers, nburn*nwalkers))
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
+                    (nburn, nwalkers, nburn*nwalkers))
         sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__, threads=1)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if set_verbose :
+            print("burn-in finished")
         if fburn is not None :
             if set_verbose :
                 print("save burn-in chains to %s"%fburn)
             np.savetxt(fburn, sampler.flatchain)
-        if set_verbose :
-            print("burn-in finished")
+        # reset sampler
         sampler.reset()
         if set_verbose :
             print("start sampling")
@@ -362,8 +451,8 @@ class DRW_Model(object) :
             print("sampling finished")
         af = sampler.acceptance_fraction
         if set_verbose :
-            print("acceptance fractions are\n")
-        print(af)
+            print("acceptance fractions for all walkers are")
+            print(" ".join([format(r, "3.2f") for r in af]))
         if fchain is not None :
             if set_verbose :
                 print("save MCMC chains to %s"%fchain)
@@ -374,6 +463,14 @@ class DRW_Model(object) :
         self.get_hpd(set_verbose=set_verbose)
 
     def get_hpd(self, set_verbose=True):
+        """ Get the 68% percentile range of each parameter to self.hpd.
+
+        Parameters
+        ----------
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
         hpd = np.zeros((3, self.ndim))
         chain_len = self.flatchain.shape[0]
         pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
@@ -388,6 +485,8 @@ class DRW_Model(object) :
         self.hpd = hpd
 
     def show_hist(self):
+        """ Plot the histograms.
+        """
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
@@ -401,6 +500,16 @@ class DRW_Model(object) :
         plt.show()
 
     def load_chain(self, fchain, set_verbose=True):
+        """ Load stored MCMC chain.
+
+        Parameters
+        ----------
+        fchain: string
+            Name for the chain file.
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+        """
         if set_verbose :
             print("load MCMC chain from %s"%fchain)
         self.flatchain = np.genfromtxt(fchain)
@@ -409,6 +518,36 @@ class DRW_Model(object) :
 
     def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
             set_overwrite=True) :
+        """ Calculate the predicted mean and variance of each light curve on a
+        densely sampled time axis.
+
+        Parameters
+        ----------
+        p_bst: array_like
+            Input paraemeters.
+
+        fpred: string, optional
+            Name of the output file for the predicted light curves, set it to
+            None if you do not want output (default: None).
+
+        dense: int, optional
+            The factor by which the predicted light curves should be more
+            densely sampled than the original data (default: 10).
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        set_overwrite: bool, optional
+            True if you want to overwrite existing fpred (default: True).
+
+        Returns
+        -------
+        zydata_pred: zyLC object
+            Predicted light curves packaged as a zyLC object.
+
+        """
         sigma = np.exp(p_bst[0])
         tau   = np.exp(p_bst[1])
         qlist  = self.prh.lnlikefn_single(covfunc="drw", 
@@ -433,6 +572,14 @@ class DRW_Model(object) :
 
 class Rmap_Model(object) :
     def __init__(self, zydata=None) :
+        """ Rmap Model object.
+
+        Parameters
+        ----------
+        zydata: zyLC object, optional
+            Light curve data.
+
+        """
         self.zydata = zydata
         if zydata is None :
             pass
@@ -459,6 +606,29 @@ class Rmap_Model(object) :
                 self.texs.append( "".join([r"$s_{", self.names[i] ,r"}$"]))
 
     def __call__(self, p, conthpd):
+        """ __call__ attribute of DRW_Model
+
+        Parameters
+        ----------
+        p : array_like
+            Rmap_model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
+            ...]
+
+        conthpd: ndarray
+            Priors on sigma and tau as an ndarray with shape (3, 2), 
+            np.array([[log(sigma_low), log(tau_low)],
+                      [log(sigma_med), log(tau_med)],
+                      [log(sigma_hig), log(tau_hig)]])
+            where 'low', 'med', and 'hig' are defined as the 68% confidence
+            limits around the median. conthpd usually comes in as an attribute
+            of the DRW_Model object DRW_Model.hpd.
+
+        Returns
+        -------
+        logp: float
+            log-posterior.
+
+        """
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no __call__ can be done")
             return("__call__ error ")
@@ -495,6 +665,42 @@ class Rmap_Model(object) :
         return(logp)
 
     def do_map(self, p_ini, fixed=None, conthpd=None, set_verbose=True):
+        """ Do an optimization to find the Maximum a Posterior estimates.
+
+        Parameters
+        ----------
+        p_ini: array_like
+            DRW_Model parameters [log(sigma), log(tau)].
+
+        fixed: array_like, optional
+            Same dimension as p_ini, but with 0 for parameters that is fixed in
+            the optimization, and with 1 for parameters that is varying, e.g.,
+            fixed = [0, 1] means sigma is fixed while tau is varying. fixed=[1,
+            1] is equivalent to fixed=None (default:
+            None).
+
+        conthpd: ndarray, optional
+            Priors on sigma and tau as an ndarray with shape (3, 2), 
+            np.array([[log(sigma_low), log(tau_low)],
+                      [log(sigma_med), log(tau_med)],
+                      [log(sigma_hig), log(tau_hig)]])
+            where 'low', 'med', and 'hig' are defined as the 68% confidence
+            limits around the median. conthpd usually comes in as an attribute
+            of the DRW_Model object DRW_Model.hpd (default: None).
+
+        set_verbose: bool, optional
+            True if best-fit parameters are printed to std (default: True).
+
+        Returns
+        -------
+        p_bst : array_like
+            Best-fit parameters.
+
+        l: float
+            The maximum log-posterior.
+
+        """
+
         p_ini = np.asarray(p_ini)
         if fixed is not None :
             fixed = np.asarray(fixed)
@@ -505,7 +711,7 @@ class Rmap_Model(object) :
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
         if set_verbose :
-            print("best-fit parameters are")
+            print("Best-fit parameters are")
             print("sigma %8.3f tau %8.3f"%tuple(np.exp(p_bst[0:2])))
             for i in xrange(1,self.nlc) :
                 ip = 2+(i-1)*3
@@ -515,10 +721,45 @@ class Rmap_Model(object) :
                     self.vars[ip+2], p_bst[ip+2],
                     ))
             print("with logp  %10.5g "%-v_bst)
-        return(-v_bst, p_bst)
+        return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd, nwalkers=100, nburn=100, nchain=100,
             fburn=None, fchain=None, set_verbose=True):
+        """ Do a MCMC search in the parameter space.
+
+        Parameters
+        ----------
+        conthpd: ndarray
+            Priors on sigma and tau as an ndarray with shape (3, 2), 
+            np.array([[log(sigma_low), log(tau_low)],
+                      [log(sigma_med), log(tau_med)],
+                      [log(sigma_hig), log(tau_hig)]])
+            where 'low', 'med', and 'hig' are defined as the 68% confidence
+            limits around the median. conthpd usually comes in as an attribute
+            of the DRW_Model object DRW_Model.hpd.
+
+        nwalkers: int, optional
+            Number of random walkers for emcee sampler (default: 100).
+
+        nburn: int, optional
+            Number of iterations for burn-in process, note that the actual MCMC
+            steps would be nwalkers*nburn (default: 50).
+
+        nchain: int, optional
+            Number of iterations for sampling, note that the actual MCMC
+            steps would be nwalkers*nchain (default: 50).
+
+        fburn: string, optional
+            Name of the output file for saving the burn-in chain.
+
+        fchain: string, optional
+            Name of the output file for saving the MCMC chain.
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
+
         if not hasattr(self, "prh") :
             print("Warning: no PRH object found, no mcmc can be done")
             return(1)
@@ -531,17 +772,18 @@ class Rmap_Model(object) :
             print("start burn-in")
             print("using priors on sigma and tau from the continuum fitting")
             print(np.exp(conthpd))
-            print("nburn = %d nwalkers = %d -> number of burn-in iteration = %d"%
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                 (nburn, nwalkers, nburn*nwalkers))
         sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__,
                 args=(conthpd,), threads=1)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if set_verbose :
+            print("burn-in finished")
         if fburn is not None :
             if set_verbose :
                 print("save burn-in chains to %s"%fburn)
             np.savetxt(fburn, sampler.flatchain)
-        if set_verbose :
-            print("burn-in finished")
+        # reset the sampler
         sampler.reset()
         if set_verbose :
             print("start sampling")
@@ -550,8 +792,8 @@ class Rmap_Model(object) :
             print("sampling finished")
         af = sampler.acceptance_fraction
         if set_verbose :
-            print("acceptance fractions are\n")
-        print(af)
+            print("acceptance fractions are")
+            print(" ".join([format(r, "3.2f") for r in af]))
         if fchain is not None :
             if set_verbose :
                 print("save MCMC chains to %s"%fchain)
@@ -562,6 +804,14 @@ class Rmap_Model(object) :
         self.get_hpd(set_verbose=set_verbose)
 
     def get_hpd(self, set_verbose=True):
+        """ Get the 68% percentile range of each parameter to self.hpd.
+
+        Parameters
+        ----------
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
         hpd = np.zeros((3, self.ndim))
         chain_len = self.flatchain.shape[0]
         pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
@@ -579,6 +829,8 @@ class Rmap_Model(object) :
         self.hpd = hpd
 
     def show_hist(self):
+        """ Plot the histograms.
+        """
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
@@ -599,7 +851,15 @@ class Rmap_Model(object) :
 
 
     def break_chain(self, llag_segments):
-        """ break the chain.
+        """ Break the chain.
+
+        Parameters
+        ----------
+        llag_segments: list of lists
+            list of length self.nlc-1, wich each element a two-element array
+            bracketing the range of lags (usually the single most probable peak) 
+            you want to consider for each line.
+        
         """
         if (len(llag_segments) != self.nlc-1) :
             print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
@@ -616,6 +876,16 @@ class Rmap_Model(object) :
             self.flatchain = self.flatchain[indx_cut, :]
 
     def load_chain(self, fchain, set_verbose=True):
+        """ Load stored MCMC chain.
+
+        Parameters
+        ----------
+        fchain: string
+            Name for the chain file.
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+        """
         if set_verbose :
             print("load MCMC chain from %s"%fchain)
         self.flatchain = np.genfromtxt(fchain)
@@ -623,8 +893,33 @@ class Rmap_Model(object) :
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
-    def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
-            set_overwrite=True) :
+    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
+        """ Calculate the predicted mean and variance of each light curve on a
+        densely sampled time axis.
+
+        Parameters
+        ----------
+        p_bst: array_like
+            Input paraemeters.
+
+        fpred: string, optional
+            Name of the output file for the predicted light curves, set it to
+            None if you do not want output (default: None).
+
+        dense: int, optional
+            The factor by which the predicted light curves should be more
+            densely sampled than the original data (default: 10).
+
+        set_overwrite: bool, optional
+            True if you want to overwrite existing fpred (default: True).
+
+        Returns
+        -------
+        zydata_pred: zyLC object
+            Predicted light curves packaged as a zyLC object.
+
+        """
+
         sigma = np.exp(p_bst[0])
         tau   = np.exp(p_bst[1])
         llags   = np.zeros(self.nlc-1)
@@ -666,8 +961,6 @@ class Rmap_Model(object) :
 
 if __name__ == "__main__":    
     import matplotlib.pyplot as plt
-    import pickle
-    from emcee import *
 
     sigma, tau = (2.00, 100.0)
     lagy, widy, scaley = (150.0,  3.0, 2.0)
@@ -744,7 +1037,7 @@ if __name__ == "__main__":
 #        cont.load_chain("chain_arp151_B.dat")
 #        cont.show_hist()
 
-    if True :
+    if False :
         lcfile = "dat/Arp151/Arp151_B.dat"
         zydata   = get_data(lcfile)
         cont   = DRW_Model(zydata)
@@ -772,12 +1065,12 @@ if __name__ == "__main__":
         rmap.get_hpd()
 
         p_ini = rmap.hpd[1,:]
-        v, p_bst = rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)
+        p_bst = rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd,
+                set_verbose=True)[0]
 
         zypred = rmap.do_pred(p_bst, fpred="dat/Arp151_5pred.dat", dense=10)
         zypred.plot(set_pred=True, obs=zydata)
         
 
 
-    plt.show()
     exit()

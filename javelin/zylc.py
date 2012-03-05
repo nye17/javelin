@@ -134,8 +134,8 @@ class zyLC(object):
             else :
                 ax.set_xticklabels([])
             ax.legend(loc=1)
-        #plt.show()
-        plt.draw()
+        plt.show()
+#        plt.draw()
 
     def save(self, fname, set_overwrite=True):
         """ save zydata into zylc file format.

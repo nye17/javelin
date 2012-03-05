@@ -1,4 +1,4 @@
-#Last-modified: 03 Feb 2012 06:46:40 PM
+#Last-modified: 05 Mar 2012 02:13:17 AM
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
@@ -44,7 +44,6 @@ def get_covfunc_dict(covfunc, **covparams):
         print(" ".join(covfunc_dict.keys))
         raise RuntimeError("%s has not been implemented"%covfunc)
     return(_cov_dict)
-
 
 
 class MyCovariance(object):

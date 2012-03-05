@@ -62,7 +62,7 @@ Test Installation
 
 After installing JAVLIN, you can try::
 
-    testJAVELIN
+    python demo.py
 
 to make sure everything works.
 

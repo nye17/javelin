@@ -5,7 +5,7 @@ import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
 from spear import spear
-from zylc import zyLC
+from zylc import LightCurve
 
 np.set_printoptions(precision=3)
 
@@ -104,8 +104,8 @@ class PredictRmap(object):
 
         Parameters
         ----------
-        zydata: zyLC object
-            Observed light curve in zyLC format.
+        zydata: LightCurve object
+            Observed light curve in LightCurve format.
 
         covparams: kwargs
             Parameters for the spear covariance function.
@@ -242,8 +242,8 @@ class PredictSignal(object):
 
         Parameters
         ----------
-        zydata: zyLC object, optional
-            Observed light curve in zyLC format, set to 'None' if no observation
+        zydata: LightCurve object, optional
+            Observed light curve in LightCurve format, set to 'None' if no observation
             is done (default: Done)
 
         lcmean: scalar or a Mean object, optional

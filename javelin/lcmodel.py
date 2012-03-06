@@ -1,4 +1,4 @@
-#Last-modified: 05 Mar 2012 02:08:53 AM
+#Last-modified: 05 Mar 2012 07:02:03 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -6,12 +6,14 @@ from numpy.random import normal, multivariate_normal
 from scipy.optimize import fmin
 import matplotlib.pyplot as plt
 
-from zylc import zyLC, get_data
+from zylc import LightCurve, get_data
 from cov import get_covfunc_dict
-from spear import spear
+#from spear import spear
+from spear_debug import spear
 from predict import PredictSignal, PredictRmap
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import *
+from emcee import EnsembleSampler
 
 """ PRH likelihood calculation.
 """
@@ -27,7 +29,7 @@ class PRH(object):
 
         Parameters
         ----------
-        zydata: zyLC object
+        zydata: LightCurve object
             Light curve data.
 
         set_warning: bool, optional
@@ -35,8 +37,8 @@ class PRH(object):
             (default: False).
 
         """
-        if not isinstance(zydata, zyLC):
-            raise InputError(zydata, "zydata has to be a zyLC object")
+        if not isinstance(zydata, LightCurve):
+            raise InputError(zydata, "zydata has to be a LightCurve object")
         # initialize zydata
         self.zydata = zydata
         # description/basic statistics
@@ -136,7 +138,6 @@ class PRH(object):
         retval = self._lnlike_from_U(U, retq=retq)
         return(retval)
 
-
     def lnlikefn_spear(self, sigma, tau, llags, lwids, lscales, retq=False) :
         """ PRH log-likelihood function for the reverbeartion mapping model.
 
@@ -194,6 +195,8 @@ class PRH(object):
         # calculate covariance matrix
         C = spear(self.jarr,self.jarr,
                   self.iarr,self.iarr,sigma,tau,self.lags,self.wids,self.scales)
+#        C = np.diag(np.ones(self.npt))
+
         # decompose C inplace
         U, info = cholesky(C, nugget=self.varr, inplace=True, raiseinfo=False)
         # handle exceptions here
@@ -278,7 +281,7 @@ class DRW_Model(object) :
 
         Parameters
         ----------
-        zydata: zyLC object, optional
+        zydata: LightCurve object, optional
             Light curve data.
 
         """
@@ -544,8 +547,8 @@ class DRW_Model(object) :
 
         Returns
         -------
-        zydata_pred: zyLC object
-            Predicted light curves packaged as a zyLC object.
+        zydata_pred: LightCurve object
+            Predicted light curves packaged as a LightCurve object.
 
         """
         sigma = np.exp(p_bst[0])
@@ -564,7 +567,7 @@ class DRW_Model(object) :
         mve, var = P.mve_var(jwant)
         sig = np.sqrt(var)
         zylclist_pred = [[jwant, mve, sig],]
-        zydata_pred   = zyLC(zylclist_pred)
+        zydata_pred   = LightCurve(zylclist_pred)
         if fpred is not None :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
@@ -576,7 +579,7 @@ class Rmap_Model(object) :
 
         Parameters
         ----------
-        zydata: zyLC object, optional
+        zydata: LightCurve object, optional
             Light curve data.
 
         """
@@ -656,10 +659,11 @@ class Rmap_Model(object) :
         # for each lag
         prior3 = 0.0
         for i in xrange(self.nlc-1) :
-            if np.abs(llags[i]) > 0.5*self.rj :
-                # penalize long lags when they are larger than half of the
-                # baseline.
-                prior3 += np.log(np.abs(llags[i])/(0.5*self.rj))
+            if np.abs(llags[i]) > 0.3*self.rj :
+                # penalize long lags when they are larger than 0.3 times the baseline,
+                # as it is too easy to fit the model with non-overlapping
+                # signals in the light curves.
+                prior3 += np.log(np.abs(llags[i])/(0.3*self.rj))
         prior = -0.5*(prior0*prior0+prior1*prior1) - prior3
         logp = logl + prior
         return(logp)
@@ -723,6 +727,11 @@ class Rmap_Model(object) :
             print("with logp  %10.5g "%-v_bst)
         return(p_bst, -v_bst)
 
+#    def _test(self, p):
+#        C = spear([1,],[1,],
+#                  [1,],[1,],1,1,[1,],[1,],[1,])
+#        return(np.sum(p))
+
     def do_mcmc(self, conthpd, nwalkers=100, nburn=100, nchain=100,
             fburn=None, fchain=None, set_verbose=True):
         """ Do a MCMC search in the parameter space.
@@ -775,7 +784,9 @@ class Rmap_Model(object) :
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                 (nburn, nwalkers, nburn*nwalkers))
         sampler = EnsembleSampler(nwalkers, self.ndim, self.__call__,
-                args=(conthpd,), threads=1)
+                args=(conthpd,), threads=2)
+#        sampler = EnsembleSampler(nwalkers, self.ndim, _test,
+#                args=(conthpd,), threads=2)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
             print("burn-in finished")
@@ -915,8 +926,8 @@ class Rmap_Model(object) :
 
         Returns
         -------
-        zydata_pred: zyLC object
-            Predicted light curves packaged as a zyLC object.
+        zydata_pred: LightCurve object
+            Predicted light curves packaged as a LightCurve object.
 
         """
 
@@ -950,12 +961,13 @@ class Rmap_Model(object) :
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
             zylclist_pred.append([jwant, mve, sig])
-        zydata_pred   = zyLC(zylclist_pred)
+        zydata_pred   = LightCurve(zylclist_pred)
         if fpred is not None :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
-        
 
+#def _test(self, p):
+#    return(np.sum(p))
 
 
 
@@ -987,22 +999,22 @@ if __name__ == "__main__":
 #        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
 #        zypred.plot(set_pred=True, obs=zydata)
 
-    if False :
+    if True :
         lcfile = "dat/loopdeloop_con_y.dat"
         zydata   = get_data(lcfile)
         rmap   = Rmap_Model(zydata)
 
         cont   = DRW_Model()
-        cont.load_chain("chain0.dat")
+        cont.load_chain("dat/chain0.dat")
 
-#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
-#                nchain=50, fburn=None, fchain="chain6.dat")
+        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
+                nchain=50, fburn=None, fchain="dat/test.dat")
 
 #        rmap.load_chain("chain6.dat")
-        rmap.load_chain("chain5.dat")
-        rmap.show_hist()
-        rmap.break_chain([[0, 400],])
-        rmap.show_hist()
+#        rmap.load_chain("chain5.dat")
+#        rmap.show_hist()
+#        rmap.break_chain([[0, 400],])
+#        rmap.show_hist()
 
 #        p_ini = [np.log(3.043), np.log(170.8), 232.8, 0.868, 1.177]
 #        rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd, set_verbose=True)

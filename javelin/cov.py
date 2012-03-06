@@ -1,4 +1,4 @@
-#Last-modified: 05 Mar 2012 02:13:17 AM
+#Last-modified: 05 Mar 2012 01:53:54 PM
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
@@ -6,7 +6,7 @@ from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail
 import numpy as np
 
 """
-Wrapping the all the covariance functions together.
+Wrapping the all the continuum covariance functions together.
 """
 
 covname_dict = {

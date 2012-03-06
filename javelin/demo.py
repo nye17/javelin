@@ -1,16 +1,16 @@
-#Last-modified: 04 Mar 2012 12:49:08 AM
+#Last-modified: 05 Mar 2012 03:59:08 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
 from lcio import *
-from zylc import zyLC, get_data
+from zylc import LightCurve, get_data
 import matplotlib.pyplot as plt
 
 """
 Test from scratch.
 """
 
-names  = ["cont", "Yelm", "Zing"]
+names  = ["Continuum", "Yelm", "Zing"]
 jdense = np.linspace(0.0, 1000.0, 2000)
 sigma, tau = (2.00, 100.0)
 lagy, widy, scaley = (150.0,  3.0, 2.0)
@@ -57,7 +57,7 @@ def generateTrueLC():
         imin = np.searchsorted(jl, jmin)
         imax = np.searchsorted(jl, jmax)
         zylist.append([jl[imin: imax], sl[imin: imax], edense[imin: imax]])
-    zydata = zyLC(zylist, names=names)
+    zydata = LightCurve(zylist, names=names)
     return(zydata)
 
 def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
@@ -88,7 +88,7 @@ def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
         et= generateError(e, errcov=0.0)
         m = m + et + lcmeans[i]
         zylclist_new.append([j,m,e])
-    zymock = zyLC(zylclist_new, names=names)
+    zymock = LightCurve(zylclist_new, names=names)
     return(zymock)
 
 
@@ -97,26 +97,32 @@ if __name__ == "__main__":
     # truth
     trufile = "dat/trulc.dat"
     if file_exists(trufile) :
+        print("read true light curve signal from %s"%trufile)
         zydata = get_data(trufile, names=names)
     else :
+        print("generate true light curve signal")
         zydata = generateTrueLC()
+        print("save true light curve signal to %s"%trufile)
         zydata.save(trufile)
     if set_plot :
+        print("plot true light curve signal")
         zydata.plot()
 
-    # downsample the truth to get more realistic light curves
     confile = "dat/loopdeloop_con.dat"
     topfile = "dat/loopdeloop_con_y.dat"
     doufile = "dat/loopdeloop_con_y_z.dat"
+
+    # downsample the truth to get more realistic light curves
     zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
         errfac=[0.05, 0.05, 0.05], set_seasongap=False)
     zydata_dou.save_continuum(confile)
     zydata_dou.save(doufile)
     zylclist_top = zydata_dou.zylclist[:2]
-    zydata_top = zyLC(zylclist_top)
+    zydata_top = LightCurve(zylclist_top, names=names[0:2])
     zydata_top.save(topfile)
     if set_plot :
+        print("plot mock light curves for continuum and yelm line")
         zydata_top.plot()
+        print("plot mock light curves for continuum, yelm, and zing lines")
         zydata_dou.plot()
 
-    plt.show()

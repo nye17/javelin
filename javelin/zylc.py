@@ -1,17 +1,17 @@
 import numpy as np
 
-__all__ = ['zyLC', 'get_data']
+__all__ = ['LightCurve', 'get_data']
 
 from lcio import jdmedlc, readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-""" load light curve files into a zyLC object.
+""" load light curve files into a LightCurve object.
 """
 
-class zyLC(object):
+class LightCurve(object):
     def __init__(self, zylclist, names=None, set_subtractmean=True, qlist=None):
-        """ zyLC object for encapsulating light curve data.
+        """ LightCurve object for encapsulating light curve data.
 
         Parameters
         ----------
@@ -61,9 +61,9 @@ class zyLC(object):
         if self.cont_mean_err != 0.0 :
             # a rough estimate of the continuum variability signal-to-noise
             # ratio
-            self.cont_SN       = self.cont_std/self.cont_mean_err
+            self.cont_SN = self.cont_std/self.cont_mean_err
         else :
-            print("Warning: zero mean error in the continuum?")
+            self.cont_SN = np.inf
 
         # subtract the mean to get *blist*
         # usually good for the code health, smaller means means less 
@@ -81,6 +81,15 @@ class zyLC(object):
         # combine all information into one vector, those are the primariy
         # vectors we are gonna use in spear covariance.
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
+        # variance array
+        self.varr = self.earr*self.earr
+
+        # construct the linear response matrix
+        self.larr   = np.zeros((self.npt, self.nlc))
+        for i in xrange(self.npt):
+            lcid = self.iarr[i] - 1
+            self.larr[i, lcid] = 1.0
+        self.larrTr = self.larr.T
 
         # baseline of all the light curves
         self.jstart = self.jarr[0]
@@ -166,7 +175,7 @@ class zyLC(object):
             writelc([self.zylclist[0]], fname)
 
     def update_qlist(self, qlist_new):
-        """ update blist and mlist of the zyLC object according to the 
+        """ update blist and mlist of the LightCurve object according to the 
         newly acquired qlist values. 
 
         Parameters
@@ -184,6 +193,8 @@ class zyLC(object):
             self.mlist[i] -= qlist_new[i]
         # redo combineddataarr
         self.jarr, self.marr, self.earr, self.iarr = self.combineddataarr()
+        # variance array
+        self.varr = self.earr*self.earr
         # update qlist
         self.qlist = qlist_new
 
@@ -242,7 +253,7 @@ class zyLC(object):
 
 
 def get_data(lcfile, names=None, set_subtractmean=True):
-    """ Read light curve file(s) into a zyLC object.
+    """ Read light curve file(s) into a LightCurve object.
 
     Parameters
     ----------
@@ -254,12 +265,12 @@ def get_data(lcfile, names=None, set_subtractmean=True):
         Names of each files in *lcfile* (default: None).
 
     set_subtractmean: bool
-        Subtract mean in zyLC if True (default: True).
+        Subtract mean in LightCurve if True (default: True).
 
     Returns
     -------
-    zydata: zyLC object
-        Combined data in a zyLC object
+    zydata: LightCurve object
+        Combined data in a LightCurve object
 
     """
     if isinstance(lcfile, basestring):
@@ -281,7 +292,7 @@ def get_data(lcfile, names=None, set_subtractmean=True):
         for lcf in lcfile :
             lc = readlc_3c(lcf)
             lclist.append(lc[0])
-    zydata = zyLC(lclist, names=names, set_subtractmean=set_subtractmean)
+    zydata = LightCurve(lclist, names=names, set_subtractmean=set_subtractmean)
     return(zydata)
 
 
@@ -303,5 +314,5 @@ if __name__ == "__main__":
                 [0.2, 0.1]
                ]
               ]
-    zylc = zyLC(zylclist=zylclist)
+    zylc = LightCurve(zylclist=zylclist)
     print(zylc.cont_cad)

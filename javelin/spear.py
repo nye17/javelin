@@ -1,4 +1,4 @@
-#Last-modified: 03 Mar 2012 02:47:59 AM
+#Last-modified: 05 Mar 2012 07:29:17 PM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -9,12 +9,16 @@ from javelin.gp import isotropic_cov_funs
 from javelin.gp.GPutils import regularize_array
 
 
-""" The SPEAR covariance function, called by gp.Covariance.
+""" The SPEAR covariance function, wrapper for the Fortran version.
 """
 
 
-def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
+def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,
+        blocksize=10000) :
     """
+    threaded version, divide matrix into subblocks with *blocksize* 
+    elements each. Do not use it when multiprocessing is on (e.g., in emcee MCMC
+    sampling).
     """
     if (sigma<0. or tau<0.) :
         raise ValueError, 'The amp and scale parameters must be positive.'
@@ -33,7 +37,7 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
         idy = np.ones(nx, dtype="int", order="F")*idy
 
     # Figure out how to divide job up between threads (along y)
-    n_threads = min(get_threadpool_size(), nx*ny / 10000)
+    n_threads = min(get_threadpool_size(), nx*ny/blocksize)
     
     if n_threads > 1 :
         if not symm:
@@ -61,23 +65,33 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
     return(C)
 
 
-if __name__ == "__main__":    
-    npt = 1000
-    x   = np.arange(0, npt, 1)
-    idx = np.ones(npt,dtype="int")
-#    idx[2] = 2
-    y   = x
-    idy = idx
+def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None) :
+    """
+    Clean version without multithreading. Used when multiprocessing is on (e.g., 
+    in emcee MCMC sampling).
+    """
+    if (sigma<0. or tau<0.) :
+        raise ValueError, 'The amp and scale parameters must be positive.'
+    if (symm is None) :
+        symm = (x is y) and (idx is idy)
 
-    sigma = 1.
-    tau   = 1.
-    lags  = np.array([0.])
-    wids  = np.array([0.])
-    scales= np.array([1.])
-#    lags  = np.array([0., 2.])
-#    wids  = np.array([0., 2.])
-#    scales= np.array([1., 2.])
-#    C = spear_w(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None)
-    C = spear(x,y,1,1,sigma,tau,lags,wids,scales,symm=None)
-    print(C[:3,:3])
-#    print(C)
+    x = regularize_array(x)
+    y = regularize_array(y)
+
+    nx = x.shape[0]
+    ny = y.shape[0]
+
+    if np.isscalar(idx) :
+        idx = np.ones(nx, dtype="int", order="F")*idx
+    if np.isscalar(idy) :
+        idy = np.ones(nx, dtype="int", order="F")*idy
+
+    # Allocate the matrix
+    C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
+
+    SCF.covmat_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,0,-1,symm)
+
+    if symm:
+        isotropic_cov_funs.symmetrize(C)
+
+    return(C)

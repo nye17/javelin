@@ -1,4 +1,4 @@
-#Last-modified: 05 Mar 2012 12:55:18 AM
+#Last-modified: 05 Mar 2012 11:10:58 PM
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -8,11 +8,9 @@ class InputError(Error):
     """Exception raised for errors in the input.
 
     Attributes:
-        expr -- input expression in which the error occurred
         msg  -- explanation of the error
     """
-    def __init__(self, expr, msg):
-        self.expr = expr
+    def __init__(self, msg):
         self.msg = msg
 
 

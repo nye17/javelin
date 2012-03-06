@@ -4,7 +4,7 @@ from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_t
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
-from spear import spear
+from spear import spear, spear_threading
 from zylc import LightCurve
 
 np.set_printoptions(precision=3)
@@ -205,7 +205,8 @@ class PredictRmap(object):
         return(zylclist_new)
 
     def _get_covmat(self) :
-        self.cmatrix = spear(self.jd,self.jd,self.id,self.id, **self.covparams)
+        self.cmatrix = spear_threading(self.jd,self.jd,self.id,self.id, 
+                **self.covparams)
         print("covariance matrix calculated")
 
     def _get_cholesky(self) :
@@ -224,9 +225,9 @@ class PredictRmap(object):
         mw = np.zeros_like(jw)
         vw = np.zeros_like(jw)
         for i, (jwant, iwant) in enumerate(zip(jw, iw)):
-            covar = spear(jwant,self.jd,iwant,self.id, **self.covparams)
+            covar = spear_threading(jwant,self.jd,iwant,self.id, **self.covparams)
             cplusninvdotcovar = chosolve_from_tri(self.U, covar.T, nugget=None, inplace=False)
-            vw[i] = spear(jwant, jwant, iwant, iwant, **self.covparams)
+            vw[i] = spear_threading(jwant, jwant, iwant, iwant, **self.covparams)
             mw[i] = np.dot(covar, self.cplusninvdoty)
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)

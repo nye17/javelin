@@ -1,4 +1,4 @@
-#Last-modified: 05 Mar 2012 11:10:58 PM
+#Last-modified: 06 Mar 2012 12:02:02 PM
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -12,6 +12,7 @@ class InputError(Error):
     """
     def __init__(self, msg):
         self.msg = msg
+        print(msg)
 
 
 class UsageError(Error):
@@ -22,6 +23,7 @@ class UsageError(Error):
     """
     def __init__(self, msg):
         self.msg = msg
+        print(msg)
 
 
 

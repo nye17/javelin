@@ -1,4 +1,4 @@
-#Last-modified: 06 Mar 2012 03:07:17 AM
+#Last-modified: 06 Mar 2012 12:46:18 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -16,14 +16,14 @@ from emcee import EnsembleSampler
 
 my_neg_inf = float(-1.0e+300)
 
-def unpacksinglepar(p, covfunc="drw") :
+def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.
     """
     sigma   = np.exp(p[0])
     tau     = np.exp(p[1])
     if covfunc == "drw" :
         nu = None
-    elif covfunc == "matern" or covfunc == "kepler_exp" :
+    elif uselognu :
         nu = np.exp(p[2])
     else :
         nu = p[2]
@@ -57,11 +57,11 @@ def unpackspearpar(p, nlc=None, hascontlag=False) :
             lscales[i] = p[4+i*3]
         return(sigma, tau, llags, lwids, lscales)
 
-def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, rank="Full",
+def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="Full",
         set_retq=False, set_verbose=False) :
     """
     """
-    sigma, tau, nu = unpacksinglepar(p, covfunc)
+    sigma, tau, nu = unpacksinglepar(p, covfunc, uselognu=uselognu)
     if set_retq :
         vals = list(lnlikefn_single(zydata, covfunc=covfunc, rank=rank,
                     sigma=sigma, tau=tau, nu=nu,
@@ -91,13 +91,36 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
         set_verbose=False, **covparams) :
     """
     """
-    # set up covariance function
     covfunc_dict = get_covfunc_dict(covfunc, **covparams)
+    sigma = covparams.pop("sigma")
+    tau   = covparams.pop("tau")
+    nu    = covparams.pop("nu", None)
+    # set up covariance function
+    if (sigma<=0.0 or tau<=0.0) :
+       return(_exit_with_retval(zydata.nlc, set_retq, 
+              errmsg="Warning: illegal input of parameters", 
+              set_verbose=set_verbose))
+    else :
+        if covfunc == "pow_exp" :
+            if nu <= 0.0 or nu >= 2.0 :
+                return(_exit_with_retval(zydata.nlc, set_retq, 
+                       errmsg="Warning: illegal input of parameters in nu", 
+                       set_verbose=set_verbose))
+        if covfunc == "matern" :
+            if nu <= 0.0 :
+                return(_exit_with_retval(zydata.nlc, set_retq, 
+                       errmsg="Warning: illegal input of parameters in nu", 
+                       set_verbose=set_verbose))
+        if covfunc == "kepler_exp" :
+            if nu < 0.0 or nu >= 1.0 :
+                return(_exit_with_retval(zydata.nlc, set_retq, 
+                       errmsg="Warning: illegal input of parameters in nu", 
+                       set_verbose=set_verbose))
     # choice of ranks
-    if rank is "Full" :
+    if rank == "Full" :
         # using full-rank
         C = FullRankCovariance(**covfunc_dict)
-    elif rank is "NearlyFull" :
+    elif rank == "NearlyFull" :
         # using nearly full-rank
         C = NearlyFullRankCovariance(**covfunc_dict)
     else :
@@ -107,7 +130,7 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
     try :
         U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
     except :
-        return(_exit_with_retval(data.nlc, set_retq,
+        return(_exit_with_retval(zydata.nlc, set_retq,
                errmsg="Warning: non positive-definite covariance C",
                set_verbose=set_verbose))
     # calculate RPH likelihood
@@ -301,7 +324,7 @@ def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
     if errmsg is not None:
         if set_verbose:
             print("Exit: %s"%errmsg)
-    if set_retq
+    if set_retq :
         return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, 
               [my_neg_inf]*nlc)
     else:
@@ -318,7 +341,8 @@ class Cont_Model(object) :
             Light curve data.
 
         """
-        self.zydata = zydata
+        self.zydata  = zydata
+        self.covfunc = covfunc
         if zydata is None :
             pass
         else :
@@ -326,6 +350,7 @@ class Cont_Model(object) :
             self.npt      = zydata.npt
             self.cont_npt = zydata.nptlist[0]
             self.cont_cad = zydata.cont_cad
+            self.cont_std = zydata.cont_std
             self.rj       = zydata.rj
             self.jstart   = zydata.jstart
             self.jend     = zydata.jend
@@ -333,38 +358,198 @@ class Cont_Model(object) :
         self.vars = ["sigma", "tau"]
         self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
         if covfunc == "drw" :
+            self.uselognu = False
             self.ndim = 2
-        elif covfunc == "matern" or covfunc == "kepler_exp" :
-            self.ndim = 3
-            self.vars.append("nu")
-            self.texs.append(r"$\log\,\nu$")
+#        elif covfunc == "matern" or covfunc == "kepler_exp" :
+#            self.uselognu = True
+#            self.ndim = 3
+#            self.vars.append("nu")
+#            self.texs.append(r"$\log\,\nu$")
         else :
+            self.uselognu = False
             self.ndim = 3
             self.vars.append("nu")
             self.texs.append(r"$\nu$")
 
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
-        pass
+        """
+        """
+        set_verbose = lnpostparams.pop("set_verbose", True)
+        set_retq    = lnpostparams.pop("set_retq",    False)
+        set_prior   = lnpostparams.pop("set_prior",   True)
+        rank        = lnpostparams.pop("rank",       "Full")
+        if set_retq is True :
+            raise InputError("set_retq has to be False")
+        p_ini = np.asarray(p_ini)
+        if fixed is not None :
+            fixed = np.asarray(fixed)
+            func = lambda _p : -lnpostfn_single_p(_p*fixed+p_ini*(1.-fixed),
+                    self.zydata, self.covfunc, uselognu=self.uselognu, 
+                    set_prior=set_prior, rank=rank, set_verbose=set_verbose)
+        else :
+            func = lambda _p : -lnpostfn_single_p(_p,
+                    self.zydata, self.covfunc, uselognu=self.uselognu, 
+                    set_prior=set_prior, rank=rank, set_verbose=set_verbose)
+        p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc,
+                uselognu=self.uselognu)
+        if set_verbose :
+            print("Best-fit parameters are:")
+            print("sigma %8.3f tau %8.3f"%(sigma, tau))
+            if nu is not None :
+                print("nu %8.3f"%nu)
+            print("with logp  %10.5g "%-v_bst)
+        return(p_bst, -v_bst)
 
-    def do_mcmc(self, nwalkers=100, nburn=50, nchain=50,
-            fburn=None, fchain=None, flogp=None,set_verbose=True):
-        pass
+    def do_mcmc(self, set_prior=True, rank="Full", 
+            nwalkers=100, nburn=50, nchain=50,
+            fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
+        """
+        """
+        # initialize a multi-dim random number array 
+        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        # initial values of sigma to be scattering around cont_std
+        p0[:,0] = p0[:,0] - 0.5 + np.log(self.cont_std)
+        # initial values of tau   filling 0 - 0.5rj
+        p0[:,1] = np.log(self.rj*0.5*p0[:,1])
+        if self.covfunc == "pow_exp" :
+            p0[:,2] = p0[:,2] * 1.99
+        elif self.covfunc == "matern" :
+#            p0[:,2] = np.log(p0[:,2] * 5)
+            p0[:,2] = p0[:,2] * 5
+#        elif self.covfunc == "kepler_exp" :
+#            p0[:,2] = np.log(p0[:,2])
+
+        if set_verbose :
+            print("start burn-in")
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
+                    (nburn, nwalkers, nburn*nwalkers))
+        sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p, 
+                    args=(self.zydata, self.covfunc, self.uselognu, 
+                        set_prior, rank, False, False), 
+                    threads=threads)
+        pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if set_verbose :
+            print("burn-in finished")
+        if fburn is not None :
+            if set_verbose :
+                print("save burn-in chains to %s"%fburn)
+            np.savetxt(fburn, sampler.flatchain)
+        # reset sampler
+        sampler.reset()
+        if set_verbose :
+            print("start sampling")
+        sampler.run_mcmc(pos, nchain, rstate0=state)
+        if set_verbose :
+            print("sampling finished")
+        af = sampler.acceptance_fraction
+        if set_verbose :
+            print("acceptance fractions for all walkers are")
+            print(" ".join([format(r, "3.2f") for r in af]))
+        if fchain is not None :
+            if set_verbose :
+                print("save MCMC chains to %s"%fchain)
+            np.savetxt(fchain, sampler.flatchain)
+        if flogp is not None :
+            if set_verbose :
+                print("save logp of MCMC chains to %s"%flogp)
+            np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
+        # make chain an attritue
+        self.flatchain = sampler.flatchain
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
 
     def get_hpd(self, set_verbose=True):
-        pass
+        """
+        """
+        hpd = np.zeros((3, self.ndim))
+        chain_len = self.flatchain.shape[0]
+        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+        medlowhig = pct1sig.astype(np.int32)
+        for i in xrange(self.ndim):
+            vsort = np.sort(self.flatchain[:,i])
+            hpd[:,i] = vsort[medlowhig]
+            if set_verbose :
+                print("HPD of %s"%self.vars[i])
+                if (self.vars[i] == "nu" and (not self.uselognu)) :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+                else :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+        # register hpd to attr
+        self.hpd = hpd
+
 
     def show_hist(self):
-        pass
+        """
+        """
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        ln10 = np.log(10.0)
+        fig  = plt.figure(figsize=(4*3, 4))
+        for i in xrange(self.ndim) :
+            ax = fig.add_subplot(1,3,i+1)
+            if (self.vars[i] == "nu" and (not self.uselognu)) :
+                ax.hist(self.flatchain[:,i], 100)
+            else :
+                ax.hist(self.flatchain[:,i]/ln10, 100)
+            ax.set_xlabel(self.texs[i])
+            ax.set_ylabel("N")
+        plt.show()
 
     def load_chain(self, fchain, set_verbose=True):
-        pass
+        """
+        """
+        if set_verbose :
+            print("load MCMC chain from %s"%fchain)
+        self.flatchain = np.genfromtxt(fchain)
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def break_chain(self, covpar_segments):
+        """ Break the chain.
+        """
+        if (len(covpar_segments) != self.ndim) :
+            print("Error: covpar_segments has to be a list of length %d"%(self.ndim))
+            return(1)
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        for i, covpar_seq in enumerate(covpar_segments) : 
+            if covpar_seq is None:
+                continue
+            indx = np.argsort(self.flatchain[:, i])
+            imin, imax = np.searchsorted(self.flatchain[indx, i], covpar_seq)
+            indx_cut = indx[imin : imax]
+            if len(indx_cut) < 10 :
+                print("Warning: cut too aggressive!")
+                return(1)
+            self.flatchain = self.flatchain[indx_cut, :]
 
     def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
             set_overwrite=True) :
-        pass
-
-
-
+        """
+        """
+        qlist = lnpostfn_single_p(p_bst, self.zydata, self.covfunc,
+                uselognu=self.uselognu, rank="Full", set_retq=True)[4]
+        self.zydata.update_qlist(qlist)
+        sigma, tau, nu = unpacksinglepar(p_bst, self.covfunc, uselognu=self.uselognu)
+        lcmean=self.zydata.blist[0]
+        P = PredictSignal(zydata=self.zydata, lcmean=zydata.blist[0],
+                rank=rank, covfunc=self.covfunc,
+                sigma=sigma, tau=tau, nu=nu)
+        nwant = dense*self.cont_npt
+        jwant0 = self.jstart - 0.1*self.rj
+        jwant1 = self.jend   + 0.1*self.rj
+        jwant = np.linspace(jwant0, jwant1, nwant)
+        mve, var = P.mve_var(jwant)
+        sig = np.sqrt(var)
+        zylclist_pred = [[jwant, mve, sig],]
+        zydata_pred   = LightCurve(zylclist_pred)
+        if fpred is not None :
+            zydata_pred.save(fpred, set_overwrite=set_overwrite)
+        return(zydata_pred)
 
 
 class Rmap_Model(object) :
@@ -439,15 +624,17 @@ class Rmap_Model(object) :
                     self.zydata, **lnpostparams)
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        sigma, tau, llags, lwids, lscales = unpackspearpar(p_bst,
+                self.zydata.nlc, hascontlag=False)
         if set_verbose :
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f"%tuple(np.exp(p_bst[0:2])))
-            for i in xrange(1,self.nlc) :
-                ip = 2+(i-1)*3
+            print("sigma %8.3f tau %8.3f"%(sigma, tau))
+            for i in xrange(self.nlc-1) :
+                ip = 2+i*3
                 print("%s %8.3f %s %8.3f %s %8.3f"%(
-                    self.vars[ip+0], p_bst[ip+0],
-                    self.vars[ip+1], p_bst[ip+1],
-                    self.vars[ip+2], p_bst[ip+2],
+                    self.vars[ip+0], llags[i],
+                    self.vars[ip+1], lwids[i],
+                    self.vars[ip+2], lscales[i],
                     ))
             print("with logp  %10.5g "%-v_bst)
         return(p_bst, -v_bst)
@@ -526,7 +713,6 @@ class Rmap_Model(object) :
         if flogp is not None :
             if set_verbose :
                 print("save logp of MCMC chains to %s"%flogp)
-#            s = sampler.lnprobability.shape
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -689,23 +875,42 @@ if __name__ == "__main__":
     if False :
         lcfile = "dat/loopdeloop_con.dat"
         zydata   = get_data(lcfile)
-        cont   = DRW_Model(zydata)
-#        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn="burn0.dat",
-#                fchain="chain0.dat")
-#
-#        p_ini = [0.0, 1.0]
-#        cont.do_map(p_ini, fixed=None, set_prior=False, rank="Full", 
-#            set_verbose=True)
-#
-#        cont = DRW_Model()
-        cont.load_chain("chain0.dat")
-        cont.show_hist()
+        cont   = Cont_Model(zydata, "drw")
+        cont.do_mcmc(set_prior=True, rank="Full",
+                nwalkers=100, nburn=50, nchain=50, fburn=None,
+                fchain="chain0.dat", threads=2)
+#        cont.load_chain("chain0.dat")
+#        cont.show_hist()
 #        p_bst = [cont.hpd[1, 0], cont.hpd[1,1]]
+#        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
+#            set_verbose=True)[0]
 #        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
 #        zypred.plot(set_pred=True, obs=zydata)
 
+    if True :
+        lcfile = "dat/loopdeloop_con.dat"
+        zydata   = get_data(lcfile)
+#        cont   = Cont_Model(zydata, "pow_exp")
+        cont   = Cont_Model(zydata, "kepler_exp")
+#        cont.do_mcmc(set_prior=True, rank="Full",
+#                nwalkers=100, nburn=50, nchain=50, fburn=None,
+#                fchain="chain0_ke.dat", threads=2)
+        cont.load_chain("chain0_ke.dat")
+#        cont.show_hist()
+#        microscope = [np.log(np.array([0.1, 4.0])),None, [0.5, 1.5]]
+        microscope = [np.log(np.array([0.4, 4.0])),None,np.array([-1.0,
+            1.0])]
+        cont.break_chain(microscope)
+#        cont.show_hist()
+
+        cont.get_hpd()
+        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
+            set_verbose=True)[0]
+        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p_ke.dat", dense=10)
+        zypred.plot(set_pred=True, obs=zydata)
+
     if False :
-        from lcmodel import DRW_Model
         lcfile = "dat/loopdeloop_con_y.dat"
         zydata   = get_data(lcfile)
         rmap   = Rmap_Model(zydata)
@@ -729,8 +934,7 @@ if __name__ == "__main__":
 #        zypred = rmap.do_pred(p_bst, fpred="dat/loopdeloop_con_y.p.dat", dense=10)
 #        zypred.plot(set_pred=True, obs=zydata)
 
-    if True :
-        from lcmodel import DRW_Model
+    if False :
         lcfile = "dat/loopdeloop_con_y_z.dat"
         zydata   = get_data(lcfile)
         rmap   = Rmap_Model(zydata)

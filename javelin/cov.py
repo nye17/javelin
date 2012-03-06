@@ -1,4 +1,4 @@
-#Last-modified: 05 Mar 2012 01:53:54 PM
+#Last-modified: 06 Mar 2012 12:00:37 PM
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
@@ -27,21 +27,21 @@ def get_covfunc_dict(covfunc, **covparams):
     _cov_dict['eval_fun'] = covname_dict[covfunc]
     _cov_dict['amp']      = covparams['sigma']
     _cov_dict['scale']    = covparams['tau']
-    if   covfunc is "drw" :
+    if covfunc == "drw" :
         _cov_dict['pow']         = 1.0
-    elif covfunc is "matern" :
+    elif covfunc == "matern" :
         _cov_dict['diff_degree'] = covparams['nu']
-    elif covfunc is "pow_exp" : 
+    elif covfunc == "pow_exp" : 
         _cov_dict['pow']         = covparams['nu']
-    elif covfunc is "pareto_exp" : 
+    elif covfunc == "pareto_exp" : 
         _cov_dict['alpha']       = covparams['nu']
-    elif covfunc is "kepler_exp" : 
+    elif covfunc == "kepler_exp" : 
         _cov_dict['tcut']        = covparams['nu']
-    elif covfunc is "pow_tail" : 
+    elif covfunc == "pow_tail" : 
         _cov_dict['beta']        = covparams['nu']
     else :
-        print("covfuncs currently implemented:")
-        print(" ".join(covfunc_dict.keys))
+#        print("covfuncs currently implemented:")
+#        print(" ".join(covname_dict.keys))
         raise RuntimeError("%s has not been implemented"%covfunc)
     return(_cov_dict)
 

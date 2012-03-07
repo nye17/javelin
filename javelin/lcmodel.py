@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 12:13:56 AM
+#Last-modified: 07 Mar 2012 03:19:20 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -913,7 +913,7 @@ if __name__ == "__main__":
     wids   = np.array([0.0,   widy,   widz])
     scales = np.array([1.0, scaley, scalez])
 
-    if True :
+    if False :
 #        lcfile = "/data/LCDATA/LINEAR/10352280"
 #        lcfile = "/data/LCDATA/LINEAR/1051415"
         lcfile = "/data/LCDATA/LINEAR/11021817"
@@ -1026,47 +1026,41 @@ if __name__ == "__main__":
 
     if False :
         lcfile = "dat/Arp151/Arp151_B.dat"
+        bchain = "dat/Arp151/chain_arp151_B.dat"
         zydata   = get_data(lcfile)
-        cont   = DRW_Model(zydata)
+        cont   = Cont_Model(zydata)
 #        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="chain_arp151_B.dat")
-#        cont.load_chain("chain_arp151_B.dat")
+#                fchain=bchain)
+        cont.load_chain(bchain)
 #        cont.show_hist()
 
-    if False :
-        lcfile = "dat/Arp151/Arp151_B.dat"
-        zydata   = get_data(lcfile)
-        cont   = DRW_Model(zydata)
-        cont.load_chain("chain_arp151_B.dat")
-        cont.get_hpd()
+    if True :
 
-        lcfiles = ["dat/Arp151/Arp151_B.dat",
+        bchain = "dat/Arp151/chain_arp151_B.dat"
+        fcont  = "dat/Arp151/Arp151_B.dat"
+        zydata = get_data(fcont)
+        cont   = Cont_Model(zydata)
+        cont.load_chain(bchain)
+
+        lcfiles = [
                    "dat/Arp151/Arp151_V.dat",
                    "dat/Arp151/Arp151_Halpha.dat",
                    "dat/Arp151/Arp151_Hbeta.dat",
                    "dat/Arp151/Arp151_Hgamma.dat",
+                   "dat/Arp151/Arp151_HeI.dat",
+                   "dat/Arp151/Arp151_HeII.dat",
                    ]
-        zydata   = get_data(lcfiles)
-        rmap   = Rmap_Model(zydata)
-#        rmap.do_mcmc(cont.hpd, nwalkers=100, nburn=50,
-#                nchain=50, fburn="burn_arp151_2.dat", fchain="chain_arp151_2.dat")
-
-#        rmap.load_chain("chain_arp151_2.dat")
-        rmap.load_chain("chain_arp151_5.dat")
-#        rmap.show_hist()
-#        rmap.get_hpd()
-#        rmap.break_chain([[-10,10],])
-        rmap.break_chain([[-30,30], None, None, None])
-#        rmap.show_hist()
-        rmap.get_hpd()
-
-        p_ini = rmap.hpd[1,:]
-        p_bst = rmap.do_map(p_ini, fixed=None, conthpd=cont.hpd,
-                set_verbose=True)[0]
-
-        zypred = rmap.do_pred(p_bst, fpred="dat/Arp151_5pred.dat", dense=10)
-        zypred.plot(set_pred=True, obs=zydata)
-        
+        for i, lcfile in enumerate(lcfiles) :
+            fchain = "dat/Arp151/chain_arp151_" + str(i+1) + ".dat"
+            zydata   = get_data([fcont, lcfile])
+#            zydata.plot()
+            rmap   = Rmap_Model(zydata)
+#            rmap.do_mcmc(conthpd=cont.hpd, nwalkers=100, nburn=50,
+#                nchain=50, fburn=None, fchain=fchain, threads=1)
+            rmap.load_chain(fchain)
+            rmap.break_chain([[-20,80],])
+            rmap.show_hist()
+#            rmap.get_hpd()
 
 
-    exit()
+

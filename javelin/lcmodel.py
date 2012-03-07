@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 03:19:20 AM
+#Last-modified: 07 Mar 2012 03:42:45 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -14,6 +14,7 @@ from predict import PredictSignal, PredictRmap
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import *
 from emcee import EnsembleSampler
+from itertools import groupby
 
 my_neg_inf = float(-1.0e+300)
 my_pos_inf = float( 1.0e+300)
@@ -31,6 +32,62 @@ nu_floor      = 1.e-6
 lognu_floor   = np.log(nu_floor)   
 nu_ceiling    = 1.e+1
 lognu_ceiling = np.log(nu_ceiling)   
+
+def getAdaptiveHist(x, bins=100, floor=2) :
+    """ x is a 1D array with multi-modal number density distribution.
+    """
+    # do a first round binning
+    h0, edge0 = np.histogram(x, bins=100)
+    h0min, h0max = h0.min(), h0.max()
+    if h0min >= floor :
+        print("the distribution is fairly continuous" +\
+              "you may want to increase the value of *floor*")
+        return(h0)
+    else :
+        h0[np.where(h0 <= floor)] = 0
+        h0[np.where(h0 >  floor)] = 1
+    nh0 = len(h0)
+    edge = []
+    peak = []
+    edge.append(edge0[0])
+    edge.append(edge0[1])
+    if h0[0] == 1 :
+        peak.append(True)
+    else :
+        peak.append(False)
+    # start breaking down the histogram
+    for i in xrange(1, nh0) :
+        if h0[i] == h0[i-1] :
+            edge[-1] = edge0[i+1]
+        else :
+            edge.append(edge0[i+1])
+            if h0[i] == 1 :
+                peak.append(True)
+            else :
+                peak.append(False)
+    # calculate the total length of peaks and the width of final binning
+    edge = np.asarray(edge)
+    ngap = len(peak)
+    lpks = 0.0
+    for i in xrange(ngap) :
+        if peak[i] is True :
+            lpks += edge[i+1] - edge[i]
+        else :
+            pass
+    binwid = lpks/bins
+    # refine the peaks
+    adaptiveedge = np.array([edge[0],])
+    for i in xrange(ngap) :
+        if peak[i] is True :
+            subedge = np.arange(edge[i]+binwid, edge[i+1]+binwid, binwid)
+        else :
+#            subedge = np.array([edge[i+1],])
+            subedge = np.arange(adaptiveedge[-1]+binwid, edge[i+1]+binwid, binwid)
+        adaptiveedge = np.append(adaptiveedge, subedge)
+    # finally
+    h1, edge1 = np.histogram(x, bins=adaptiveedge)
+    return(h1, edge1)
+
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.
@@ -512,7 +569,7 @@ class Cont_Model(object) :
         self.hpd = hpd
 
 
-    def show_hist(self):
+    def show_hist(self, bins=100, set_adaptive=False, floor=50):
         """
         """
         if not hasattr(self, "flatchain"):
@@ -523,11 +580,26 @@ class Cont_Model(object) :
         for i in xrange(self.ndim) :
             ax = fig.add_subplot(1,3,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)) :
-                ax.hist(self.flatchain[:,i], 100)
+                if set_adaptive :
+                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
+                            floor=floor)
+                    left  = edges[:-1]
+                    width = edges[1:] - left
+                    ax.step(left, h, where="post", color="r")
+                else :
+                    ax.hist(self.flatchain[:,i], bins)
             else :
-                ax.hist(self.flatchain[:,i]/ln10, 100)
+                if set_adaptive :
+                    h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
+                            floor=floor)
+                    left  = edges[:-1]
+                    width = edges[1:] - left
+                    ax.step(left, h, where="post", color="r")
+                else :
+                    ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
+        plt.get_current_fig_manager().toolbar.zoom()
         plt.show()
 
     def load_chain(self, fchain, set_verbose=True):
@@ -781,7 +853,7 @@ class Rmap_Model(object) :
         # register hpd to attr
         self.hpd = hpd
 
-    def show_hist(self):
+    def show_hist(self, bins=100, set_adaptive=False, floor=50):
         """ Plot the histograms.
         """
         if not hasattr(self, "flatchain"):
@@ -791,16 +863,32 @@ class Rmap_Model(object) :
         fig  = plt.figure(figsize=(6*3, 3*self.nlc))
         for i in xrange(2) :
             ax = fig.add_subplot(self.nlc,3,i+1)
-            ax.hist(self.flatchain[:,i]/ln10, 100)
+            if set_adaptive :
+                h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
+                        floor=floor)
+                left  = edges[:-1]
+                width = edges[1:] - left
+                ax.step(left, h, where="post", color="r")
+            else :
+                ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
         for k in xrange(self.nlc-1):
             for i in xrange(2+k*3, 5+k*3) :
                 ax = fig.add_subplot(self.nlc,3,i+1+1) 
-                ax.hist(self.flatchain[:,i], 100)
+                if set_adaptive :
+                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
+                            floor=floor)
+                    left  = edges[:-1]
+                    width = edges[1:] - left
+                    ax.step(left, h, where="post", color="r")
+                else :
+                    ax.hist(self.flatchain[:,i], bins)
                 ax.set_xlabel(self.texs[i])
                 ax.set_ylabel("N")
+        plt.get_current_fig_manager().toolbar.zoom()
         plt.show()
+
 
 
     def break_chain(self, llag_segments):
@@ -1044,11 +1132,11 @@ if __name__ == "__main__":
 
         lcfiles = [
                    "dat/Arp151/Arp151_V.dat",
-                   "dat/Arp151/Arp151_Halpha.dat",
-                   "dat/Arp151/Arp151_Hbeta.dat",
-                   "dat/Arp151/Arp151_Hgamma.dat",
-                   "dat/Arp151/Arp151_HeI.dat",
-                   "dat/Arp151/Arp151_HeII.dat",
+#                   "dat/Arp151/Arp151_Halpha.dat",
+#                   "dat/Arp151/Arp151_Hbeta.dat",
+#                   "dat/Arp151/Arp151_Hgamma.dat",
+#                   "dat/Arp151/Arp151_HeI.dat",
+#                   "dat/Arp151/Arp151_HeII.dat",
                    ]
         for i, lcfile in enumerate(lcfiles) :
             fchain = "dat/Arp151/chain_arp151_" + str(i+1) + ".dat"
@@ -1058,8 +1146,9 @@ if __name__ == "__main__":
 #            rmap.do_mcmc(conthpd=cont.hpd, nwalkers=100, nburn=50,
 #                nchain=50, fburn=None, fchain=fchain, threads=1)
             rmap.load_chain(fchain)
-            rmap.break_chain([[-20,80],])
-            rmap.show_hist()
+            rmap.show_hist(set_adaptive=True, bins=50, floor=100)
+#            rmap.break_chain([[-20,80],])
+#            rmap.show_hist()
 #            rmap.get_hpd()
 
 

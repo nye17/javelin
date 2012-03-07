@@ -1,7 +1,8 @@
-#Last-modified: 06 Mar 2012 12:46:18 PM
+#Last-modified: 06 Mar 2012 03:23:58 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
+#np.seterr(all='raise')
 from numpy.random import normal, multivariate_normal
 from scipy.optimize import fmin
 import matplotlib.pyplot as plt
@@ -15,16 +16,49 @@ from err import *
 from emcee import EnsembleSampler
 
 my_neg_inf = float(-1.0e+300)
+my_pos_inf = float( 1.0e+300)
+
+tau_floor     = 1.e-6
+tau_ceiling   = 1.e+5
+sigma_floor   = 1.e-6
+sigma_ceiling = 1.e+2
+logtau_floor     = np.log(tau_floor) 
+logtau_ceiling   = np.log(tau_ceiling)   
+logsigma_floor   = np.log(sigma_floor)  
+logsigma_ceiling = np.log(sigma_ceiling) 
+
+nu_floor      = 1.e-6
+lognu_floor   = np.log(nu_floor)   
+nu_ceiling    = 1.e+1
+lognu_ceiling = np.log(nu_ceiling)   
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.
     """
-    sigma   = np.exp(p[0])
-    tau     = np.exp(p[1])
+    if p[0] > logsigma_ceiling :
+        sigma = sigma_ceiling
+    elif p[0] < logsigma_floor :
+        sigma = sigma_floor
+    else :
+        sigma = np.exp(p[0])
+    if p[1] > logtau_ceiling :
+        tau = tau_ceiling
+    elif p[1] < logtau_floor :
+        tau = tau_floor
+    else :
+        tau = np.exp(p[1])
+#    sigma = np.exp(p[0])
+#    tau = np.exp(p[1])
+
     if covfunc == "drw" :
         nu = None
     elif uselognu :
-        nu = np.exp(p[2])
+        if p[2] < lognu_floor :
+            nu = nu_floor 
+        elif p[2] > lognu_ceiling :
+            nu = nu_ceiling 
+        else :
+            nu = np.exp(p[2])
     else :
         nu = p[2]
     return(sigma, tau, nu)
@@ -360,11 +394,11 @@ class Cont_Model(object) :
         if covfunc == "drw" :
             self.uselognu = False
             self.ndim = 2
-#        elif covfunc == "matern" or covfunc == "kepler_exp" :
-#            self.uselognu = True
-#            self.ndim = 3
-#            self.vars.append("nu")
-#            self.texs.append(r"$\log\,\nu$")
+        elif covfunc == "matern" :
+            self.uselognu = True
+            self.ndim = 3
+            self.vars.append("nu")
+            self.texs.append(r"$\log\,\nu$")
         else :
             self.uselognu = False
             self.ndim = 3
@@ -415,10 +449,7 @@ class Cont_Model(object) :
         if self.covfunc == "pow_exp" :
             p0[:,2] = p0[:,2] * 1.99
         elif self.covfunc == "matern" :
-#            p0[:,2] = np.log(p0[:,2] * 5)
-            p0[:,2] = p0[:,2] * 5
-#        elif self.covfunc == "kepler_exp" :
-#            p0[:,2] = np.log(p0[:,2])
+            p0[:,2] = np.log(p0[:,2] * 5)
 
         if set_verbose :
             print("start burn-in")
@@ -456,6 +487,7 @@ class Cont_Model(object) :
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
+        self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
@@ -504,6 +536,7 @@ class Cont_Model(object) :
         if set_verbose :
             print("load MCMC chain from %s"%fchain)
         self.flatchain = np.genfromtxt(fchain)
+        self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
@@ -526,6 +559,9 @@ class Cont_Model(object) :
                 print("Warning: cut too aggressive!")
                 return(1)
             self.flatchain = self.flatchain[indx_cut, :]
+
+    def restore_chain(self) :
+        self.flatchain = np.copy(self.flatchain_whole)
 
     def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
             set_overwrite=True) :
@@ -716,6 +752,7 @@ class Rmap_Model(object) :
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
+        self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
@@ -791,6 +828,9 @@ class Rmap_Model(object) :
             indx_cut = indx[imin : imax]
             self.flatchain = self.flatchain[indx_cut, :]
 
+    def restore_chain(self) :
+        self.flatchain = np.copy(self.flatchain_whole)
+
     def load_chain(self, fchain, set_verbose=True):
         """ Load stored MCMC chain.
 
@@ -805,6 +845,7 @@ class Rmap_Model(object) :
         if set_verbose :
             print("load MCMC chain from %s"%fchain)
         self.flatchain = np.genfromtxt(fchain)
+        self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
@@ -872,6 +913,25 @@ if __name__ == "__main__":
     wids   = np.array([0.0,   widy,   widz])
     scales = np.array([1.0, scaley, scalez])
 
+    if True :
+        lcfile = "dat/16105523"
+        zydata   = get_data(lcfile)
+#        zydata.plot()
+        cont   = Cont_Model(zydata, "kepler_exp")
+#        cont.do_mcmc(set_prior=True, rank="Full",
+#                nwalkers=100, nburn=50, nchain=50, fburn=None,
+#                fchain="dat/lineartest.dat", threads=1)
+        cont.load_chain("dat/lineartest.dat")
+        microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
+        cont.break_chain(microscope)
+        cont.show_hist()
+        cont.get_hpd()
+        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
+            set_verbose=True)[0]
+        zypred = cont.do_pred(p_bst, fpred=None, dense=10)
+        zypred.plot(set_pred=True, obs=zydata)
+
     if False :
         lcfile = "dat/loopdeloop_con.dat"
         zydata   = get_data(lcfile)
@@ -887,28 +947,31 @@ if __name__ == "__main__":
 #        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
 #        zypred.plot(set_pred=True, obs=zydata)
 
-    if True :
+    if False :
         lcfile = "dat/loopdeloop_con.dat"
         zydata   = get_data(lcfile)
 #        cont   = Cont_Model(zydata, "pow_exp")
-        cont   = Cont_Model(zydata, "kepler_exp")
+#        cont   = Cont_Model(zydata, "kepler_exp")
+        cont   = Cont_Model(zydata, "matern")
 #        cont.do_mcmc(set_prior=True, rank="Full",
 #                nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="chain0_ke.dat", threads=2)
-        cont.load_chain("chain0_ke.dat")
+#                fchain="chain0_ma.dat", threads=2)
+        cont.load_chain("chain0_ma.dat")
 #        cont.show_hist()
 #        microscope = [np.log(np.array([0.1, 4.0])),None, [0.5, 1.5]]
-        microscope = [np.log(np.array([0.4, 4.0])),None,np.array([-1.0,
-            1.0])]
+#        microscope = [np.log(np.array([0.1, 4.0])),np.log(np.array([10.0, 400.0])), None]
+#        microscope = [np.log(np.array([0.4, 4.0])),None,np.array([-1.0, 1.0])]
         cont.break_chain(microscope)
-#        cont.show_hist()
+        cont.show_hist()
+        cont.restore_chain()
+        cont.show_hist()
 
-        cont.get_hpd()
-        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
-        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
-            set_verbose=True)[0]
-        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p_ke.dat", dense=10)
-        zypred.plot(set_pred=True, obs=zydata)
+#        cont.get_hpd()
+#        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+#        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
+#            set_verbose=True)[0]
+#        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p_ma.dat", dense=10)
+#        zypred.plot(set_pred=True, obs=zydata)
 
     if False :
         lcfile = "dat/loopdeloop_con_y.dat"

@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 04:32:23 PM
+#Last-modified: 07 Mar 2012 06:16:23 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -226,13 +226,20 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
                 return(_exit_with_retval(zydata.nlc, set_retq, 
                        errmsg="Warning: illegal input of parameters in nu", 
                        set_verbose=set_verbose))
-        if covfunc == "matern" :
+        elif covfunc == "matern" :
             if nu <= 0.0 :
                 return(_exit_with_retval(zydata.nlc, set_retq, 
                        errmsg="Warning: illegal input of parameters in nu", 
                        set_verbose=set_verbose))
-        if covfunc == "kepler_exp" :
+        elif covfunc == "kepler_exp" :
+            # here nu is the ratio
             if nu < 0.0 or nu >= 1.0 :
+                return(_exit_with_retval(zydata.nlc, set_retq, 
+                       errmsg="Warning: illegal input of parameters in nu", 
+                       set_verbose=set_verbose))
+        elif covfunc == "kepler2_exp" :
+            # here nu is the cutoff time scale
+            if nu < 0.0 or nu >= tau :
                 return(_exit_with_retval(zydata.nlc, set_retq, 
                        errmsg="Warning: illegal input of parameters in nu", 
                        set_verbose=set_verbose))

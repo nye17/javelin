@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 04:06:03 PM
+#Last-modified: 07 Mar 2012 04:32:23 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -37,15 +37,43 @@ def getAdaptiveHist(x, bins=100, floor=2) :
     """ x is a 1D array with multi-modal number density distribution.
     """
     # do a first round binning
-    h0, edge0 = np.histogram(x, bins=100)
+    h0, edge0 = np.histogram(x, bins=bins)
     h0min, h0max = h0.min(), h0.max()
     if h0min >= floor :
         print("the distribution is fairly continuous" +\
               "you may want to increase the value of *floor*")
-        return(h0)
+        return(h0, edge0)
     else :
-        h0[np.where(h0 <= floor)] = 0
-        h0[np.where(h0 >  floor)] = 1
+        pass
+    # find peaks (note h0 is modifed)
+    peak, edge = binarize(h0, edge0, floor)
+    # throw away the (almost) empty wings
+    peak, edge = removewings(peak, edge) 
+    # calculate the total length of peaks and the width of final binning
+    ngap = len(peak)
+    lpks = 0.0
+    for i in xrange(ngap) :
+        if peak[i] is True :
+            lpks += edge[i+1] - edge[i]
+        else :
+            pass
+    binwid = lpks/bins
+    # refine the peaks
+    adaptiveedge = np.arange(edge[0],edge[-1]+binwid, binwid)
+    # finally
+    h1, edge1 = np.histogram(x, bins=adaptiveedge)
+    # another iteration
+#    newfloor = floor*(edge1[1]-edge[0])/(edge0[1]-edge0[0])
+#    peak, edge = binarize(h1, edge1, newfloor)
+#    peak, edge = removewings(peak, edge) 
+#    print(edge[0]),
+#    print(edge[-1])
+#    h1, edge1 = np.histogram(x, bins=edge)
+    return(h1, edge1)
+
+def binarize(h0, edge0, floor) :
+    h0[np.where(h0 <= floor)] = 0
+    h0[np.where(h0 >  floor)] = 1
     nh0 = len(h0)
     edge = []
     peak = []
@@ -65,7 +93,11 @@ def getAdaptiveHist(x, bins=100, floor=2) :
                 peak.append(True)
             else :
                 peak.append(False)
-    # throw away the (almost) empty wings
+    return(peak, edge)
+
+def removewings(peak, edge) :
+    peak = list(peak)
+    edge = list(edge)
     if peak[0] is False :
         nleft = 1
         for i in xrange(1, len(peak)):
@@ -84,29 +116,7 @@ def getAdaptiveHist(x, bins=100, floor=2) :
                 break
         del peak[-nright:]
         del edge[-nright:]
-    # calculate the total length of peaks and the width of final binning
-    edge = np.asarray(edge)
-    ngap = len(peak)
-    lpks = 0.0
-    for i in xrange(ngap) :
-        if peak[i] is True :
-            lpks += edge[i+1] - edge[i]
-        else :
-            pass
-    binwid = lpks/bins
-    # refine the peaks
-    adaptiveedge = np.array([edge[0],])
-    for i in xrange(ngap) :
-        if peak[i] is True :
-            subedge = np.arange(edge[i]+binwid, edge[i+1]+binwid, binwid)
-        else :
-#            subedge = np.array([edge[i+1],])
-            subedge = np.arange(adaptiveedge[-1]+binwid, edge[i+1]+binwid, binwid)
-        adaptiveedge = np.append(adaptiveedge, subedge)
-    # finally
-    h1, edge1 = np.histogram(x, bins=adaptiveedge)
-    return(h1, edge1)
-
+    return(peak, edge)
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.

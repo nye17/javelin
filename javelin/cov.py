@@ -1,4 +1,4 @@
-#Last-modified: 06 Mar 2012 12:00:37 PM
+#Last-modified: 07 Mar 2012 06:13:07 PM
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
@@ -10,12 +10,13 @@ Wrapping the all the continuum covariance functions together.
 """
 
 covname_dict = {
-                "matern"    :    matern.euclidean,
-                "pow_exp"   :   pow_exp.euclidean,
-                "drw"       :   pow_exp.euclidean,
-                "pareto_exp":pareto_exp.euclidean,
-                "kepler_exp":kepler_exp.euclidean,
-                "pow_tail"  :  pow_tail.euclidean,
+                "matern"     :    matern.euclidean,
+                "pow_exp"    :   pow_exp.euclidean,
+                "drw"        :   pow_exp.euclidean,
+                "pareto_exp" :pareto_exp.euclidean,
+                "pow_tail"   :  pow_tail.euclidean,
+                "kepler_exp" :kepler_exp.euclidean,
+                "kepler2_exp":kepler_exp.euclidean,
                }
 
 
@@ -37,6 +38,10 @@ def get_covfunc_dict(covfunc, **covparams):
         _cov_dict['alpha']       = covparams['nu']
     elif covfunc == "kepler_exp" : 
         _cov_dict['tcut']        = covparams['nu']
+    elif covfunc == "kepler2_exp" : 
+        # tcut is the ratio of the cutoff timescale to tau, so if you
+        # want nu to be the cutoff timescale....
+        _cov_dict['tcut']        = covparams['nu']/covparams['tau']
     elif covfunc == "pow_tail" : 
         _cov_dict['beta']        = covparams['nu']
     else :

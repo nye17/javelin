@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 03:42:45 PM
+#Last-modified: 07 Mar 2012 04:06:03 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -65,6 +65,25 @@ def getAdaptiveHist(x, bins=100, floor=2) :
                 peak.append(True)
             else :
                 peak.append(False)
+    # throw away the (almost) empty wings
+    if peak[0] is False :
+        nleft = 1
+        for i in xrange(1, len(peak)):
+            if peak[i] is False :
+                nleft += 1
+            else :
+                break
+        del peak[0:nleft]
+        del edge[0:nleft]
+    if peak[-1] is False :
+        nright = 1
+        for i in xrange(len(peak)-2, 0, -1):
+            if peak[i] is False :
+                nright += 1
+            else :
+                break
+        del peak[-nright:]
+        del edge[-nright:]
     # calculate the total length of peaks and the width of final binning
     edge = np.asarray(edge)
     ngap = len(peak)

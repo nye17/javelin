@@ -1,4 +1,4 @@
-#Last-modified: 06 Mar 2012 03:23:58 PM
+#Last-modified: 07 Mar 2012 12:13:56 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -914,23 +914,27 @@ if __name__ == "__main__":
     scales = np.array([1.0, scaley, scalez])
 
     if True :
-        lcfile = "dat/16105523"
+#        lcfile = "/data/LCDATA/LINEAR/10352280"
+#        lcfile = "/data/LCDATA/LINEAR/1051415"
+        lcfile = "/data/LCDATA/LINEAR/11021817"
         zydata   = get_data(lcfile)
 #        zydata.plot()
+#        quit()
         cont   = Cont_Model(zydata, "kepler_exp")
 #        cont.do_mcmc(set_prior=True, rank="Full",
 #                nwalkers=100, nburn=50, nchain=50, fburn=None,
 #                fchain="dat/lineartest.dat", threads=1)
+
         cont.load_chain("dat/lineartest.dat")
         microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
         cont.break_chain(microscope)
         cont.show_hist()
-        cont.get_hpd()
-        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
-        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
-            set_verbose=True)[0]
-        zypred = cont.do_pred(p_bst, fpred=None, dense=10)
-        zypred.plot(set_pred=True, obs=zydata)
+#        cont.get_hpd()
+#        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+#        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
+#            set_verbose=True)[0]
+#        zypred = cont.do_pred(p_bst, fpred=None, dense=10, rank="Full")
+#        zypred.plot(set_pred=True, obs=zydata)
 
     if False :
         lcfile = "dat/loopdeloop_con.dat"

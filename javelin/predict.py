@@ -422,3 +422,20 @@ def smooth(x,window_len=11,window='flat'):
     y=np.convolve(w/w.sum(),s,mode='same')
     # chop off the wings to maintain array size before return
     return(y[window_len-1:-window_len+1])
+
+
+
+def mockme(zydata, covfunc="drw", **covparams) :
+    """ simulate a mock continuum light curve with the same sampling and error
+    properties as the input data.
+    """
+    lcmean = zydata.blist[0]
+    PS = PredictSignal(lcmean=lcmean, covfunc=covfunc, **covparams)
+    jwant = zydata.jlist[0]
+    ewant = zydata.elist[0]
+    mwant = PS.generate(jwant, ewant=ewant, num=1)
+    zymock_list = [[jwant, mwant, ewant],]
+    zymock = LightCurve(zymock_list)
+    return(zymock)
+    
+

@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2012 03:21:29 PM
+#Last-modified: 08 Mar 2012 05:22:13 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -198,9 +198,13 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
         else :
             prior += - np.log(zydata.cont_cad/tau) - np.log(sigma)
         if covfunc == "kepler2_exp" :
+            # try to suppress large ratios of tau_cut to tau
+            # basically penalize covariances with spiky shape
+            prior += -np.log(nu/tau)
             if nu < zydata.cont_cad :
-                # try to suppress numbers below the "minimum" cadence
+                # try to suppress numbers below the cadence
                 prior += - np.log(zydata.cont_cad/nu) 
+
     if set_retq :
         vals[0] = vals[0] + prior
         vals.append(prior)
@@ -244,8 +248,6 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
             return(_exit_with_retval(zydata.nlc, set_retq, 
                    errmsg="Warning: illegal input of parameters in nu", 
                    set_verbose=set_verbose))
-    else :
-        raise InputError("no such covariance function: "+covfunc)
 
     # choice of ranks
     if rank == "Full" :
@@ -822,7 +824,7 @@ class Cont_Model(object) :
         self.zydata.update_qlist(qlist)
         sigma, tau, nu = unpacksinglepar(p_bst, self.covfunc, uselognu=self.uselognu)
         lcmean=self.zydata.blist[0]
-        P = PredictSignal(zydata=self.zydata, lcmean=zydata.blist[0],
+        P = PredictSignal(zydata=self.zydata, lcmean=lcmean,
                 rank=rank, covfunc=self.covfunc,
                 sigma=sigma, tau=tau, nu=nu)
         nwant = dense*self.cont_npt

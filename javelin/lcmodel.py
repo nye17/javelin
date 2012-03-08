@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2012 01:18:02 AM
+#Last-modified: 08 Mar 2012 03:21:29 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -188,16 +188,19 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
         logl = lnlikefn_single(zydata, covfunc=covfunc, rank=rank,
                     sigma=sigma, tau=tau, nu=nu,
                     set_retq=False, set_verbose=set_verbose)
+    prior = 0.0
     if set_prior :
         if tau > zydata.cont_cad :
-            prior = - np.log(tau/zydata.cont_cad) - np.log(sigma)
-        elif tau < 0.00001 :
-            prior = my_neg_inf
+            prior += - np.log(tau/zydata.cont_cad) - np.log(sigma)
+        elif tau < 0.001 :
+            # 86.4 seconds if tau in days
+            prior += my_neg_inf
         else :
-            prior = - np.log(zydata.cont_cad/tau) - np.log(sigma)
-        # do we want to put prior on t_cut in kepler2_exp?
-    else :
-        prior = 0.0
+            prior += - np.log(zydata.cont_cad/tau) - np.log(sigma)
+        if covfunc == "kepler2_exp" :
+            if nu < zydata.cont_cad :
+                # try to suppress numbers below the "minimum" cadence
+                prior += - np.log(zydata.cont_cad/nu) 
     if set_retq :
         vals[0] = vals[0] + prior
         vals.append(prior)
@@ -478,6 +481,8 @@ class Cont_Model(object) :
             self.npt      = zydata.npt
             self.cont_npt = zydata.nptlist[0]
             self.cont_cad = zydata.cont_cad
+            self.cont_cad_min = zydata.cont_cad_min
+            self.cont_cad_max = zydata.cont_cad_max
             self.cont_std = zydata.cont_std
             self.rj       = zydata.rj
             self.jstart   = zydata.jstart
@@ -747,8 +752,14 @@ class Cont_Model(object) :
                     left  = edges[:-1]
                     width = edges[1:] - left
                     ax.step(left, h, where="post", color="r")
+                    indpeak = np.argmax(h)
+                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
+                        edges[indpeak], edges[indpeak+1]))
                 else :
                     ax.hist(self.flatchain[:,i], bins)
+                if self.covfunc == "kepler2_exp" :
+                    ax.axvspan(self.cont_cad_min,
+                            self.cont_cad, color="g", alpha=0.2)
             else :
                 if set_adaptive :
                     h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
@@ -756,8 +767,14 @@ class Cont_Model(object) :
                     left  = edges[:-1]
                     width = edges[1:] - left
                     ax.step(left, h, where="post", color="r")
+                    indpeak = np.argmax(h)
+                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
+                        edges[indpeak], edges[indpeak+1]))
                 else :
                     ax.hist(self.flatchain[:,i]/ln10, bins)
+                if self.vars[i] == "nu" and self.covfunc == "kepler2_exp" :
+                    ax.axvspan(np.log10(self.cont_cad_min),
+                               np.log10(self.cont_cad), color="g", alpha=0.2)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
         plt.get_current_fig_manager().toolbar.zoom()
@@ -1040,6 +1057,9 @@ class Rmap_Model(object) :
                     left  = edges[:-1]
                     width = edges[1:] - left
                     ax.step(left, h, where="post", color="r")
+                    indpeak = np.argmax(h)
+                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
+                        edges[indpeak], edges[indpeak+1]))
                 else :
                     ax.hist(self.flatchain[:,i]/ln10, bins)
                 ax.set_xlabel(self.texs[i])
@@ -1053,6 +1073,9 @@ class Rmap_Model(object) :
                         left  = edges[:-1]
                         width = edges[1:] - left
                         ax.step(left, h, where="post", color="r")
+                        indpeak = np.argmax(h)
+                        print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
+                            edges[indpeak], edges[indpeak+1]))
                     else :
                         ax.hist(self.flatchain[:,i], bins)
                     ax.set_xlabel(self.texs[i])
@@ -1175,25 +1198,32 @@ if __name__ == "__main__":
     if True :
 #        lcfile = "/data/LCDATA/LINEAR/10352280"
 #        lcfile = "/data/LCDATA/LINEAR/1051415"
-        lcfile = "/data/LCDATA/LINEAR/11021817"
+#        lcfile = "/data/LCDATA/LINEAR/11021817"
+#        lcfile = "dat/loopdeloop_con.dat"
+        lcfile = "dat/24996081_mock20"
         zydata   = get_data(lcfile)
+        print(zydata.cont_cad_min)
+        print(zydata.cont_cad_max)
+#        print(zydata.cont_cad)
 #        zydata.plot()
 #        quit()
         cont   = Cont_Model(zydata, "kepler2_exp")
+
 #        cont.do_mcmc(set_prior=True, rank="Full",
 #                nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="dat/lineartest2.dat", threads=1)
+#                fchain="dat/lineartest3.dat", threads=1)
 
 #        quit()
 
-        cont.load_chain("dat/lineartest2.dat")
+        cont.load_chain("dat/lineartest3.dat")
+        cont.show_hist(set_adaptive=True, bins=500, floor=10)
 #        microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
-#        microscope = [None, None, [-3,3]]
+#        microscope = [None, None, [np.log(1),np.log(100)]]
 #        cont.break_chain(microscope)
-#        cont.show_hist(set_adaptive=True, bins=200, floor=50)
+#        cont.get_hpd()
 #        cont.show_hist(set_adaptive=False, bins=200)
 
-#        quit()
+        quit()
 
 #        cont.get_hpd()
         p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]

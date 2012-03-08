@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2012 02:00:32 AM
+#Last-modified: 08 Mar 2012 02:23:14 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     set_plot = True
     # truth drw
     trufile = "dat/trulc.dat"
-    if False :
+    if True :
         if file_exists(trufile) :
             print("read true light curve signal from %s"%trufile)
             zydata = get_data(trufile, names=names)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     # truth kepler
     trufile_k2e = "dat/trulc_k2e.dat"
-    if True :
+    if False :
         if file_exists(trufile_k2e) :
             print("read true k2e light curve signal from %s"%trufile_k2e)
             zydata_k2e = get_data(trufile_k2e, names=names)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     confile = "dat/loopdeloop_con.dat"
     topfile = "dat/loopdeloop_con_y.dat"
     doufile = "dat/loopdeloop_con_y_z.dat"
-    if False :
+    if True :
         # downsample the truth to get more realistic light curves
         zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
             errfac=[0.05, 0.05, 0.05], set_seasongap=False)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     confile_k2e = "dat/loopdeeswoop_con.dat"
     topfile_k2e = "dat/loopdeeswoop_con_y.dat"
     doufile_k2e = "dat/loopdeeswoop_con_y_z.dat"
-    if True :
+    if False :
         # downsample the truth to get more realistic light curves
         zydata_dou_k2e = True2Mock(zydata_k2e, lcmeans=lcmeans, sparse=[20, 20, 20], 
             errfac=[0.05, 0.05, 0.05], set_seasongap=False)

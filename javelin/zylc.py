@@ -2,7 +2,7 @@ import numpy as np
 
 __all__ = ['LightCurve', 'get_data']
 
-from lcio import jdmedlc, readlc, readlc_3c, writelc
+from lcio import readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -57,7 +57,10 @@ class LightCurve(object):
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
         self.cont_std      = np.std(self.mlist[0])
-        self.cont_cad      = jdmedlc(list(self.jlist[0]))
+        self.cont_cad_arr  = self.jlist[0][1:] - self.jlist[0][:-1]  
+        self.cont_cad      = np.median(self.cont_cad_arr)
+        self.cont_cad_min  = np.min(self.cont_cad_arr)
+        self.cont_cad_max  = np.max(self.cont_cad_arr)
         if self.cont_mean_err != 0.0 :
             # a rough estimate of the continuum variability signal-to-noise
             # ratio

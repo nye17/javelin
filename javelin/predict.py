@@ -425,12 +425,12 @@ def smooth(x,window_len=11,window='flat'):
 
 
 
-def mockme(zydata, covfunc="drw", **covparams) :
+def mockme(zydata, covfunc="drw", rank="Full", **covparams) :
     """ simulate a mock continuum light curve with the same sampling and error
     properties as the input data.
     """
     lcmean = zydata.blist[0]
-    PS = PredictSignal(lcmean=lcmean, covfunc=covfunc, **covparams)
+    PS = PredictSignal(lcmean=lcmean, covfunc=covfunc, rank=rank, **covparams)
     jwant = zydata.jlist[0]
     ewant = zydata.elist[0]
     mwant = PS.generate(jwant, ewant=ewant, num=1)

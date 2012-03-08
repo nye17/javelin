@@ -1,4 +1,4 @@
-#Last-modified: 07 Mar 2012 06:16:23 PM
+#Last-modified: 08 Mar 2012 01:18:02 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -30,7 +30,7 @@ logsigma_ceiling = np.log(sigma_ceiling)
 
 nu_floor      = 1.e-6
 lognu_floor   = np.log(nu_floor)   
-nu_ceiling    = 1.e+1
+nu_ceiling    = 1.e+3
 lognu_ceiling = np.log(nu_ceiling)   
 
 def getAdaptiveHist(x, bins=100, floor=2) :
@@ -63,12 +63,12 @@ def getAdaptiveHist(x, bins=100, floor=2) :
     # finally
     h1, edge1 = np.histogram(x, bins=adaptiveedge)
     # another iteration
-#    newfloor = floor*(edge1[1]-edge[0])/(edge0[1]-edge0[0])
-#    peak, edge = binarize(h1, edge1, newfloor)
-#    peak, edge = removewings(peak, edge) 
-#    print(edge[0]),
-#    print(edge[-1])
-#    h1, edge1 = np.histogram(x, bins=edge)
+    #    newfloor = floor*(edge1[1]-edge[0])/(edge0[1]-edge0[0])
+    #    peak, edge = binarize(h1, edge1, newfloor)
+    #    peak, edge = removewings(peak, edge) 
+    #    print(edge[0]),
+    #    print(edge[-1])
+    #    h1, edge1 = np.histogram(x, bins=edge)
     return(h1, edge1)
 
 def binarize(h0, edge0, floor) :
@@ -133,8 +133,6 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
         tau = tau_floor
     else :
         tau = np.exp(p[1])
-#    sigma = np.exp(p[0])
-#    tau = np.exp(p[1])
 
     if covfunc == "drw" :
         nu = None
@@ -197,6 +195,7 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
             prior = my_neg_inf
         else :
             prior = - np.log(zydata.cont_cad/tau) - np.log(sigma)
+        # do we want to put prior on t_cut in kepler2_exp?
     else :
         prior = 0.0
     if set_retq :
@@ -220,29 +219,31 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
        return(_exit_with_retval(zydata.nlc, set_retq, 
               errmsg="Warning: illegal input of parameters", 
               set_verbose=set_verbose))
+    if covfunc == "pow_exp" :
+        if nu <= 0.0 or nu >= 2.0 :
+            return(_exit_with_retval(zydata.nlc, set_retq, 
+                   errmsg="Warning: illegal input of parameters in nu", 
+                   set_verbose=set_verbose))
+    elif covfunc == "matern" :
+        if nu <= 0.0 :
+            return(_exit_with_retval(zydata.nlc, set_retq, 
+                   errmsg="Warning: illegal input of parameters in nu", 
+                   set_verbose=set_verbose))
+    elif covfunc == "kepler_exp" :
+        # here nu is the ratio
+        if nu < 0.0 or nu >= 1.0 :
+            return(_exit_with_retval(zydata.nlc, set_retq, 
+                   errmsg="Warning: illegal input of parameters in nu", 
+                   set_verbose=set_verbose))
+    elif covfunc == "kepler2_exp" :
+        # here nu is the cutoff time scale
+        if nu < 0.0 or nu >= tau :
+            return(_exit_with_retval(zydata.nlc, set_retq, 
+                   errmsg="Warning: illegal input of parameters in nu", 
+                   set_verbose=set_verbose))
     else :
-        if covfunc == "pow_exp" :
-            if nu <= 0.0 or nu >= 2.0 :
-                return(_exit_with_retval(zydata.nlc, set_retq, 
-                       errmsg="Warning: illegal input of parameters in nu", 
-                       set_verbose=set_verbose))
-        elif covfunc == "matern" :
-            if nu <= 0.0 :
-                return(_exit_with_retval(zydata.nlc, set_retq, 
-                       errmsg="Warning: illegal input of parameters in nu", 
-                       set_verbose=set_verbose))
-        elif covfunc == "kepler_exp" :
-            # here nu is the ratio
-            if nu < 0.0 or nu >= 1.0 :
-                return(_exit_with_retval(zydata.nlc, set_retq, 
-                       errmsg="Warning: illegal input of parameters in nu", 
-                       set_verbose=set_verbose))
-        elif covfunc == "kepler2_exp" :
-            # here nu is the cutoff time scale
-            if nu < 0.0 or nu >= tau :
-                return(_exit_with_retval(zydata.nlc, set_retq, 
-                       errmsg="Warning: illegal input of parameters in nu", 
-                       set_verbose=set_verbose))
+        raise InputError("no such covariance function: "+covfunc)
+
     # choice of ranks
     if rank == "Full" :
         # using full-rank
@@ -251,7 +252,7 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
         # using nearly full-rank
         C = NearlyFullRankCovariance(**covfunc_dict)
     else :
-        raise InputError("No such option for rank ")
+        raise InputError("No such option for rank "+rank)
     # cholesky decompose S+N so that U^T U = S+N = C
     # using intrinsic method of C without explicitly writing out cmatrix
     try :
@@ -444,7 +445,7 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
 
 def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
     """ Return failure elegantly.
-    
+
     When you are desperate and just want to leave the calculation with 
     appropriate return values that quietly speak out your angst.
     """
@@ -487,7 +488,7 @@ class Cont_Model(object) :
         if covfunc == "drw" :
             self.uselognu = False
             self.ndim = 2
-        elif covfunc == "matern" :
+        elif covfunc == "matern" or covfunc == "kepler2_exp" :
             self.uselognu = True
             self.ndim = 3
             self.vars.append("nu")
@@ -497,6 +498,12 @@ class Cont_Model(object) :
             self.ndim = 3
             self.vars.append("nu")
             self.texs.append(r"$\nu$")
+
+    def __call__(self, p, set_prior=True, rank="Full", set_retq=False,
+            set_verbose=True): 
+        return(lnpostfn_single_p(p, self.zydata, self.covfunc, 
+            uselognu=self.uselognu, set_prior=set_prior, rank=rank,
+            set_retq=set_retq, set_verbose=set_verbose))
 
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
         """
@@ -512,14 +519,18 @@ class Cont_Model(object) :
             fixed = np.asarray(fixed)
             func = lambda _p : -lnpostfn_single_p(_p*fixed+p_ini*(1.-fixed),
                     self.zydata, self.covfunc, uselognu=self.uselognu, 
+                    set_retq=False,
                     set_prior=set_prior, rank=rank, set_verbose=set_verbose)
         else :
             func = lambda _p : -lnpostfn_single_p(_p,
                     self.zydata, self.covfunc, uselognu=self.uselognu, 
+                    set_retq=False,
                     set_prior=set_prior, rank=rank, set_verbose=set_verbose)
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
         sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc,
                 uselognu=self.uselognu)
+        if fixed is not None :
+            p_bst = p_bst*fixed+p_ini*(1.-fixed)
         if set_verbose :
             print("Best-fit parameters are:")
             print("sigma %8.3f tau %8.3f"%(sigma, tau))
@@ -527,6 +538,119 @@ class Cont_Model(object) :
                 print("nu %8.3f"%nu)
             print("with logp  %10.5g "%-v_bst)
         return(p_bst, -v_bst)
+
+
+    def do_grid1d(self, p_ini, fixed, rangex, dx, fgrid1d, **lnpostparams) :
+        set_verbose = lnpostparams.pop("set_verbose", True)
+        xs = np.arange(rangex[0], rangex[-1]+dx, dx)
+        fixed = np.asarray(fixed)
+        nfixed = np.sum(fixed == 0)
+        if nfixed != 1 :
+            raise InputError("wrong number of fixed pars ")
+        f = open(fgrid1d, "w")
+        for x in xs :
+            _p_ini = p_ini*fixed + x*(1.-fixed) 
+            _p, _l = self.do_map(_p_ini, fixed=fixed, **lnpostparams)
+            _line = "".join([format(_l, "20.10g"), 
+                             " ".join([format(r, "10.5f") for r in _p]), "\n"])
+            f.write(_line)
+            f.flush()
+        f.close()
+        if set_verbose :
+            print("saved grid1d result to %s"%fgrid1d)
+
+    def do_grid2d(self, p_ini, fixed, rangex, dx, rangey, dy, fgrid2d, 
+            **lnpostparams) :
+        fixed = np.asarray(fixed)
+        set_verbose = lnpostparams.pop("set_verbose", True)
+        xs = np.arange(rangex[0], rangex[-1]+dx, dx)
+        ys = np.arange(rangey[0], rangey[-1]+dy, dy)
+        nfixed = np.sum(fixed == 0)
+        if nfixed != 2 :
+            raise InputError("wrong number of fixed pars ")
+        posx, posy = np.nonzero(1-fixed)[0]
+        dimx, dimy = len(xs),len(ys)
+        header = " ".join(["#", str(posx), str(posy), str(dimx), str(dimy), "\n"])
+        print(header)
+        f = open(fgrid2d, "w")
+        f.write(header)
+        for x in xs :
+            for y in ys :
+                _p_ini = p_ini*fixed
+                _p_ini[posx] = x
+                _p_ini[posy] = y
+                _p, _l = self.do_map(_p_ini, fixed=fixed, **lnpostparams)
+                _line = "".join([format(_l, "20.10g"), 
+                             " ".join([format(r, "10.5f") for r in _p]), "\n"])
+                f.write(_line)
+                f.flush()
+        f.close()
+        if set_verbose :
+            print("saved grid2d result to %s"%fgrid2d)
+
+    def read_logp_map(self, fgrid2d, set_verbose=True) :
+        f = open(fgrid2d, "r")
+        posx, posy, dimx, dimy = [int(r) for r in f.readline().lstrip("#").split()]
+        if set_verbose :
+            print("grid file %s is registered for"%fgrid2d)
+            print("var_x = %10s var_y = %10s"%(self.vars[posx], self.vars[posy]))
+            print("dim_x = %10d dim_y = %10d"%(dimx, dimy))
+        if self.covfunc != "drw" :
+            logp, sigma, tau, nu = np.genfromtxt(f,unpack=True,usecols=(0,1,2,3))
+        else :
+            logp, sigma, tau     = np.genfromtxt(f,unpack=True,usecols=(0,1,2))
+        f.close()
+        retdict = {
+                   'logp'   :    logp.reshape(dimx, dimy).T,
+                   'sigma'  :   sigma.reshape(dimx, dimy).T,
+                   'tau'    :     tau.reshape(dimx, dimy).T,
+                   'nu'     :     None,
+                   'posx'   :   posx,
+                   'posy'   :   posy,
+                   'dimx'   :   dimx,
+                   'dimy'   :   dimy,
+                  }
+        if self.covfunc != "drw" :
+            retdict['nu'] = nu.reshape(dimx, dimy).T
+        return(retdict)
+
+    def show_logp_map(self, fgrid2d, set_normalize=True, vmin=None, vmax=None,
+            set_contour=True, clevels=None,
+            set_verbose=True) :
+        ln10 = np.log(10.0)
+        fig = plt.figure(figsize=(8,8))
+        ax  = fig.add_subplot(111)
+        retdict = self.read_logp_map(fgrid2d, set_verbose=set_verbose)
+        x = retdict[self.vars[retdict['posx']]]/ln10
+        y = retdict[self.vars[retdict['posy']]]/ln10
+        z = retdict['logp']
+        if x is None or y is None :
+            raise InputError("incompatible fgrid2d file"+fgrid2d)
+        xmin,xmax,ymin,ymax = np.min(x),np.max(x),np.min(y),np.max(y)
+        extent = (xmin,xmax,ymin,ymax)
+        if set_normalize :
+            zmax = np.max(z)
+            z    = z - zmax
+        if vmin is None:
+            vmin = z.min()
+        if vmax is None:
+            vmax = z.max()
+        im = ax.imshow(z, origin='lower', vmin=vmin, vmax=vmax,
+                          cmap='jet', interpolation="nearest", aspect="auto", 
+                          extent=extent)
+        if set_contour:
+            if clevels is None:
+                sigma3,sigma2,sigma1 = 11.8/2.0,6.17/2.0,2.30/2.0
+                levels = (vmax-sigma1, vmax-sigma2, vmax-sigma3)
+            else:
+                levels = clevels
+            ax.set_autoscale_on(False)
+            cs = ax.contour(z,levels, hold='on',colors='k',
+                              origin='lower',extent=extent)
+        ax.set_xlabel(self.texs[retdict['posx']])
+        ax.set_ylabel(self.texs[retdict['posy']])
+        plt.show()
+
 
     def do_mcmc(self, set_prior=True, rank="Full", 
             nwalkers=100, nburn=50, nchain=50,
@@ -543,6 +667,8 @@ class Cont_Model(object) :
             p0[:,2] = p0[:,2] * 1.99
         elif self.covfunc == "matern" :
             p0[:,2] = np.log(p0[:,2] * 5)
+        elif self.covfunc == "kepler2_exp" :
+            p0[:,2] = np.log(self.rj*0.1*p0[:,2])
 
         if set_verbose :
             print("start burn-in")
@@ -603,7 +729,6 @@ class Cont_Model(object) :
                     print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
-
 
     def show_hist(self, bins=100, set_adaptive=False, floor=50):
         """
@@ -730,6 +855,14 @@ class Rmap_Model(object) :
                 self.texs.append( "".join([r"$w_{", self.names[i] ,r"}$"]))
                 self.texs.append( "".join([r"$s_{", self.names[i] ,r"}$"]))
 
+    def __call__(self, p, conthpd=None, lagtobaseline=0.3, set_retq=False,
+            set_verbose=True, set_threading=False, blocksize=10000) :
+        return(lnpostfn_spear_p(p, self.zydata, conthpd=conthpd, 
+            lagtobaseline=lagtobaseline,
+            set_retq=set_retq, set_verbose=set_verbose,
+            set_threading=set_threading, blocksize=blocksize,
+            ))
+
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
         """ Do an optimization to find the Maximum a Posterior estimates.
 
@@ -768,6 +901,8 @@ class Rmap_Model(object) :
                     self.zydata, **lnpostparams)
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        if fixed is not None :
+            p_bst = p_bst*fixed+p_ini*(1.-fixed)
         sigma, tau, llags, lwids, lscales = unpackspearpar(p_bst,
                 self.zydata.nlc, hascontlag=False)
         if set_verbose :
@@ -784,246 +919,246 @@ class Rmap_Model(object) :
         return(p_bst, -v_bst)
 
 
-    def do_mcmc(self, conthpd=None, lagtobaseline=0.3, 
-            nwalkers=100, nburn=100, nchain=100, threads=1, 
-            fburn=None, fchain=None, flogp=None,
-            set_threading=False, blocksize=10000,
-            set_verbose=True):
-        """ test
-        """
-        if (threads > 1 and (not set_threading)):
-            if set_verbose:
-                print("run parallel chains of number %2d "%threads)
-        elif (threads == 1) :
-            if set_verbose:
-                if set_threading :
-                    print("run single chain in submatrix blocksize %10d "%blocksize)
+        def do_mcmc(self, conthpd=None, lagtobaseline=0.3, 
+                nwalkers=100, nburn=100, nchain=100, threads=1, 
+                fburn=None, fchain=None, flogp=None,
+                set_threading=False, blocksize=10000,
+                set_verbose=True):
+            """ test
+            """
+            if (threads > 1 and (not set_threading)):
+                if set_verbose:
+                    print("run parallel chains of number %2d "%threads)
+            elif (threads == 1) :
+                if set_verbose:
+                    if set_threading :
+                        print("run single chain in submatrix blocksize %10d "%blocksize)
+                    else :
+                        print("run single chain without subdividing matrix ")
+            else :
+                raise InputError("conflicting set_threading and threads setup")
+            # generate array of random numbers
+            p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+            # initialize array
+            if conthpd is None:
+                p0[:, 0] += np.log(self.cont_std)-0.5
+                p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
+            else :
+                p0[:, 0] += conthpd[1,0]-0.5
+                p0[:, 1] += conthpd[1,1]-0.5
+            for i in xrange(self.nlc-1) :
+                p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
+            if set_verbose :
+                print("start burn-in")
+                if conthpd is None :
+                    print("no priors on sigma and tau")
                 else :
-                    print("run single chain without subdividing matrix ")
-        else :
-            raise InputError("conflicting set_threading and threads setup")
-        # generate array of random numbers
-        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
-        # initialize array
-        if conthpd is None:
-            p0[:, 0] += np.log(self.cont_std)-0.5
-            p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
-        else :
-            p0[:, 0] += conthpd[1,0]-0.5
-            p0[:, 1] += conthpd[1,1]-0.5
-        for i in xrange(self.nlc-1) :
-            p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
-        if set_verbose :
-            print("start burn-in")
-            if conthpd is None :
-                print("no priors on sigma and tau")
-            else :
-                print("using priors on sigma and tau from the continuum fitting")
-                print(np.exp(conthpd))
-            if lagtobaseline < 1.0 :
-                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
-            else :
-                print("no penalizing long lags, but only restrict to within the baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
-                (nburn, nwalkers, nburn*nwalkers))
-        # initialize the ensemble sampler
-        sampler = EnsembleSampler(nwalkers, self.ndim,
-                    lnpostfn_spear_p,
-                    args=(self.zydata, conthpd, lagtobaseline, 
-                          set_threading, blocksize, False, False), 
-                    threads=threads)
-        pos, prob, state = sampler.run_mcmc(p0, nburn)
-        if set_verbose :
-            print("burn-in finished")
-        if fburn is not None :
-            if set_verbose :
-                print("save burn-in chains to %s"%fburn)
-            np.savetxt(fburn, sampler.flatchain)
-        # reset the sampler
-        sampler.reset()
-        if set_verbose :
-            print("start sampling")
-        sampler.run_mcmc(pos, nchain, rstate0=state)
-        if set_verbose :
-            print("sampling finished")
-        af = sampler.acceptance_fraction
-        if set_verbose :
-            print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
-        if fchain is not None :
-            if set_verbose :
-                print("save MCMC chains to %s"%fchain)
-            np.savetxt(fchain, sampler.flatchain)
-        if flogp is not None :
-            if set_verbose :
-                print("save logp of MCMC chains to %s"%flogp)
-            np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
-        # make chain an attritue
-        self.flatchain = sampler.flatchain
-        self.flatchain_whole = np.copy(self.flatchain)
-        # get HPD
-        self.get_hpd(set_verbose=set_verbose)
-
-    def get_hpd(self, set_verbose=True):
-        """ Get the 68% percentile range of each parameter to self.hpd.
-
-        Parameters
-        ----------
-        set_verbose: bool, optional
-            True if you want verbosity (default: True).
-
-        """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
-        for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
-            if set_verbose :
-                print("HPD of %s"%self.vars[i])
-                if i < 2 :
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                    print("using priors on sigma and tau from the continuum fitting")
+                    print(np.exp(conthpd))
+                if lagtobaseline < 1.0 :
+                    print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
                 else :
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
-        # register hpd to attr
-        self.hpd = hpd
+                    print("no penalizing long lags, but only restrict to within the baseline")
+                print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
+                    (nburn, nwalkers, nburn*nwalkers))
+            # initialize the ensemble sampler
+            sampler = EnsembleSampler(nwalkers, self.ndim,
+                        lnpostfn_spear_p,
+                        args=(self.zydata, conthpd, lagtobaseline, 
+                              set_threading, blocksize, False, False), 
+                        threads=threads)
+            pos, prob, state = sampler.run_mcmc(p0, nburn)
+            if set_verbose :
+                print("burn-in finished")
+            if fburn is not None :
+                if set_verbose :
+                    print("save burn-in chains to %s"%fburn)
+                np.savetxt(fburn, sampler.flatchain)
+            # reset the sampler
+            sampler.reset()
+            if set_verbose :
+                print("start sampling")
+            sampler.run_mcmc(pos, nchain, rstate0=state)
+            if set_verbose :
+                print("sampling finished")
+            af = sampler.acceptance_fraction
+            if set_verbose :
+                print("acceptance fractions are")
+                print(" ".join([format(r, "3.2f") for r in af]))
+            if fchain is not None :
+                if set_verbose :
+                    print("save MCMC chains to %s"%fchain)
+                np.savetxt(fchain, sampler.flatchain)
+            if flogp is not None :
+                if set_verbose :
+                    print("save logp of MCMC chains to %s"%flogp)
+                np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
+            # make chain an attritue
+            self.flatchain = sampler.flatchain
+            self.flatchain_whole = np.copy(self.flatchain)
+            # get HPD
+            self.get_hpd(set_verbose=set_verbose)
 
-    def show_hist(self, bins=100, set_adaptive=False, floor=50):
-        """ Plot the histograms.
-        """
-        if not hasattr(self, "flatchain"):
-            print("Warning: need to run do_mcmc or load_chain first")
-            return(1)
-        ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(6*3, 3*self.nlc))
-        for i in xrange(2) :
-            ax = fig.add_subplot(self.nlc,3,i+1)
-            if set_adaptive :
-                h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
-                        floor=floor)
-                left  = edges[:-1]
-                width = edges[1:] - left
-                ax.step(left, h, where="post", color="r")
-            else :
-                ax.hist(self.flatchain[:,i]/ln10, bins)
-            ax.set_xlabel(self.texs[i])
-            ax.set_ylabel("N")
-        for k in xrange(self.nlc-1):
-            for i in xrange(2+k*3, 5+k*3) :
-                ax = fig.add_subplot(self.nlc,3,i+1+1) 
+        def get_hpd(self, set_verbose=True):
+            """ Get the 68% percentile range of each parameter to self.hpd.
+
+            Parameters
+            ----------
+            set_verbose: bool, optional
+                True if you want verbosity (default: True).
+
+            """
+            hpd = np.zeros((3, self.ndim))
+            chain_len = self.flatchain.shape[0]
+            pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+            medlowhig = pct1sig.astype(np.int32)
+            for i in xrange(self.ndim):
+                vsort = np.sort(self.flatchain[:,i])
+                hpd[:,i] = vsort[medlowhig]
+                if set_verbose :
+                    print("HPD of %s"%self.vars[i])
+                    if i < 2 :
+                        print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                    else :
+                        print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+            # register hpd to attr
+            self.hpd = hpd
+
+        def show_hist(self, bins=100, set_adaptive=False, floor=50):
+            """ Plot the histograms.
+            """
+            if not hasattr(self, "flatchain"):
+                print("Warning: need to run do_mcmc or load_chain first")
+                return(1)
+            ln10 = np.log(10.0)
+            fig  = plt.figure(figsize=(6*3, 3*self.nlc))
+            for i in xrange(2) :
+                ax = fig.add_subplot(self.nlc,3,i+1)
                 if set_adaptive :
-                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
+                    h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
                             floor=floor)
                     left  = edges[:-1]
                     width = edges[1:] - left
                     ax.step(left, h, where="post", color="r")
                 else :
-                    ax.hist(self.flatchain[:,i], bins)
+                    ax.hist(self.flatchain[:,i]/ln10, bins)
                 ax.set_xlabel(self.texs[i])
                 ax.set_ylabel("N")
-        plt.get_current_fig_manager().toolbar.zoom()
-        plt.show()
+            for k in xrange(self.nlc-1):
+                for i in xrange(2+k*3, 5+k*3) :
+                    ax = fig.add_subplot(self.nlc,3,i+1+1) 
+                    if set_adaptive :
+                        h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
+                                floor=floor)
+                        left  = edges[:-1]
+                        width = edges[1:] - left
+                        ax.step(left, h, where="post", color="r")
+                    else :
+                        ax.hist(self.flatchain[:,i], bins)
+                    ax.set_xlabel(self.texs[i])
+                    ax.set_ylabel("N")
+            plt.get_current_fig_manager().toolbar.zoom()
+            plt.show()
 
 
 
-    def break_chain(self, llag_segments):
-        """ Break the chain.
+        def break_chain(self, llag_segments):
+            """ Break the chain.
 
-        Parameters
-        ----------
-        llag_segments: list of lists
-            list of length self.nlc-1, wich each element a two-element array
-            bracketing the range of lags (usually the single most probable peak) 
-            you want to consider for each line.
-        
-        """
-        if (len(llag_segments) != self.nlc-1) :
-            print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
-            return(1)
-        if not hasattr(self, "flatchain"):
-            print("Warning: need to run do_mcmc or load_chain first")
-            return(1)
-        for i, llag_seq in enumerate(llag_segments) : 
-            if llag_seq is None:
-                continue
-            indx = np.argsort(self.flatchain[:, 2+i*3])
-            imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
-            indx_cut = indx[imin : imax]
-            self.flatchain = self.flatchain[indx_cut, :]
+            Parameters
+            ----------
+            llag_segments: list of lists
+                list of length self.nlc-1, wich each element a two-element array
+                bracketing the range of lags (usually the single most probable peak) 
+                you want to consider for each line.
+            
+            """
+            if (len(llag_segments) != self.nlc-1) :
+                print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
+                return(1)
+            if not hasattr(self, "flatchain"):
+                print("Warning: need to run do_mcmc or load_chain first")
+                return(1)
+            for i, llag_seq in enumerate(llag_segments) : 
+                if llag_seq is None:
+                    continue
+                indx = np.argsort(self.flatchain[:, 2+i*3])
+                imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
+                indx_cut = indx[imin : imax]
+                self.flatchain = self.flatchain[indx_cut, :]
 
-    def restore_chain(self) :
-        self.flatchain = np.copy(self.flatchain_whole)
+        def restore_chain(self) :
+            self.flatchain = np.copy(self.flatchain_whole)
 
-    def load_chain(self, fchain, set_verbose=True):
-        """ Load stored MCMC chain.
+        def load_chain(self, fchain, set_verbose=True):
+            """ Load stored MCMC chain.
 
-        Parameters
-        ----------
-        fchain: string
-            Name for the chain file.
+            Parameters
+            ----------
+            fchain: string
+                Name for the chain file.
 
-        set_verbose: bool, optional
-            True if you want verbosity (default: True).
-        """
-        if set_verbose :
-            print("load MCMC chain from %s"%fchain)
-        self.flatchain = np.genfromtxt(fchain)
-        self.flatchain_whole = np.copy(self.flatchain)
-        self.ndim = self.flatchain.shape[1]
-        # get HPD
-        self.get_hpd(set_verbose=set_verbose)
+            set_verbose: bool, optional
+                True if you want verbosity (default: True).
+            """
+            if set_verbose :
+                print("load MCMC chain from %s"%fchain)
+            self.flatchain = np.genfromtxt(fchain)
+            self.flatchain_whole = np.copy(self.flatchain)
+            self.ndim = self.flatchain.shape[1]
+            # get HPD
+            self.get_hpd(set_verbose=set_verbose)
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
-        """ Calculate the predicted mean and variance of each light curve on a
-        densely sampled time axis.
+        def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
+            """ Calculate the predicted mean and variance of each light curve on a
+            densely sampled time axis.
 
-        Parameters
-        ----------
-        p_bst: array_like
-            Input paraemeters.
+            Parameters
+            ----------
+            p_bst: array_like
+                Input paraemeters.
 
-        fpred: string, optional
-            Name of the output file for the predicted light curves, set it to
-            None if you do not want output (default: None).
+            fpred: string, optional
+                Name of the output file for the predicted light curves, set it to
+                None if you do not want output (default: None).
 
-        dense: int, optional
-            The factor by which the predicted light curves should be more
-            densely sampled than the original data (default: 10).
+            dense: int, optional
+                The factor by which the predicted light curves should be more
+                densely sampled than the original data (default: 10).
 
-        set_overwrite: bool, optional
-            True if you want to overwrite existing fpred (default: True).
+            set_overwrite: bool, optional
+                True if you want to overwrite existing fpred (default: True).
 
-        Returns
-        -------
-        zydata_pred: LightCurve object
-            Predicted light curves packaged as a LightCurve object.
+            Returns
+            -------
+            zydata_pred: LightCurve object
+                Predicted light curves packaged as a LightCurve object.
 
-        """
-        qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
-                    set_threading=True, blocksize=10000,
-                    set_retq=True, set_verbose=False)[4]
-        sigma, tau, lags, wids, scales = unpackspearpar(p_bst,
-                self.zydata.nlc, hascontlag=True)
-        # update qlist
-        self.zydata.update_qlist(qlist)
-        # initialize PredictRmap object
-        P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
-                lags=lags, wids=wids, scales=scales)
-        nwant = dense*self.cont_npt
-        jwant0 = self.jstart - 0.1*self.rj
-        jwant1 = self.jend   + 0.1*self.rj
-        jwant = np.linspace(jwant0, jwant1, nwant)
-        zylclist_pred = []
-        for i in xrange(self.nlc) :
-            iwant = np.ones(nwant)*(i+1)
-            mve, var = P.mve_var(jwant, iwant)
-            sig = np.sqrt(var)
-            zylclist_pred.append([jwant, mve, sig])
-        zydata_pred   = LightCurve(zylclist_pred)
-        if fpred is not None :
-            zydata_pred.save(fpred, set_overwrite=set_overwrite)
-        return(zydata_pred)
+            """
+            qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
+                        set_threading=True, blocksize=10000,
+                        set_retq=True, set_verbose=False)[4]
+            sigma, tau, lags, wids, scales = unpackspearpar(p_bst,
+                    self.zydata.nlc, hascontlag=True)
+            # update qlist
+            self.zydata.update_qlist(qlist)
+            # initialize PredictRmap object
+            P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
+                    lags=lags, wids=wids, scales=scales)
+            nwant = dense*self.cont_npt
+            jwant0 = self.jstart - 0.1*self.rj
+            jwant1 = self.jend   + 0.1*self.rj
+            jwant = np.linspace(jwant0, jwant1, nwant)
+            zylclist_pred = []
+            for i in xrange(self.nlc) :
+                iwant = np.ones(nwant)*(i+1)
+                mve, var = P.mve_var(jwant, iwant)
+                sig = np.sqrt(var)
+                zylclist_pred.append([jwant, mve, sig])
+            zydata_pred   = LightCurve(zylclist_pred)
+            if fpred is not None :
+                zydata_pred.save(fpred, set_overwrite=set_overwrite)
+            return(zydata_pred)
 
 
 
@@ -1037,26 +1172,53 @@ if __name__ == "__main__":
     wids   = np.array([0.0,   widy,   widz])
     scales = np.array([1.0, scaley, scalez])
 
-    if False :
+    if True :
 #        lcfile = "/data/LCDATA/LINEAR/10352280"
 #        lcfile = "/data/LCDATA/LINEAR/1051415"
         lcfile = "/data/LCDATA/LINEAR/11021817"
         zydata   = get_data(lcfile)
 #        zydata.plot()
 #        quit()
-        cont   = Cont_Model(zydata, "kepler_exp")
+        cont   = Cont_Model(zydata, "kepler2_exp")
 #        cont.do_mcmc(set_prior=True, rank="Full",
 #                nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="dat/lineartest.dat", threads=1)
+#                fchain="dat/lineartest2.dat", threads=1)
 
-        cont.load_chain("dat/lineartest.dat")
-        microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
-        cont.break_chain(microscope)
-        cont.show_hist()
+#        quit()
+
+        cont.load_chain("dat/lineartest2.dat")
+#        microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
+#        microscope = [None, None, [-3,3]]
+#        cont.break_chain(microscope)
+#        cont.show_hist(set_adaptive=True, bins=200, floor=50)
+#        cont.show_hist(set_adaptive=False, bins=200)
+
+#        quit()
+
 #        cont.get_hpd()
-#        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
+
+#        fixed = [1, 1, 0]
+#        rangex = [-2, 2]
+#        dx = 0.1
+#        fgrid1d = "dat/linearplike2noprior.dat"
+#        cont.do_grid1d(p_bst, fixed, rangex, dx, fgrid1d, set_prior=False)
+        fixed =  [1, 0, 0]
+        rangex = [0.0, 7.0]
+        dx = 0.2
+#        dx = 1.0
+        rangey = [-6.0, 6.0]
+        dy = 0.2
+#        dy = 1.0
+        fgrid2d = "dat/grid2dtest.dat"
+        cont.show_logp_map(fgrid2d, set_normalize=True, vmin=-5, vmax=None,
+            set_contour=True, clevels=None, set_verbose=True)
+#        cont.do_grid2d(p_bst, fixed, rangex, dx, rangey, dy, fgrid2d, set_prior=False)
+
+#        print(cont(p_bst, set_prior=False))
 #        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
 #            set_verbose=True)[0]
+#        print(cont(p_bst, set_prior=False))
 #        zypred = cont.do_pred(p_bst, fpred=None, dense=10, rank="Full")
 #        zypred.plot(set_pred=True, obs=zydata)
 
@@ -1158,7 +1320,7 @@ if __name__ == "__main__":
         cont.load_chain(bchain)
 #        cont.show_hist()
 
-    if True :
+    if False :
 
         bchain = "dat/Arp151/chain_arp151_B.dat"
         fcont  = "dat/Arp151/Arp151_B.dat"

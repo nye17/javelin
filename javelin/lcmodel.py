@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2012 05:22:13 PM
+#Last-modified: 08 Mar 2012 10:58:46 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -190,20 +190,30 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
                     set_retq=False, set_verbose=set_verbose)
     prior = 0.0
     if set_prior :
+        prior += - np.log(sigma)
+        # global
         if tau > zydata.cont_cad :
-            prior += - np.log(tau/zydata.cont_cad) - np.log(sigma)
+            prior += - np.log(tau/zydata.cont_cad)
         elif tau < 0.001 :
             # 86.4 seconds if tau in days
             prior += my_neg_inf
         else :
-            prior += - np.log(zydata.cont_cad/tau) - np.log(sigma)
+            prior += - np.log(zydata.cont_cad/tau)
+        # model specific
         if covfunc == "kepler2_exp" :
-            # try to suppress large ratios of tau_cut to tau
-            # basically penalize covariances with spiky shape
-            prior += -np.log(nu/tau)
-            if nu < zydata.cont_cad :
-                # try to suppress numbers below the cadence
-                prior += - np.log(zydata.cont_cad/nu) 
+            #FIXME still unresolved.
+            ratio = nu/tau
+            if ratio > 0.1 :
+                prior += - np.log(ratio/0.1)
+#            else :
+#                prior += - np.log(0.1/ratio)
+            if nu > zydata.cont_cad :
+                prior += - np.log(nu/zydata.cont_cad)
+            elif nu < 0.0001 :
+                # 8.64 seconds if tau in days
+                prior += my_neg_inf
+            else :
+                prior += - np.log(zydata.cont_cad/nu)
 
     if set_retq :
         vals[0] = vals[0] + prior

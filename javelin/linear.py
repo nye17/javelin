@@ -1,4 +1,4 @@
-#Last-modified: 14 Mar 2012 11:37:12 AM
+#Last-modified: 14 Mar 2012 02:31:18 PM
 
 import os
 #from javelin.lcmodel import *
@@ -83,7 +83,7 @@ if __name__ == "__main__":
             cont   = Cont_Model(zyda, "kepler2_exp")
             fchain = os.path.join(lineardir, "k2echain_"+testname+affix)
             flogp  = os.path.join(lineardir, "k2echain_logp_"+testname+affix)
-            if False :
+            if True :
                 cont.do_mcmc(set_prior=True, rank="Full",
                     nwalkers=100, nburn=50, nchain=50, fburn=None,
                     fchain=fchain, flogp=flogp, threads=1)
@@ -97,8 +97,8 @@ if __name__ == "__main__":
 #                cont.break_chain([[-3,0],None,None])
 #                cont.show_hist(set_adaptive=True, bins=200, floor=50)
 #                cont.show_hist(set_adaptive=True, bins=200, floor=10)
-                cont.show_hist(set_adaptive=True, bins=100, floor=2)
-            if True :
+#                cont.show_hist(set_adaptive=True, bins=100, floor=2)
+            if False :
                 # grid
                 fgrid2d = os.path.join(lineardir, "k2egrid2d_"+testname+affix)
                 if False :

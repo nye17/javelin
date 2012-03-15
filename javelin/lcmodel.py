@@ -1,4 +1,4 @@
-#Last-modified: 09 Mar 2012 02:39:57 PM
+#Last-modified: 14 Mar 2012 02:30:33 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -200,18 +200,13 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
         else :
             prior += - np.log(zydata.cont_cad/tau)
         # model specific
-#        if covfunc == "kepler2_exp" :
-#            #FIXME still unresolved.
-#            # double penalize this
-#            prior += - np.log(sigma)
-#            if nu > zydata.cont_cad_min :
-#                prior += - np.log(nu/zydata.cont_cad_min)
-#            elif nu < 0.0001 :
-#                # 8.64 seconds if input is in days
-#                prior += my_neg_inf
-#            else :
-#                prior += - np.log(zydata.cont_cad_min/nu)
-
+        if covfunc == "kepler2_exp" :
+            ratio = nu/tau
+            cad2base = zydata.cont_cad/zydata.rj
+            if ratio > cad2base :
+                prior += - np.log(ratio/cad2base)
+            else :
+                prior += - np.log(cad2base/ratio)
     if set_retq :
         vals[0] = vals[0] + prior
         vals.append(prior)

@@ -1,4 +1,4 @@
-#Last-modified: 14 Mar 2012 02:31:18 PM
+#Last-modified: 26 Mar 2012 05:53:55 PM
 
 import os
 #from javelin.lcmodel import *
@@ -14,7 +14,8 @@ import numpy as np
 
 if __name__ == "__main__":    
 #    lineardir = "dat/LINEAR/"
-    lineardir = "/data/LCDATA/LINEAR"
+#    lineardir = "/data/LCDATA/LINEAR"
+    lineardir = "/home/mitchell/yingzu/Dropbox/data/LCDATA/LINEAR"
     indxfile  = os.path.join(lineardir, "LINEAR_lightcurves")
     fnamelist = []
     lcnamelist= []
@@ -29,6 +30,8 @@ if __name__ == "__main__":
         testfile = fnamelist[0]
         testname = lcnamelist[0]
         zydata = get_data(testfile)
+        zydata.plotdt(bins=500, log=True, set_logdt=True)
+        quit()
         # show light curve
         if False :
             zydata.plot()

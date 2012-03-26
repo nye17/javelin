@@ -109,10 +109,8 @@ class LightCurve(object):
             else :
                 self.update_qlist(qlist)
 
-
-    def plot(self, set_pred=False, obs=None):
+    def plot(self, set_pred=False, obs=None) :
         fig  = plt.figure(figsize=(10, 3*self.nlc))
-        #axes = []
         height = 0.90/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
@@ -148,6 +146,27 @@ class LightCurve(object):
             ax.legend(loc=1)
         plt.show()
 #        plt.draw()
+
+    def plotdt(self, set_logdt=False, **params) :
+        _np  = self.nptlist[0]
+        _ndt = _np*(_np-1)/2
+        dtarr = np.zeros(_ndt)
+        _k = 0
+        for i in xrange(_np-1) :
+            for j in xrange(i+1, _np) :
+                dtarr[_k] = self.jlist[0][j] - self.jlist[0][i]
+                _k += 1
+        if set_logdt :
+            dtarr = np.log10(dtarr)
+        fig = plt.figure(figsize=(10, 8))
+        ax  = fig.add_axes([0.1, 0.1, 0.85, 0.85])
+        ax.hist(dtarr, **params)
+        if set_logdt :
+            ax.set_xlabel(r"$\log\;\Delta t$")
+        else :
+            ax.set_xlabel(r"$\Delta t$")
+        plt.show()
+
 
     def save(self, fname, set_overwrite=True):
         """ save zydata into zylc file format.

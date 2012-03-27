@@ -1,4 +1,4 @@
-#Last-modified: 14 Mar 2012 02:30:33 PM
+#Last-modified: 27 Mar 2012 03:46:17 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -175,7 +175,8 @@ def unpackspearpar(p, nlc=None, hascontlag=False) :
             lscales[i] = p[4+i*3]
         return(sigma, tau, llags, lwids, lscales)
 
-def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="Full",
+def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True,
+        conthpd=None, rank="Full",
         set_retq=False, set_verbose=False) :
     """
     """
@@ -190,23 +191,29 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, rank="
                     set_retq=False, set_verbose=set_verbose)
     prior = 0.0
     if set_prior :
-        prior += - np.log(sigma)
-        # global
-        if tau > zydata.cont_cad :
-            prior += - np.log(tau/zydata.cont_cad)
-        elif tau < 0.001 :
-            # 86.4 seconds if input is in days
-            prior += my_neg_inf
-        else :
-            prior += - np.log(zydata.cont_cad/tau)
-        # model specific
         if covfunc == "kepler2_exp" :
-            ratio = nu/tau
-            cad2base = zydata.cont_cad/zydata.rj
-            if ratio > cad2base :
-                prior += - np.log(ratio/cad2base)
+            if conthpd is None :
+                raise RuntimeError("kepler2_exp prior requires conthpd")
+            # for sigma
+            if p[0] < conthpd[1,0] :
+                prior += (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
             else :
-                prior += - np.log(cad2base/ratio)
+                prior += (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+            # for tau
+            if p[1] < conthpd[1,1] :
+                prior += (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+            else :
+                prior += (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+        else :
+            prior += - np.log(sigma)
+            if tau > zydata.cont_cad :
+                prior += - np.log(tau/zydata.cont_cad)
+            elif tau < 0.001 :
+                # 86.4 seconds if input is in days
+                prior += my_neg_inf
+            else :
+                prior += - np.log(zydata.cont_cad/tau)
+
     if set_retq :
         vals[0] = vals[0] + prior
         vals.append(prior)
@@ -661,7 +668,7 @@ class Cont_Model(object) :
         plt.show()
 
 
-    def do_mcmc(self, set_prior=True, rank="Full", 
+    def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", 
             nwalkers=100, nburn=50, nchain=50,
             fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
         """
@@ -685,7 +692,7 @@ class Cont_Model(object) :
                     (nburn, nwalkers, nburn*nwalkers))
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p, 
                     args=(self.zydata, self.covfunc, self.uselognu, 
-                        set_prior, rank, False, False), 
+                        set_prior, conthpd, rank, False, False), 
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -1192,70 +1199,6 @@ class Rmap_Model(object) :
 if __name__ == "__main__":    
     import matplotlib.pyplot as plt
 
-    sigma, tau = (2.00, 100.0)
-    lagy, widy, scaley = (150.0,  3.0, 2.0)
-    lagz, widz, scalez = (200.0,  9.0, 0.5)
-    lags   = np.array([0.0,   lagy,   lagz])
-    wids   = np.array([0.0,   widy,   widz])
-    scales = np.array([1.0, scaley, scalez])
-
-    if True :
-#        lcfile = "/data/LCDATA/LINEAR/10352280"
-#        lcfile = "/data/LCDATA/LINEAR/1051415"
-#        lcfile = "/data/LCDATA/LINEAR/11021817"
-#        lcfile = "dat/loopdeloop_con.dat"
-        lcfile = "dat/24996081_mock20"
-        zydata   = get_data(lcfile)
-        print(zydata.cont_cad_min)
-        print(zydata.cont_cad_max)
-#        print(zydata.cont_cad)
-#        zydata.plot()
-#        quit()
-        cont   = Cont_Model(zydata, "kepler2_exp")
-
-#        cont.do_mcmc(set_prior=True, rank="Full",
-#                nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="dat/lineartest3.dat", threads=1)
-
-#        quit()
-
-        cont.load_chain("dat/lineartest3.dat")
-        cont.show_hist(set_adaptive=True, bins=500, floor=10)
-#        microscope = [np.log(np.array([0.01, 2.0])),np.log(np.array([0.1, 1000])), [0,1]]
-#        microscope = [None, None, [np.log(1),np.log(100)]]
-#        cont.break_chain(microscope)
-#        cont.get_hpd()
-#        cont.show_hist(set_adaptive=False, bins=200)
-
-        quit()
-
-#        cont.get_hpd()
-        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
-
-#        fixed = [1, 1, 0]
-#        rangex = [-2, 2]
-#        dx = 0.1
-#        fgrid1d = "dat/linearplike2noprior.dat"
-#        cont.do_grid1d(p_bst, fixed, rangex, dx, fgrid1d, set_prior=False)
-        fixed =  [1, 0, 0]
-        rangex = [0.0, 7.0]
-        dx = 0.2
-#        dx = 1.0
-        rangey = [-6.0, 6.0]
-        dy = 0.2
-#        dy = 1.0
-        fgrid2d = "dat/grid2dtest.dat"
-        cont.show_logp_map(fgrid2d, set_normalize=True, vmin=-5, vmax=None,
-            set_contour=True, clevels=None, set_verbose=True)
-#        cont.do_grid2d(p_bst, fixed, rangex, dx, rangey, dy, fgrid2d, set_prior=False)
-
-#        print(cont(p_bst, set_prior=False))
-#        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
-#            set_verbose=True)[0]
-#        print(cont(p_bst, set_prior=False))
-#        zypred = cont.do_pred(p_bst, fpred=None, dense=10, rank="Full")
-#        zypred.plot(set_pred=True, obs=zydata)
-
     if False :
         lcfile = "dat/loopdeloop_con.dat"
         zydata   = get_data(lcfile)
@@ -1269,32 +1212,6 @@ if __name__ == "__main__":
 #        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
 #            set_verbose=True)[0]
 #        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p.dat", dense=10)
-#        zypred.plot(set_pred=True, obs=zydata)
-
-    if False :
-        lcfile = "dat/loopdeloop_con.dat"
-        zydata   = get_data(lcfile)
-#        cont   = Cont_Model(zydata, "pow_exp")
-#        cont   = Cont_Model(zydata, "kepler_exp")
-        cont   = Cont_Model(zydata, "matern")
-#        cont.do_mcmc(set_prior=True, rank="Full",
-#                nwalkers=100, nburn=50, nchain=50, fburn=None,
-#                fchain="chain0_ma.dat", threads=2)
-        cont.load_chain("chain0_ma.dat")
-#        cont.show_hist()
-#        microscope = [np.log(np.array([0.1, 4.0])),None, [0.5, 1.5]]
-#        microscope = [np.log(np.array([0.1, 4.0])),np.log(np.array([10.0, 400.0])), None]
-#        microscope = [np.log(np.array([0.4, 4.0])),None,np.array([-1.0, 1.0])]
-        cont.break_chain(microscope)
-        cont.show_hist()
-        cont.restore_chain()
-        cont.show_hist()
-
-#        cont.get_hpd()
-#        p_bst = [cont.hpd[1, 0], cont.hpd[1,1], cont.hpd[1,2]]
-#        p_bst = cont.do_map(p_bst, fixed=None, set_prior=False, rank="Full", 
-#            set_verbose=True)[0]
-#        zypred = cont.do_pred(p_bst, fpred="dat/loopdeloop_con.p_ma.dat", dense=10)
 #        zypred.plot(set_pred=True, obs=zydata)
 
     if False :

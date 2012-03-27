@@ -110,7 +110,7 @@ class LightCurve(object):
                 self.update_qlist(qlist)
 
     def plot(self, set_pred=False, obs=None) :
-        fig  = plt.figure(figsize=(10, 3*self.nlc))
+        fig  = plt.figure(figsize=(8, 3*self.nlc))
         height = 0.90/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
@@ -158,7 +158,7 @@ class LightCurve(object):
                 _k += 1
         if set_logdt :
             dtarr = np.log10(dtarr)
-        fig = plt.figure(figsize=(10, 8))
+        fig = plt.figure(figsize=(8, 8))
         ax  = fig.add_axes([0.1, 0.1, 0.85, 0.85])
         ax.hist(dtarr, **params)
         if set_logdt :

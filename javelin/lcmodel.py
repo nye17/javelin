@@ -1,4 +1,4 @@
-#Last-modified: 27 Mar 2012 03:46:17 PM
+#Last-modified: 27 Mar 2012 04:02:27 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -196,14 +196,16 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True,
                 raise RuntimeError("kepler2_exp prior requires conthpd")
             # for sigma
             if p[0] < conthpd[1,0] :
-                prior += (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
+                prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
             else :
-                prior += (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+                prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
             # for tau
             if p[1] < conthpd[1,1] :
-                prior += (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+                prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
             else :
-                prior += (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+                prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+            # final
+            prior += -0.5*(prior0*prior0+prior1*prior1)
         else :
             prior += - np.log(sigma)
             if tau > zydata.cont_cad :

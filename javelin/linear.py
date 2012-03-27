@@ -1,4 +1,4 @@
-#Last-modified: 26 Mar 2012 05:53:55 PM
+#Last-modified: 26 Mar 2012 08:58:38 PM
 
 import os
 #from javelin.lcmodel import *
@@ -14,8 +14,8 @@ import numpy as np
 
 if __name__ == "__main__":    
 #    lineardir = "dat/LINEAR/"
-#    lineardir = "/data/LCDATA/LINEAR"
-    lineardir = "/home/mitchell/yingzu/Dropbox/data/LCDATA/LINEAR"
+    lineardir = "/data/LCDATA/LINEAR"
+#    lineardir = "/home/mitchell/yingzu/Dropbox/data/LCDATA/LINEAR"
     indxfile  = os.path.join(lineardir, "LINEAR_lightcurves")
     fnamelist = []
     lcnamelist= []

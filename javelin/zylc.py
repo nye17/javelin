@@ -5,7 +5,7 @@ __all__ = ['LightCurve', 'get_data']
 from lcio import readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from graphics import figure_handler
+from graphic import figure_handler
 
 """ load light curve files into a LightCurve object.
 """

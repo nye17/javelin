@@ -1,4 +1,4 @@
-#Last-modified: 28 Mar 2012 12:11:54 AM
+#Last-modified: 28 Mar 2012 12:48:25 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -15,7 +15,7 @@ from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import *
 from emcee import EnsembleSampler
 from itertools import groupby
-from graphics import figure_handler
+from graphic import figure_handler
 
 my_neg_inf = float(-1.0e+300)
 my_pos_inf = float( 1.0e+300)

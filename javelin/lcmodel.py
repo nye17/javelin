@@ -1,4 +1,4 @@
-#Last-modified: 28 Mar 2012 12:48:25 AM
+#Last-modified: 28 Mar 2012 01:46:33 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -758,7 +758,7 @@ class Cont_Model(object) :
             return(1)
         ln10 = np.log(10.0)
 #        fig  = plt.figure(figsize=(8, 8./3.))
-        fig  = plt.figure(figsize=(8, 5))
+        fig  = plt.figure(figsize=(8, 3))
         for i in xrange(self.ndim) :
             ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)) :

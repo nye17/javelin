@@ -1,4 +1,4 @@
-#Last-modified: 27 Mar 2012 06:20:04 PM
+#Last-modified: 28 Mar 2012 12:11:54 AM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -15,6 +15,7 @@ from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import *
 from emcee import EnsembleSampler
 from itertools import groupby
+from graphics import figure_handler
 
 my_neg_inf = float(-1.0e+300)
 my_pos_inf = float( 1.0e+300)
@@ -634,7 +635,7 @@ class Cont_Model(object) :
 
     def show_logp_map(self, fgrid2d, set_normalize=True, vmin=None, vmax=None,
             set_contour=True, clevels=None,
-            set_verbose=True) :
+            set_verbose=True, figout=None, figext=None) :
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(8,8))
         ax  = fig.add_subplot(111)
@@ -667,7 +668,7 @@ class Cont_Model(object) :
                               origin='lower',extent=extent)
         ax.set_xlabel(self.texs[retdict['posx']])
         ax.set_ylabel(self.texs[retdict['posy']])
-        plt.show()
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
 
 
     def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", 
@@ -748,16 +749,18 @@ class Cont_Model(object) :
         # register hpd to attr
         self.hpd = hpd
 
-    def show_hist(self, bins=100, set_adaptive=False, floor=50):
+    def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
+            figext=None):
         """
         """
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(8, 8./3.))
+#        fig  = plt.figure(figsize=(8, 8./3.))
+        fig  = plt.figure(figsize=(8, 5))
         for i in xrange(self.ndim) :
-            ax = fig.add_subplot(1,3,i+1)
+            ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)) :
                 if set_adaptive :
                     h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
@@ -790,8 +793,8 @@ class Cont_Model(object) :
                                np.log10(self.cont_cad), color="g", alpha=0.2)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
-        plt.get_current_fig_manager().toolbar.zoom()
-        plt.show()
+        #plt.get_current_fig_manager().toolbar.zoom()
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
 
     def load_chain(self, fchain, set_verbose=True):
         """
@@ -1054,7 +1057,8 @@ class Rmap_Model(object) :
             # register hpd to attr
             self.hpd = hpd
 
-        def show_hist(self, bins=100, set_adaptive=False, floor=50):
+        def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
+                figext=None):
             """ Plot the histograms.
             """
             if not hasattr(self, "flatchain"):
@@ -1093,8 +1097,8 @@ class Rmap_Model(object) :
                         ax.hist(self.flatchain[:,i], bins)
                     ax.set_xlabel(self.texs[i])
                     ax.set_ylabel("N")
-            plt.get_current_fig_manager().toolbar.zoom()
-            plt.show()
+#            plt.get_current_fig_manager().toolbar.zoom()
+            return(figure_handler(fig=fig, figout=figout, figext=figext))
 
 
 

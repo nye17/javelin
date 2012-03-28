@@ -5,6 +5,7 @@ __all__ = ['LightCurve', 'get_data']
 from lcio import readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from graphics import figure_handler
 
 """ load light curve files into a LightCurve object.
 """
@@ -109,7 +110,7 @@ class LightCurve(object):
             else :
                 self.update_qlist(qlist)
 
-    def plot(self, set_pred=False, obs=None) :
+    def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
         fig  = plt.figure(figsize=(8, 3*self.nlc))
         height = 0.90/self.nlc
         for i in xrange(self.nlc) :
@@ -144,10 +145,9 @@ class LightCurve(object):
             else :
                 ax.set_xticklabels([])
             ax.legend(loc=1)
-        plt.show()
-#        plt.draw()
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-    def plotdt(self, set_logdt=False, **params) :
+    def plotdt(self, set_logdt=False, figout=None, figext=None, **params) :
         _np  = self.nptlist[0]
         _ndt = _np*(_np-1)/2
         dtarr = np.zeros(_ndt)
@@ -165,7 +165,7 @@ class LightCurve(object):
             ax.set_xlabel(r"$\log\;\Delta t$")
         else :
             ax.set_xlabel(r"$\Delta t$")
-        plt.show()
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
 
 
     def save(self, fname, set_overwrite=True):

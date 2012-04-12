@@ -1,4 +1,4 @@
-#Last-modified: 12 Apr 2012 06:51:59 PM
+#Last-modified: 12 Apr 2012 07:02:39 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -137,18 +137,18 @@ def fitCon(confile, confchain, threads=1, set_plot=False) :
     return(cont.hpd)
 
 
-def fitLag(linfile, linfchain, conthpd, lagrange=[100, 300], threads=1, set_plot=False) :
-    zydata = get_data(linfile)
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[100, 300], threads=1, set_plot=False) :
+    zydata = get_data(linfile, names=names)
     rmap   = Rmap_Model(zydata)
     if file_exists(linfchain) :
-        rmap.load_chain(linfchain)
+        rmap.load_chain(linfchain, set_verbose=False)
     else :
         rmap.do_mcmc(conthpd=conthpd, nwalkers=100, nburn=50, nchain=50,
                 fburn=None, fchain=linfchain, threads=threads)
     if set_plot :
         rmap.break_chain([lagrange,]*(zydata.nlc-1))
-        rmap.show_hist(bins=100)
         rmap.get_hpd()
+        rmap.show_hist(bins=100)
     return(rmap.hpd)
 
 

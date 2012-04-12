@@ -1,4 +1,4 @@
-#Last-modified: 11 Apr 2012 12:50:08 PM
+#Last-modified: 12 Apr 2012 05:49:35 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -34,90 +34,6 @@ lognu_floor   = np.log(nu_floor)
 nu_ceiling    = 1.e+3
 lognu_ceiling = np.log(nu_ceiling)   
 
-def getAdaptiveHist(x, bins=100, floor=2) :
-    """ x is a 1D array with multi-modal number density distribution.
-    """
-    # do a first round binning
-    h0, edge0 = np.histogram(x, bins=bins)
-    h0min, h0max = h0.min(), h0.max()
-    if h0min >= floor :
-        print("the distribution is fairly continuous" +\
-              "you may want to increase the value of *floor*")
-        return(h0, edge0)
-    else :
-        pass
-    # find peaks (note h0 is modifed)
-    peak, edge = binarize(h0, edge0, floor)
-    # throw away the (almost) empty wings
-    peak, edge = removewings(peak, edge) 
-    # calculate the total length of peaks and the width of final binning
-    ngap = len(peak)
-    lpks = 0.0
-    for i in xrange(ngap) :
-        if peak[i] is True :
-            lpks += edge[i+1] - edge[i]
-        else :
-            pass
-    binwid = lpks/bins
-    # refine the peaks
-    adaptiveedge = np.arange(edge[0],edge[-1]+binwid, binwid)
-    # finally
-    h1, edge1 = np.histogram(x, bins=adaptiveedge)
-    # another iteration
-    #    newfloor = floor*(edge1[1]-edge[0])/(edge0[1]-edge0[0])
-    #    peak, edge = binarize(h1, edge1, newfloor)
-    #    peak, edge = removewings(peak, edge) 
-    #    print(edge[0]),
-    #    print(edge[-1])
-    #    h1, edge1 = np.histogram(x, bins=edge)
-    return(h1, edge1)
-
-def binarize(h0, edge0, floor) :
-    h0[np.where(h0 <= floor)] = 0
-    h0[np.where(h0 >  floor)] = 1
-    nh0 = len(h0)
-    edge = []
-    peak = []
-    edge.append(edge0[0])
-    edge.append(edge0[1])
-    if h0[0] == 1 :
-        peak.append(True)
-    else :
-        peak.append(False)
-    # start breaking down the histogram
-    for i in xrange(1, nh0) :
-        if h0[i] == h0[i-1] :
-            edge[-1] = edge0[i+1]
-        else :
-            edge.append(edge0[i+1])
-            if h0[i] == 1 :
-                peak.append(True)
-            else :
-                peak.append(False)
-    return(peak, edge)
-
-def removewings(peak, edge) :
-    peak = list(peak)
-    edge = list(edge)
-    if peak[0] is False :
-        nleft = 1
-        for i in xrange(1, len(peak)):
-            if peak[i] is False :
-                nleft += 1
-            else :
-                break
-        del peak[0:nleft]
-        del edge[0:nleft]
-    if peak[-1] is False :
-        nright = 1
-        for i in xrange(len(peak)-2, 0, -1):
-            if peak[i] is False :
-                nright += 1
-            else :
-                break
-        del peak[-nright:]
-        del edge[-nright:]
-    return(peak, edge)
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.
@@ -749,45 +665,23 @@ class Cont_Model(object) :
         # register hpd to attr
         self.hpd = hpd
 
-    def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
-            figext=None):
+    def show_hist(self, bins=100, figout=None, figext=None):
         """
         """
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-#        fig  = plt.figure(figsize=(8, 8./3.))
         fig  = plt.figure(figsize=(8, 3))
         for i in xrange(self.ndim) :
             ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)) :
-                if set_adaptive :
-                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
-                            floor=floor)
-                    left  = edges[:-1]
-                    width = edges[1:] - left
-                    ax.step(left, h, where="post", color="r")
-                    indpeak = np.argmax(h)
-                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
-                        edges[indpeak], edges[indpeak+1]))
-                else :
-                    ax.hist(self.flatchain[:,i], bins)
+                ax.hist(self.flatchain[:,i], bins)
                 if self.covfunc == "kepler2_exp" :
                     ax.axvspan(self.cont_cad_min,
                             self.cont_cad, color="g", alpha=0.2)
             else :
-                if set_adaptive :
-                    h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
-                            floor=floor)
-                    left  = edges[:-1]
-                    width = edges[1:] - left
-                    ax.step(left, h, where="post", color="r")
-                    indpeak = np.argmax(h)
-                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
-                        edges[indpeak], edges[indpeak+1]))
-                else :
-                    ax.hist(self.flatchain[:,i]/ln10, bins)
+                ax.hist(self.flatchain[:,i]/ln10, bins)
                 if self.vars[i] == "nu" and self.covfunc == "kepler2_exp" :
                     ax.axvspan(np.log10(self.cont_cad_min),
                                np.log10(self.cont_cad), color="g", alpha=0.2)
@@ -1057,50 +951,33 @@ class Rmap_Model(object) :
         # register hpd to attr
         self.hpd = hpd
 
-    def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
-            figext=None):
+    def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
         """ Plot the histograms.
         """
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(8, 8.*self.nlc/3.0))
+        fig  = plt.figure(figsize=(14, 10.*self.nlc/3.0))
         for i in xrange(2) :
             ax = fig.add_subplot(self.nlc,3,i+1)
-            if set_adaptive :
-                h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
-                        floor=floor)
-                left  = edges[:-1]
-                width = edges[1:] - left
-                ax.step(left, h, where="post", color="r")
-                indpeak = np.argmax(h)
-                print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
-                    edges[indpeak], edges[indpeak+1]))
-            else :
-                ax.hist(self.flatchain[:,i]/ln10, bins)
+            ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
         for k in xrange(self.nlc-1):
             for i in xrange(2+k*3, 5+k*3) :
                 ax = fig.add_subplot(self.nlc,3,i+1+1) 
-                if set_adaptive :
-                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
-                            floor=floor)
-                    left  = edges[:-1]
-                    width = edges[1:] - left
-                    ax.step(left, h, where="post", color="r")
-                    indpeak = np.argmax(h)
-                    print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
-                        edges[indpeak], edges[indpeak+1]))
+                if np.mod(i, 3) == 2 : 
+                    # lag plots
+                    lagbins = np.arange(int(np.min(self.flatchain[:,i])), 
+                            int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
+                    ax.hist(self.flatchain[:,i], bins=lagbins)
                 else :
                     ax.hist(self.flatchain[:,i], bins)
                 ax.set_xlabel(self.texs[i])
                 ax.set_ylabel("N")
 #        plt.get_current_fig_manager().toolbar.zoom()
         return(figure_handler(fig=fig, figout=figout, figext=figext))
-
-
 
     def break_chain(self, llag_segments):
         """ Break the chain.

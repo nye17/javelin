@@ -1,4 +1,4 @@
-#Last-modified: 28 Mar 2012 01:46:33 AM
+#Last-modified: 11 Apr 2012 12:50:08 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -952,124 +952,140 @@ class Rmap_Model(object) :
         return(p_bst, -v_bst)
 
 
-        def do_mcmc(self, conthpd=None, lagtobaseline=0.3, 
-                nwalkers=100, nburn=100, nchain=100, threads=1, 
-                fburn=None, fchain=None, flogp=None,
-                set_threading=False, blocksize=10000,
-                set_verbose=True):
-            """ test
-            """
-            if (threads > 1 and (not set_threading)):
-                if set_verbose:
-                    print("run parallel chains of number %2d "%threads)
-            elif (threads == 1) :
-                if set_verbose:
-                    if set_threading :
-                        print("run single chain in submatrix blocksize %10d "%blocksize)
-                    else :
-                        print("run single chain without subdividing matrix ")
-            else :
-                raise InputError("conflicting set_threading and threads setup")
-            # generate array of random numbers
-            p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
-            # initialize array
-            if conthpd is None:
-                p0[:, 0] += np.log(self.cont_std)-0.5
-                p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
-            else :
-                p0[:, 0] += conthpd[1,0]-0.5
-                p0[:, 1] += conthpd[1,1]-0.5
-            for i in xrange(self.nlc-1) :
-                p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
-            if set_verbose :
-                print("start burn-in")
-                if conthpd is None :
-                    print("no priors on sigma and tau")
+    def do_mcmc(self, conthpd=None, lagtobaseline=0.3, 
+            nwalkers=100, nburn=100, nchain=100, threads=1, 
+            fburn=None, fchain=None, flogp=None,
+            set_threading=False, blocksize=10000,
+            set_verbose=True):
+        """ test
+        """
+        if (threads > 1 and (not set_threading)):
+            if set_verbose:
+                print("run parallel chains of number %2d "%threads)
+        elif (threads == 1) :
+            if set_verbose:
+                if set_threading :
+                    print("run single chain in submatrix blocksize %10d "%blocksize)
                 else :
-                    print("using priors on sigma and tau from the continuum fitting")
-                    print(np.exp(conthpd))
-                if lagtobaseline < 1.0 :
-                    print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+                    print("run single chain without subdividing matrix ")
+        else :
+            raise InputError("conflicting set_threading and threads setup")
+        # generate array of random numbers
+        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        # initialize array
+        if conthpd is None:
+            p0[:, 0] += np.log(self.cont_std)-0.5
+            p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
+        else :
+            p0[:, 0] += conthpd[1,0]-0.5
+            p0[:, 1] += conthpd[1,1]-0.5
+        for i in xrange(self.nlc-1) :
+            p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
+        if set_verbose :
+            print("start burn-in")
+            if conthpd is None :
+                print("no priors on sigma and tau")
+            else :
+                print("using priors on sigma and tau from the continuum fitting")
+                print(np.exp(conthpd))
+            if lagtobaseline < 1.0 :
+                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+            else :
+                print("no penalizing long lags, but only restrict to within the baseline")
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
+                (nburn, nwalkers, nburn*nwalkers))
+        # initialize the ensemble sampler
+        sampler = EnsembleSampler(nwalkers, self.ndim,
+                    lnpostfn_spear_p,
+                    args=(self.zydata, conthpd, lagtobaseline, 
+                          set_threading, blocksize, False, False), 
+                    threads=threads)
+        pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if set_verbose :
+            print("burn-in finished")
+        if fburn is not None :
+            if set_verbose :
+                print("save burn-in chains to %s"%fburn)
+            np.savetxt(fburn, sampler.flatchain)
+        # reset the sampler
+        sampler.reset()
+        if set_verbose :
+            print("start sampling")
+        sampler.run_mcmc(pos, nchain, rstate0=state)
+        if set_verbose :
+            print("sampling finished")
+        af = sampler.acceptance_fraction
+        if set_verbose :
+            print("acceptance fractions are")
+            print(" ".join([format(r, "3.2f") for r in af]))
+        if fchain is not None :
+            if set_verbose :
+                print("save MCMC chains to %s"%fchain)
+            np.savetxt(fchain, sampler.flatchain)
+        if flogp is not None :
+            if set_verbose :
+                print("save logp of MCMC chains to %s"%flogp)
+            np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
+        # make chain an attritue
+        self.flatchain = sampler.flatchain
+        self.flatchain_whole = np.copy(self.flatchain)
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def get_hpd(self, set_verbose=True):
+        """ Get the 68% percentile range of each parameter to self.hpd.
+
+        Parameters
+        ----------
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
+        hpd = np.zeros((3, self.ndim))
+        chain_len = self.flatchain.shape[0]
+        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+        medlowhig = pct1sig.astype(np.int32)
+        for i in xrange(self.ndim):
+            vsort = np.sort(self.flatchain[:,i])
+            hpd[:,i] = vsort[medlowhig]
+            if set_verbose :
+                print("HPD of %s"%self.vars[i])
+                if i < 2 :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
                 else :
-                    print("no penalizing long lags, but only restrict to within the baseline")
-                print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
-                    (nburn, nwalkers, nburn*nwalkers))
-            # initialize the ensemble sampler
-            sampler = EnsembleSampler(nwalkers, self.ndim,
-                        lnpostfn_spear_p,
-                        args=(self.zydata, conthpd, lagtobaseline, 
-                              set_threading, blocksize, False, False), 
-                        threads=threads)
-            pos, prob, state = sampler.run_mcmc(p0, nburn)
-            if set_verbose :
-                print("burn-in finished")
-            if fburn is not None :
-                if set_verbose :
-                    print("save burn-in chains to %s"%fburn)
-                np.savetxt(fburn, sampler.flatchain)
-            # reset the sampler
-            sampler.reset()
-            if set_verbose :
-                print("start sampling")
-            sampler.run_mcmc(pos, nchain, rstate0=state)
-            if set_verbose :
-                print("sampling finished")
-            af = sampler.acceptance_fraction
-            if set_verbose :
-                print("acceptance fractions are")
-                print(" ".join([format(r, "3.2f") for r in af]))
-            if fchain is not None :
-                if set_verbose :
-                    print("save MCMC chains to %s"%fchain)
-                np.savetxt(fchain, sampler.flatchain)
-            if flogp is not None :
-                if set_verbose :
-                    print("save logp of MCMC chains to %s"%flogp)
-                np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
-            # make chain an attritue
-            self.flatchain = sampler.flatchain
-            self.flatchain_whole = np.copy(self.flatchain)
-            # get HPD
-            self.get_hpd(set_verbose=set_verbose)
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+        # register hpd to attr
+        self.hpd = hpd
 
-        def get_hpd(self, set_verbose=True):
-            """ Get the 68% percentile range of each parameter to self.hpd.
-
-            Parameters
-            ----------
-            set_verbose: bool, optional
-                True if you want verbosity (default: True).
-
-            """
-            hpd = np.zeros((3, self.ndim))
-            chain_len = self.flatchain.shape[0]
-            pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-            medlowhig = pct1sig.astype(np.int32)
-            for i in xrange(self.ndim):
-                vsort = np.sort(self.flatchain[:,i])
-                hpd[:,i] = vsort[medlowhig]
-                if set_verbose :
-                    print("HPD of %s"%self.vars[i])
-                    if i < 2 :
-                        print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
-                    else :
-                        print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
-            # register hpd to attr
-            self.hpd = hpd
-
-        def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
-                figext=None):
-            """ Plot the histograms.
-            """
-            if not hasattr(self, "flatchain"):
-                print("Warning: need to run do_mcmc or load_chain first")
-                return(1)
-            ln10 = np.log(10.0)
-            fig  = plt.figure(figsize=(8, 8.*self.nlc/3.0))
-            for i in xrange(2) :
-                ax = fig.add_subplot(self.nlc,3,i+1)
+    def show_hist(self, bins=100, set_adaptive=False, floor=50, figout=None,
+            figext=None):
+        """ Plot the histograms.
+        """
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        ln10 = np.log(10.0)
+        fig  = plt.figure(figsize=(8, 8.*self.nlc/3.0))
+        for i in xrange(2) :
+            ax = fig.add_subplot(self.nlc,3,i+1)
+            if set_adaptive :
+                h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
+                        floor=floor)
+                left  = edges[:-1]
+                width = edges[1:] - left
+                ax.step(left, h, where="post", color="r")
+                indpeak = np.argmax(h)
+                print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
+                    edges[indpeak], edges[indpeak+1]))
+            else :
+                ax.hist(self.flatchain[:,i]/ln10, bins)
+            ax.set_xlabel(self.texs[i])
+            ax.set_ylabel("N")
+        for k in xrange(self.nlc-1):
+            for i in xrange(2+k*3, 5+k*3) :
+                ax = fig.add_subplot(self.nlc,3,i+1+1) 
                 if set_adaptive :
-                    h, edges = getAdaptiveHist(self.flatchain[:,i]/ln10, bins=bins,
+                    h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
                             floor=floor)
                     left  = edges[:-1]
                     width = edges[1:] - left
@@ -1078,127 +1094,111 @@ class Rmap_Model(object) :
                     print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
                         edges[indpeak], edges[indpeak+1]))
                 else :
-                    ax.hist(self.flatchain[:,i]/ln10, bins)
+                    ax.hist(self.flatchain[:,i], bins)
                 ax.set_xlabel(self.texs[i])
                 ax.set_ylabel("N")
-            for k in xrange(self.nlc-1):
-                for i in xrange(2+k*3, 5+k*3) :
-                    ax = fig.add_subplot(self.nlc,3,i+1+1) 
-                    if set_adaptive :
-                        h, edges = getAdaptiveHist(self.flatchain[:,i], bins=bins,
-                                floor=floor)
-                        left  = edges[:-1]
-                        width = edges[1:] - left
-                        ax.step(left, h, where="post", color="r")
-                        indpeak = np.argmax(h)
-                        print("peak bin of %s is %10.5f %10.5f"%(self.texs[i],
-                            edges[indpeak], edges[indpeak+1]))
-                    else :
-                        ax.hist(self.flatchain[:,i], bins)
-                    ax.set_xlabel(self.texs[i])
-                    ax.set_ylabel("N")
-#            plt.get_current_fig_manager().toolbar.zoom()
-            return(figure_handler(fig=fig, figout=figout, figext=figext))
+#        plt.get_current_fig_manager().toolbar.zoom()
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
 
 
 
-        def break_chain(self, llag_segments):
-            """ Break the chain.
+    def break_chain(self, llag_segments):
+        """ Break the chain.
 
-            Parameters
-            ----------
-            llag_segments: list of lists
-                list of length self.nlc-1, wich each element a two-element array
-                bracketing the range of lags (usually the single most probable peak) 
-                you want to consider for each line.
-            
-            """
-            if (len(llag_segments) != self.nlc-1) :
-                print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
-                return(1)
-            if not hasattr(self, "flatchain"):
-                print("Warning: need to run do_mcmc or load_chain first")
-                return(1)
-            for i, llag_seq in enumerate(llag_segments) : 
-                if llag_seq is None:
-                    continue
-                indx = np.argsort(self.flatchain[:, 2+i*3])
-                imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
-                indx_cut = indx[imin : imax]
-                self.flatchain = self.flatchain[indx_cut, :]
+        Parameters
+        ----------
+        llag_segments: list of lists
+            list of length self.nlc-1, wich each element a two-element array
+            bracketing the range of lags (usually the single most probable peak) 
+            you want to consider for each line.
+        
+        """
+        if (len(llag_segments) != self.nlc-1) :
+            print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
+            return(1)
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        for i, llag_seq in enumerate(llag_segments) : 
+            if llag_seq is None:
+                continue
+            indx = np.argsort(self.flatchain[:, 2+i*3])
+            imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
+            indx_cut = indx[imin : imax]
+            self.flatchain = self.flatchain[indx_cut, :]
 
-        def restore_chain(self) :
-            self.flatchain = np.copy(self.flatchain_whole)
+    def restore_chain(self) :
+        self.flatchain = np.copy(self.flatchain_whole)
 
-        def load_chain(self, fchain, set_verbose=True):
-            """ Load stored MCMC chain.
+    def load_chain(self, fchain, set_verbose=True):
+        """ Load stored MCMC chain.
 
-            Parameters
-            ----------
-            fchain: string
-                Name for the chain file.
+        Parameters
+        ----------
+        fchain: string
+            Name for the chain file.
 
-            set_verbose: bool, optional
-                True if you want verbosity (default: True).
-            """
-            if set_verbose :
-                print("load MCMC chain from %s"%fchain)
-            self.flatchain = np.genfromtxt(fchain)
-            self.flatchain_whole = np.copy(self.flatchain)
-            self.ndim = self.flatchain.shape[1]
-            # get HPD
-            self.get_hpd(set_verbose=set_verbose)
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+        """
+        if set_verbose :
+            print("load MCMC chain from %s"%fchain)
+        self.flatchain = np.genfromtxt(fchain)
+        self.flatchain_whole = np.copy(self.flatchain)
+        self.ndim = self.flatchain.shape[1]
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
 
-        def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
-            """ Calculate the predicted mean and variance of each light curve on a
-            densely sampled time axis.
+    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
+        """ Calculate the predicted mean and variance of each light curve on a
+        densely sampled time axis.
 
-            Parameters
-            ----------
-            p_bst: array_like
-                Input paraemeters.
+        Parameters
+        ----------
+        p_bst: array_like
+            Input paraemeters.
 
-            fpred: string, optional
-                Name of the output file for the predicted light curves, set it to
-                None if you do not want output (default: None).
+        fpred: string, optional
+            Name of the output file for the predicted light curves, set it to
+            None if you do not want output (default: None).
 
-            dense: int, optional
-                The factor by which the predicted light curves should be more
-                densely sampled than the original data (default: 10).
+        dense: int, optional
+            The factor by which the predicted light curves should be more
+            densely sampled than the original data (default: 10).
 
-            set_overwrite: bool, optional
-                True if you want to overwrite existing fpred (default: True).
+        set_overwrite: bool, optional
+            True if you want to overwrite existing fpred (default: True).
 
-            Returns
-            -------
-            zydata_pred: LightCurve object
-                Predicted light curves packaged as a LightCurve object.
+        Returns
+        -------
+        zydata_pred: LightCurve object
+            Predicted light curves packaged as a LightCurve object.
 
-            """
-            qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
-                        set_threading=True, blocksize=10000,
-                        set_retq=True, set_verbose=False)[4]
-            sigma, tau, lags, wids, scales = unpackspearpar(p_bst,
-                    self.zydata.nlc, hascontlag=True)
-            # update qlist
-            self.zydata.update_qlist(qlist)
-            # initialize PredictRmap object
-            P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
-                    lags=lags, wids=wids, scales=scales)
-            nwant = dense*self.cont_npt
-            jwant0 = self.jstart - 0.1*self.rj
-            jwant1 = self.jend   + 0.1*self.rj
-            jwant = np.linspace(jwant0, jwant1, nwant)
-            zylclist_pred = []
-            for i in xrange(self.nlc) :
-                iwant = np.ones(nwant)*(i+1)
-                mve, var = P.mve_var(jwant, iwant)
-                sig = np.sqrt(var)
-                zylclist_pred.append([jwant, mve, sig])
-            zydata_pred   = LightCurve(zylclist_pred)
-            if fpred is not None :
-                zydata_pred.save(fpred, set_overwrite=set_overwrite)
-            return(zydata_pred)
+        """
+        qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
+                    set_threading=True, blocksize=10000,
+                    set_retq=True, set_verbose=False)[4]
+        sigma, tau, lags, wids, scales = unpackspearpar(p_bst,
+                self.zydata.nlc, hascontlag=True)
+        # update qlist
+        self.zydata.update_qlist(qlist)
+        # initialize PredictRmap object
+        P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
+                lags=lags, wids=wids, scales=scales)
+        nwant = dense*self.cont_npt
+        jwant0 = self.jstart - 0.1*self.rj
+        jwant1 = self.jend   + 0.1*self.rj
+        jwant = np.linspace(jwant0, jwant1, nwant)
+        zylclist_pred = []
+        for i in xrange(self.nlc) :
+            iwant = np.ones(nwant)*(i+1)
+            mve, var = P.mve_var(jwant, iwant)
+            sig = np.sqrt(var)
+            zylclist_pred.append([jwant, mve, sig])
+        zydata_pred   = LightCurve(zylclist_pred)
+        if fpred is not None :
+            zydata_pred.save(fpred, set_overwrite=set_overwrite)
+        return(zydata_pred)
 
 
 

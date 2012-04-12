@@ -1,9 +1,10 @@
-#Last-modified: 08 Mar 2012 02:23:14 PM
+#Last-modified: 11 Apr 2012 09:17:32 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
 from lcio import *
 from zylc import LightCurve, get_data
+from lcmodel import Cont_Model, Rmap_Model
 import matplotlib.pyplot as plt
 
 """
@@ -11,11 +12,11 @@ Test from scratch.
 """
 
 names  = ["Continuum", "Yelm", "Zing"]
-jdense = np.linspace(0.0, 1000.0, 2000)
+jdense = np.linspace(0.0, 2000.0, 4000)
 sigma, tau = (2.00, 100.0)
 tau_cut = 10.0
-lagy, widy, scaley = (150.0,  3.0, 2.0)
-lagz, widz, scalez = (200.0,  9.0, 0.5)
+lagy, widy, scaley = (120.0,  3.0, 2.0)
+lagz, widz, scalez = (250.0,  9.0, 0.5)
 lags   = [0.0,   lagy,   lagz]
 wids   = [0.0,   widy,   widz]
 scales = [1.0, scaley, scalez]
@@ -36,7 +37,6 @@ def generateTrueLC(covfunc="drw"):
     # line2 : zing
     jmin = np.max(lags)
     jmax = np.max(jdense)-1.0
-
     zylist = []
     # underlying continuum variability
     if covfunc == "drw" :
@@ -44,15 +44,14 @@ def generateTrueLC(covfunc="drw"):
     elif covfunc == "kepler2_exp" :
         PS = PredictSignal(lcmean=0.0, covfunc=covfunc, sigma=sigma, tau=tau, 
                 nu=tau_cut, rank="NearlyFull")
+    else :
+        raise RuntimeError("current no such covfunc implemented %s"%covfunc)
     # generate signal with no error
     edense = np.zeros_like(jdense)
     sdense = PS.generate(jdense, ewant=edense)
     imin = np.searchsorted(jdense, jmin)
     imax = np.searchsorted(jdense, jmax)
-    print(imin),
-    print(imax)
     zylist.append([jdense[imin: imax], sdense[imin: imax], edense[imin: imax]])
-
     for i in xrange(1, 3) :
         lag  = lags[i]
         wid  = wids[i]
@@ -96,73 +95,87 @@ def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
     zymock = LightCurve(zylclist_new, names=names)
     return(zymock)
 
+def getTrue(trufile, set_plot=False):
+    if file_exists(trufile) :
+        print("read true light curve signal from %s"%trufile)
+        zydata = get_data(trufile, names=names)
+    else :
+        print("generate true light curve signal")
+        zydata = generateTrueLC(covfunc="drw")
+        print("save true light curve signal to %s"%trufile)
+        zydata.save(trufile)
+    if set_plot :
+        print("plot true light curve signal")
+        zydata.plot()
+    return(zydata)
+
+def getMock(zydata, confile, topfile, doufile, set_plot=False) :
+    # downsample the truth to get more realistic light curves
+    zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
+        errfac=[0.05, 0.05, 0.05], set_seasongap=True)
+    zydata_dou.save_continuum(confile)
+    zydata_dou.save(doufile)
+    zylclist_top = zydata_dou.zylclist[:2]
+    zydata_top = LightCurve(zylclist_top, names=names[0:2])
+    zydata_top.save(topfile)
+    if set_plot :
+        print("plot mock light curves for continuum and yelm line")
+        zydata_top.plot()
+        print("plot mock light curves for continuum, yelm, and zing lines")
+        zydata_dou.plot()
+
+def fitCon(confile, confchain, threads=1, set_plot=False) :
+    zydata = get_data(confile)
+    cont   = Cont_Model(zydata, "drw")
+    if file_exists(confchain) :
+        cont.load_chain(confchain)
+    else :
+        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn=None,
+                fchain=confchain, threads=threads)
+    if set_plot :
+        cont.show_hist(bins=100, set_adaptive=True, floor=10)
+    return(cont.hpd)
+
+
+def fitLag(linfile, linfchain, conthpd, threads=1, set_plot=False) :
+    zydata = get_data(linfile)
+    rmap   = Rmap_Model(zydata)
+    if file_exists(linfchain) :
+        rmap.load_chain(linfchain)
+    else :
+        rmap.do_mcmc(conthpd=conthpd, nwalkers=100, nburn=50, nchain=50,
+                fburn=None, fchain=linfchain, threads=threads)
+    if set_plot :
+        rmap.break_chain([[100, 300],]*(zydata.nlc-1))
+        rmap.show_hist(bins=200)
+    return(rmap.hpd)
+
 
 if __name__ == "__main__":    
     set_plot = True
-    # truth drw
+    threads  = 2
+    # generate truth drw signal
     trufile = "dat/trulc.dat"
-    if True :
-        if file_exists(trufile) :
-            print("read true light curve signal from %s"%trufile)
-            zydata = get_data(trufile, names=names)
-        else :
-            print("generate true light curve signal")
-            zydata = generateTrueLC(covfunc="drw")
-            print("save true light curve signal to %s"%trufile)
-            zydata.save(trufile)
-        if set_plot :
-            print("plot true light curve signal")
-            zydata.plot()
+#    zydata  = getTrue(trufile, set_plot=set_plot)
 
-    # truth kepler
-    trufile_k2e = "dat/trulc_k2e.dat"
-    if False :
-        if file_exists(trufile_k2e) :
-            print("read true k2e light curve signal from %s"%trufile_k2e)
-            zydata_k2e = get_data(trufile_k2e, names=names)
-        else :
-            print("generate k2e true light curve signal")
-            zydata_k2e = generateTrueLC(covfunc="kepler2_exp")
-            print("save true k2e light curve signal to %s"%trufile)
-            zydata_k2e.save(trufile_k2e)
-        if set_plot :
-            print("plot true k2e light curve signal")
-            zydata_k2e.plot()
-
-
+    # generate mock light curves
     confile = "dat/loopdeloop_con.dat"
     topfile = "dat/loopdeloop_con_y.dat"
     doufile = "dat/loopdeloop_con_y_z.dat"
-    if True :
-        # downsample the truth to get more realistic light curves
-        zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
-            errfac=[0.05, 0.05, 0.05], set_seasongap=False)
-        zydata_dou.save_continuum(confile)
-        zydata_dou.save(doufile)
-        zylclist_top = zydata_dou.zylclist[:2]
-        zydata_top = LightCurve(zylclist_top, names=names[0:2])
-        zydata_top.save(topfile)
-        if set_plot :
-            print("plot mock light curves for continuum and yelm line")
-            zydata_top.plot()
-            print("plot mock light curves for continuum, yelm, and zing lines")
-            zydata_dou.plot()
+#    getMock(zydata, confile, topfile, doufile, set_plot=set_plot)
 
-    confile_k2e = "dat/loopdeeswoop_con.dat"
-    topfile_k2e = "dat/loopdeeswoop_con_y.dat"
-    doufile_k2e = "dat/loopdeeswoop_con_y_z.dat"
-    if False :
-        # downsample the truth to get more realistic light curves
-        zydata_dou_k2e = True2Mock(zydata_k2e, lcmeans=lcmeans, sparse=[20, 20, 20], 
-            errfac=[0.05, 0.05, 0.05], set_seasongap=False)
-        zydata_dou_k2e.save_continuum(confile_k2e)
-        zydata_dou_k2e.save(doufile_k2e)
-        zylclist_top_k2e = zydata_dou_k2e.zylclist[:2]
-        zydata_top_k2e = LightCurve(zylclist_top_k2e, names=names[0:2])
-        zydata_top_k2e.save(topfile_k2e)
-        if set_plot :
-            print("plot k2e mock light curves for continuum and yelm line")
-            zydata_top_k2e.plot()
-            print("plot k2e mock light curves for continuum, yelm, and zing lines")
-            zydata_dou_k2e.plot()
+    # fit continuum
+    confchain = "dat/chain0.dat"
+    conthpd = fitCon(confile, confchain, threads=threads, set_plot=set_plot)
+
+    # fit tophat
+    topfchain = "dat/chain1.dat"
+    tophpd = fitLag(topfile, topfchain, conthpd, threads=threads, set_plot=set_plot)
+
+    # fit douhat
+    doufchain = "dat/chain2.dat"
+    douhpd = fitLag(doufile, doufchain, conthpd, threads=threads, set_plot=set_plot)
+
+
+
 

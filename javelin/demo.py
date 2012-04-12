@@ -1,4 +1,4 @@
-#Last-modified: 11 Apr 2012 09:17:32 PM
+#Last-modified: 12 Apr 2012 05:52:29 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -133,7 +133,7 @@ def fitCon(confile, confchain, threads=1, set_plot=False) :
         cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn=None,
                 fchain=confchain, threads=threads)
     if set_plot :
-        cont.show_hist(bins=100, set_adaptive=True, floor=10)
+        cont.show_hist(bins=100)
     return(cont.hpd)
 
 
@@ -147,7 +147,8 @@ def fitLag(linfile, linfchain, conthpd, threads=1, set_plot=False) :
                 fburn=None, fchain=linfchain, threads=threads)
     if set_plot :
         rmap.break_chain([[100, 300],]*(zydata.nlc-1))
-        rmap.show_hist(bins=200)
+        rmap.show_hist(bins=100)
+        rmap.get_hpd()
     return(rmap.hpd)
 
 

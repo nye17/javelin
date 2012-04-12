@@ -1,6 +1,6 @@
 import numpy as np
 import pymc as pm
-from javelin.prh import PRH
+from javelin.lcmodel import Cont_Model as  PRH
 
 def make_model_cov3par(zydata, covfunc="pow_exp",
                               use_sigprior="CSK", 

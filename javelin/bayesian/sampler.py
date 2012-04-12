@@ -1,11 +1,11 @@
-#Last-modified: 18 Jan 2012 01:37:19 AM
+#Last-modified: 12 Apr 2012 12:36:55 AM
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import os.path
 import pymc as pm
 
-from javelin.prh import PRH
+from javelin.lcmodel import Cont_Model as  PRH
 from javelin.peakdetect import peakdet1d, peakdet2d
 
 from data import get_data

@@ -1,4 +1,4 @@
-#Last-modified: 12 Apr 2012 07:02:39 PM
+#Last-modified: 12 Apr 2012 07:30:32 PM
 import numpy as np
 from predict import PredictSignal, PredictRmap, generateLine, generateError
 from psd import psd
@@ -124,31 +124,34 @@ def getMock(zydata, confile, topfile, doufile, set_plot=False) :
         print("plot mock light curves for continuum, yelm, and zing lines")
         zydata_dou.plot()
 
-def fitCon(confile, confchain, threads=1, set_plot=False) :
+def fitCon(confile, confchain, threads=1, set_plot=False, nwalkers=100,
+        nburn=50, nchain=50, figext=None) :
     zydata = get_data(confile)
     cont   = Cont_Model(zydata, "drw")
     if file_exists(confchain) :
         cont.load_chain(confchain)
     else :
-        cont.do_mcmc(nwalkers=100, nburn=50, nchain=50, fburn=None,
+        cont.do_mcmc(nwalkers=nwalkers, nburn=nburn, nchain=nchain, fburn=None,
                 fchain=confchain, threads=threads)
     if set_plot :
-        cont.show_hist(bins=100)
+        cont.show_hist(bins=100, figext=figext)
     return(cont.hpd)
 
 
-def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[100, 300], threads=1, set_plot=False) :
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[100, 300],
+        threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50,
+        figext=None) :
     zydata = get_data(linfile, names=names)
     rmap   = Rmap_Model(zydata)
     if file_exists(linfchain) :
         rmap.load_chain(linfchain, set_verbose=False)
     else :
-        rmap.do_mcmc(conthpd=conthpd, nwalkers=100, nburn=50, nchain=50,
+        rmap.do_mcmc(conthpd=conthpd, nwalkers=nwalkers, nburn=nburn, nchain=nchain,
                 fburn=None, fchain=linfchain, threads=threads)
     if set_plot :
         rmap.break_chain([lagrange,]*(zydata.nlc-1))
         rmap.get_hpd()
-        rmap.show_hist(bins=100)
+        rmap.show_hist(bins=100, figext=figext)
     return(rmap.hpd)
 
 

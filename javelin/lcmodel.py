@@ -1,4 +1,4 @@
-#Last-modified: 12 Apr 2012 05:49:35 PM
+#Last-modified: 12 Apr 2012 10:27:09 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -199,7 +199,7 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
     return(retval)
 
 
-def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, 
+def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         set_threading=False, blocksize=10000,
         set_retq=False, set_verbose=False):
     """ log-posterior function of p.
@@ -269,13 +269,17 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3,
         prior1 = 0.0
     # for each lag
     prior2 = 0.0
-    if lagtobaseline < 1.0 :
-        for i in xrange(zydata.nlc-1) :
+    for i in xrange(zydata.nlc-1) :
+        if lagtobaseline < 1.0 :
             if np.abs(llags[i]) > lagtobaseline*zydata.rj :
                 # penalize long lags when they are larger than 0.3 times the baseline,
                 # as it is too easy to fit the model with non-overlapping
                 # signals in the light curves.
                 prior2 += np.log(np.abs(llags[i])/(lagtobaseline*zydata.rj))
+        # penalize long lags to be impossible
+        if laglimit is not None :
+            if llags[i] > laglimit[1] or llags[i] < laglimit[0] :
+                prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
     if set_retq :
@@ -846,7 +850,7 @@ class Rmap_Model(object) :
         return(p_bst, -v_bst)
 
 
-    def do_mcmc(self, conthpd=None, lagtobaseline=0.3, 
+    def do_mcmc(self, conthpd=None, lagtobaseline=0.3, laglimit="baseline",
             nwalkers=100, nburn=100, nchain=100, threads=1, 
             fburn=None, fchain=None, flogp=None,
             set_threading=False, blocksize=10000,
@@ -864,6 +868,8 @@ class Rmap_Model(object) :
                     print("run single chain without subdividing matrix ")
         else :
             raise InputError("conflicting set_threading and threads setup")
+        if laglimit == "baseline" :
+            laglimit = [-self.rj, self.rj]
         # generate array of random numbers
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initialize array
@@ -891,7 +897,7 @@ class Rmap_Model(object) :
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim,
                     lnpostfn_spear_p,
-                    args=(self.zydata, conthpd, lagtobaseline, 
+                    args=(self.zydata, conthpd, lagtobaseline, laglimit,
                           set_threading, blocksize, False, False), 
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)

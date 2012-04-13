@@ -1,4 +1,4 @@
-#Last-modified: 28 Mar 2012 12:11:00 AM
+#Last-modified: 12 Apr 2012 09:48:34 PM
 
 import matplotlib.pyplot as plt
 from glob import glob
@@ -7,6 +7,7 @@ from glob import glob
 """
 
 def figure_handler(fig=None, figout=None, figext=None):
+    printed = False
     if figext is None:
         plt.get_current_fig_manager().toolbar.zoom()
         plt.show()

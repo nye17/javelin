@@ -1,4 +1,4 @@
-#Last-modified: 13 Apr 2012 10:48:06 PM
+#Last-modified: 13 Apr 2012 11:20:05 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -279,7 +279,8 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         # penalize long lags to be impossible
         if laglimit is not None :
             if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0] :
-                prior2 += my_pos_inf
+                # try not stack priors
+                prior2 = my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
     if set_retq :

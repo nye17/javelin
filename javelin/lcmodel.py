@@ -1,4 +1,4 @@
-#Last-modified: 12 Apr 2012 10:27:09 PM
+#Last-modified: 13 Apr 2012 10:48:06 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -278,7 +278,7 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
                 prior2 += np.log(np.abs(llags[i])/(lagtobaseline*zydata.rj))
         # penalize long lags to be impossible
         if laglimit is not None :
-            if llags[i] > laglimit[1] or llags[i] < laglimit[0] :
+            if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0] :
                 prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
@@ -869,7 +869,9 @@ class Rmap_Model(object) :
         else :
             raise InputError("conflicting set_threading and threads setup")
         if laglimit == "baseline" :
-            laglimit = [-self.rj, self.rj]
+            laglimit = [[-self.rj, self.rj],]*(self.nlc-1)
+        elif len(laglimit) != (self.nlc - 1) :
+            raise InputError("laglimit should be a list of lists matching number of lines")
         # generate array of random numbers
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initialize array

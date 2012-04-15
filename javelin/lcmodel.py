@@ -1,4 +1,4 @@
-#Last-modified: 13 Apr 2012 11:20:05 PM
+#Last-modified: 15 Apr 2012 05:57:19 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -883,7 +883,8 @@ class Rmap_Model(object) :
             p0[:, 0] += conthpd[1,0]-0.5
             p0[:, 1] += conthpd[1,1]-0.5
         for i in xrange(self.nlc-1) :
-            p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
+#            p0[:, 2+i*3] = p0[:,2+i*3]*self.rj*lagtobaseline
+            p0[:, 2+i*3] = p0[:,2+i*3]*(laglimit[i][1]-laglimit[i][0]) + laglimit[i][0]
         if set_verbose :
             print("start burn-in")
             if conthpd is None :

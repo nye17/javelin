@@ -81,6 +81,12 @@ try::
 
 
 
+.. image::
+    
+    http://github.com/nye17/javelin/raw/master/examples/figs/covdemo.png
+
+
+
 Demonstration
 =============
 

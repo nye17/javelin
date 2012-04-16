@@ -1,3 +1,6 @@
+.. role:: raw-math(raw)
+    :format: latex html
+
 
 =======
 JAVELIN
@@ -81,8 +84,10 @@ try::
 
 
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
    :scale: 80%
+
+   Fig. 1 : Illustration of four continuum models available in JAVELIN.
 
 which is exactly the Figure 1 in `Zu et al. (2012) <http://arxiv.org/abs/1202.3783>`_.
 
@@ -93,8 +98,9 @@ Demonstration
 
 Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
 hosted by an imaginary `Loopdeloop galaxy
-<http://www.mariowiki.com/Loopdeeloop_Galaxy>`_. Every file and script referred
-to here can be found inside ``examples`` directory if you::
+<http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
+observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>` and Zing.  Every file and
+script referred to here can be found inside ``examples`` directory::
 
     $ cd javelin/examples
 
@@ -109,17 +115,28 @@ on the command line.
 We assume the quasar variability on scales longer than a few days can be well
 described by a Damped random walk (DRW) model, and the emission line light
 curves are simply the lagged, smoothed, and scaled versions of the continuum
-light curve. 
+light curve. Fig. 1 shows the true light curves for the continuum, the Ylem, and
+the Zing lines. In particular, the Ylem (Zing) light curve is lagged by 120
+(250) days, scaled by a factor of 3 (9), and smoothed by a top hat of width 3
+(9) days, from the continuum light curve. The continuum light curve is generated
+from the DRW model with time scale 100 days and variability amplitude
+:raw-math:`$$\sigma=2\,mag$$`.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
    :scale: 80%
 
-   True light curves of loopdeeloop (from top to bottom: the Zing emission line,
-   the Ylem emission line, and the continuum).
+   Fig. 2: True light curves of loopdeeloop (from top to bottom: the Zing
+   emission line, the Ylem emission line, and the continuum).
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
+In practice, what we could observe are sparsely sampled versions of the true light
+curves, sometimes with seasonal gaps because of the conflict with our Sun's
+schedule, as shown by Fig. 3.
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
    :scale: 80%
+
+   Fig. 3: Same as Fig. 2, but observed versions, with light curves.
 
 .. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
    :scale: 80%

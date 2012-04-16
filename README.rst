@@ -83,7 +83,7 @@ try::
 
 .. image::
     
-    http://bitbucket.org/nye17/javelin/raw/master/examples/figs/covdemo.png
+    http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
 
 
 

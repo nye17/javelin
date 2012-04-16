@@ -86,6 +86,8 @@ try::
    :alt: output of python plotcov.py
    :align: right
 
+which is exactly the Figure 1 in `Zu et al. (2012) <http://arxiv.org/abs/1202.3783>`_.
+
 
 
 Demonstration

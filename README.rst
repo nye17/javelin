@@ -81,9 +81,7 @@ try::
 
 
 
-.. image::
-    
-    http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
 
 
 

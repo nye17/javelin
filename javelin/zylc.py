@@ -111,7 +111,7 @@ class LightCurve(object):
                 self.update_qlist(qlist)
 
     def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
-        fig  = plt.figure(figsize=(8, 3*self.nlc))
+        fig  = plt.figure(figsize=(8, 2*self.nlc))
         height = 0.90/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
@@ -144,7 +144,8 @@ class LightCurve(object):
                 ax.set_xlabel("JD")
             else :
                 ax.set_xticklabels([])
-            ax.legend(loc=1)
+            leg = ax.legend(loc='best', fancybox=True)
+            leg.get_frame().set_alpha(0.5)
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
     def plotdt(self, set_logdt=False, figout=None, figext=None, **params) :

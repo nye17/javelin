@@ -41,24 +41,24 @@ Installation
 
 You can install JAVELIN by the standard Python package installation procedure::
 
-    python setup.py config_fc --fcompiler=intel  install
+    $ python setup.py config_fc --fcompiler=intel  install
 
 or if you want to install the package to a specified directory ``JAVELINDIR``::
 
-    python setup.py config_fc --fcompiler=intel install --prefix=JAVELINDIR
+    $ python setup.py config_fc --fcompiler=intel install --prefix=JAVELINDIR
 
 where ``config_fc --fcompiler=intel`` tells Python to use the *intel fortran
 compiler* to compile Fortran source codes, you can also specifies other fortran
 compilers that are available in your system, e.g.,::
 
-    python setup.py config_fc --fcompiler=gnu95 install --prefix=JAVELINDIR
+    $ python setup.py config_fc --fcompiler=gnu95 install --prefix=JAVELINDIR
 
 uses ``GFortran`` as its Fortran compiler.
 
 Note that the short names for Fortran compilers may vary from system to system,
 you can check the list of available Fortran compilers in your system using::
 
-    python setup.py config_fc --help-fcompiler
+    $ python setup.py config_fc --help-fcompiler
 
 and you can find them in the ``Fortran compilers found:`` section of the output.
 
@@ -68,16 +68,16 @@ Test Installation
 
 After installing JAVELIN, navigate into the ``examples`` directory::
 
-    cd javelin/examples/
+    $ cd javelin/examples/
 
 you can try::
 
-    python demo.py test
+    $ python demo.py test
 
 to make sure the code works. Also, to test whether the graphics work, you can
 try::
 
-    python plotcov.py
+    $ python plotcov.py
 
 
 
@@ -91,23 +91,32 @@ which is exactly the Figure 1 in `Zu et al. (2012) <http://arxiv.org/abs/1202.37
 Demonstration
 =============
 
-In this section, we will quickly go through the underlying methodology of JAVELIN
-using the example included in the ``examples/dat`` directory, where several
-simulated light curves and MCMC chains are stored. We will describe and use each
-file in turn, by running::
+Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
+hosted by an imaginary `Loopdeloop galaxy
+<http://www.mariowiki.com/Loopdeeloop_Galaxy>`_. Every file and script referred
+to here can be found inside ``examples`` directory if you::
 
-    python demo.py show
+    $ cd javelin/examples
 
-on the command line, starting form the first figure.
+To give you an idea of how things work in JAVELIN, let us first go through
+several figures illustrating the underlying methodlogy of JAVELIN. You can also
+show the figures below locally by running::
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
-   :scale: 80%
+    $ python demo.py show
+
+on the command line. 
 
 We assume the quasar variability on scales longer than a few days can be well
 described by a Damped random walk (DRW) model, and the emission line light
 curves are simply the lagged, smoothed, and scaled versions of the continuum
-light curve.
+light curve. 
 
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
+   :scale: 80%
+
+   True light curves of loopdeeloop (from top to bottom: the Zing emission line,
+   the Ylem emission line, and the continuum).
 
 .. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
    :scale: 80%

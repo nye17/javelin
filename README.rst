@@ -120,7 +120,7 @@ the Zing lines. In particular, the Ylem (Zing) light curve is lagged by 120
 (250) days, scaled by a factor of 3 (9), and smoothed by a top hat of width 3
 (9) days, from the continuum light curve. The continuum light curve is generated
 from the DRW model with time scale 100 days and variability amplitude
-:raw-math:`$$\sigma=2\,mag$$`.
+:math:`\sigma=2\,mag`.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png

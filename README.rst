@@ -119,8 +119,8 @@ light curve. Fig. 1 shows the true light curves for the continuum, the Ylem, and
 the Zing lines. In particular, the Ylem (Zing) light curve is lagged by 120
 (250) days, scaled by a factor of 3 (9), and smoothed by a top hat of width 3
 (9) days, from the continuum light curve. The continuum light curve is generated
-from the DRW model with time scale 100 days and variability amplitude
-:math:`\sigma=2\,mag`.
+from the DRW model with time scale 100 days and variability amplitude sigma=2
+mag.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
@@ -129,26 +129,80 @@ from the DRW model with time scale 100 days and variability amplitude
    Fig. 2: True light curves of loopdeeloop (from top to bottom: the Zing
    emission line, the Ylem emission line, and the continuum).
 
-In practice, what we could observe are sparsely sampled versions of the true light
+In practice, what we could observe are down-sampled versions of the true light
 curves, sometimes with seasonal gaps because of the conflict with our Sun's
 schedule, as shown by Fig. 3.
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
    :scale: 80%
 
-   Fig. 3: Same as Fig. 2, but observed versions, with light curves.
+   Fig. 3: Same as Fig. 2, but observed versions.
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
+To directly derive lags from those sparse light curves is hard with traiditional
+cross-correlation based methods. JAVELIN makes it much less formidable, by
+incorporating the statistical properties of the continuum light curve into the
+lag determination. Thus we need to run a continuum model to determine the DRW
+paramters of the continuum light curve. Fig. 4 shows the posterior distribution
+of the two DRW parameters of the continuum variability as calculated from
+JAVELIN,
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
    :scale: 80%
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
+   Fig. 4: Posterior distributions of the DRW parameters.
+
+Once we derive the poseteriors of the DRW parameters, we then have a pretty good
+idea of how much the continuum light curves in unobserved epochs should vary
+relative to observed epochs, i.e., we know how to statistically interpolate the
+continuum light curve. To measure the lag between the continuum and the Ylem
+light curve, JAVELIN then tries to interpolate the continuum light curve based
+on the posteriors derived in Fig. 4, and then shift, smooth, and scale each
+interpolated continuum light curve to compare to the observed Ylem light curve.
+After doing this try-and-err many many time in a MCMC run, JAVELIN finally
+derives the posterior distribution of the lag t, the tophat width w, and the
+scale factor s of the emission line, along with updated posteriors for the
+timescale tau and the amplitude sigma of the continuum, as shown in Fig. 5.
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
    :scale: 80%
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
+   Fig. 5: Posterior distributions of the emission line lag t, tophat width w,
+   and the scale factor s for the Ylem light curve (bottom), with the top two
+   panles showing the updated posteriors for tau and sigma.
+
+However, we can see two peaks for the lag distribution in Fig. 5, which is
+caused by the 180-day seaonal gaps in the two light curves - JAVELIN found that
+it is much easier to shift the continuum by 180 days to compare to the line
+light curve - there is no overlap between the two, therefore no objection from
+the data!
+
+
+Fortunately, we also have observations of the Zing light curve. Although equally
+sparsely sampled with gaps inside, the mere existence of the Zing light curve
+makes it impossible for JAVELIN to shift the contiuum by 180 days TWICE to
+compare to the two line light curves! After another MCMC run, JAVELIN is able to
+eliminate the second peak at 180 days and solve the lags for both emission lines
+simultaneously, as shown in Fig. 6.
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
    :scale: 80%
 
-.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
+   Fig. 6: Similar as Fig. 5, but after running JAVELIN with all three light
+   curves simultaneously.
+
+Finally, we want to know how the best--fit parameters from the last
+MCMC run look like. It is generally very hard to visualize the fit for the
+traditional cross-correlation methods, but JAVELIN is exceptionally good at
+this - afterall all it has been doing is to interpolate and align light curves,
+so why not for the best-fit parameters? Fig. 7 compares the best-fit light
+curves and the observed ones shown earlier in Fig. 3. Apparently JAVELIN does a
+great job of recovering the true light curves (compare to Fig. 2).
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
    :scale: 80%
+
+   Fig. 7: Comparion between the simulated light curves as computed from the
+   best-fit parameters, and the observed light curves.
 
 
 

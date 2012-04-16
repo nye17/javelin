@@ -83,8 +83,6 @@ try::
 
 .. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
    :scale: 80%
-   :alt: output of python plotcov.py
-   :align: right
 
 which is exactly the Figure 1 in `Zu et al. (2012) <http://arxiv.org/abs/1202.3783>`_.
 
@@ -104,8 +102,6 @@ on the command line, starting form the first figure.
 
 .. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
    :scale: 80%
-   :alt: first figure of demo
-   :align: right
 
 We assume the quasar variability on scales longer than a few days can be well
 described by a Damped random walk (DRW) model, and the emission line light
@@ -113,6 +109,20 @@ curves are simply the lagged, smoothed, and scaled versions of the continuum
 light curve.
 
 
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
+   :scale: 80%
+
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
+   :scale: 80%
+
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
+   :scale: 80%
+
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
+   :scale: 80%
+
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
+   :scale: 80%
 
 
 

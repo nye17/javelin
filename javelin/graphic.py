@@ -1,15 +1,12 @@
-#Last-modified: 12 Apr 2012 09:48:34 PM
+#Last-modified: 16 Apr 2012 01:39:23 PM
 
 import matplotlib.pyplot as plt
 from glob import glob
 
-""" some utility functions for plotting
-"""
 
-def figure_handler(fig=None, figout=None, figext=None):
-    printed = False
+
+def figure_handler(fig=None, figout=None, figext=None, dpi=None, pad_inches=0.1):
     if figext is None:
-        plt.get_current_fig_manager().toolbar.zoom()
         plt.show()
         printed = True
     elif isinstance(fig, plt.Figure):
@@ -23,16 +20,21 @@ def figure_handler(fig=None, figout=None, figext=None):
                     printed = False
                     return(printed)
         if "pdf" in figext:
-            fig.savefig(figout+".pdf", format="pdf")
+            fig.savefig(figout+".pdf", format="pdf", dpi=dpi)
             printed = True
         if "png" in figext:
-            fig.savefig(figout+".png", transparent=True, format="pdf")
+            fig.savefig(figout+".png", transparent=True, format="png", dpi=dpi )
             printed = True
         if "eps" in figext:
             fig.savefig(figout+".eps", papertype="a4", format="eps",
                               bbox_inches='tight',
-                              pad_inches=0.0)
+                              pad_inches=pad_inches, dpi=dpi)
+            printed = True
+        if "eye" in figext:
+            plt.show()
             printed = True
         if (printed is False):
             print("savefig failed, currently only pdf, png, and eps allowed")
     return(printed)
+
+

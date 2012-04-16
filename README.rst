@@ -24,11 +24,11 @@ Prerequisites
 
 JAVELIN requires
 
-# `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90)
-# `Python <http://python.org>`_ (>2.5)
-# `Numpy <http://numpy.org>`_ (>1.4)
-# `Scipy <http://scipy.org>`_ (>0.1)
-# `Matplotlib <http://matplotlib.sourceforge.net/>`_ (>1.0)
+#. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90)
+#. `Python <http://python.org>`_ (>2.5)
+#. `Numpy <http://numpy.org>`_ (>1.4)
+#. `Scipy <http://scipy.org>`_ (>0.1)
+#. `Matplotlib <http://matplotlib.sourceforge.net/>`_ (>1.0)
 
 We strongly recommend that you have ``Lapack`` and ``Atlas`` library installed
 in the system, although they are not necessary. It requires no extra effort to

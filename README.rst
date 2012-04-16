@@ -163,7 +163,7 @@ scale factor s of the emission line, along with updated posteriors for the
 timescale tau and the amplitude sigma of the continuum, as shown in Fig. 5.
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
-   :scale: 80%
+   :scale: 100%
 
    Fig. 5: Posterior distributions of the emission line lag t, tophat width w,
    and the scale factor s for the Ylem light curve (bottom), with the top two
@@ -184,7 +184,7 @@ eliminate the second peak at 180 days and solve the lags for both emission lines
 simultaneously, as shown in Fig. 6.
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
-   :scale: 80%
+   :scale: 100%
 
    Fig. 6: Similar as Fig. 5, but after running JAVELIN with all three light
    curves simultaneously.

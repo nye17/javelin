@@ -112,9 +112,9 @@ class LightCurve(object):
 
     def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
         fig  = plt.figure(figsize=(8, 2*self.nlc))
-        height = 0.90/self.nlc
+        height = 0.85/self.nlc
         for i in xrange(self.nlc) :
-            ax = fig.add_axes([0.05, 0.1+i*height, 0.9, height])
+            ax = fig.add_axes([0.10, 0.1+i*height, 0.85, height])
             mfc = cm.jet(1.*(i-1)/self.nlc)
             if set_pred :
                 ax.plot(self.jlist[i], self.mlist[i]+self.blist[i],
@@ -141,9 +141,10 @@ class LightCurve(object):
             ax.set_ylim(np.min(self.mlist[i])+self.blist[i]-np.min(self.elist[i]),
                         np.max(self.mlist[i])+self.blist[i]+np.max(self.elist[i]))
             if i == 0 :
-                ax.set_xlabel("JD")
+                ax.set_xlabel(r"$t$")
             else :
                 ax.set_xticklabels([])
+            ax.set_ylabel(r"$f$")
             leg = ax.legend(loc='best', fancybox=True)
             leg.get_frame().set_alpha(0.5)
         return(figure_handler(fig=fig, figout=figout, figext=figext))

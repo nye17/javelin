@@ -1,4 +1,4 @@
-#Last-modified: 15 Apr 2012 09:37:56 PM
+#Last-modified: 16 Apr 2012 05:25:01 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -677,7 +677,7 @@ class Cont_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(8, 3))
+        fig  = plt.figure(figsize=(8, 5))
         for i in xrange(self.ndim) :
             ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)) :
@@ -968,7 +968,7 @@ class Rmap_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(16, 2.*self.nlc))
+        fig  = plt.figure(figsize=(14, 2.8*self.nlc))
         for i in xrange(2) :
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)

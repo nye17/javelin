@@ -1,4 +1,4 @@
-#Last-modified: 16 Apr 2012 04:38:20 PM
+#Last-modified: 16 Apr 2012 06:04:19 PM
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError
@@ -133,8 +133,6 @@ def getMock(zydata, confile, topfile, doufile, set_plot=False, mode="test") :
             zydata_dou.save(doufile)
             zydata_top.save(topfile)
     if set_plot :
-        print("plot mock light curves for continuum and yelm line")
-        zydata_top.plot()
         print("plot mock light curves for continuum, yelm, and zing lines")
         zydata_dou.plot()
 
@@ -188,6 +186,18 @@ def fitLag(linfile, linfchain, conthpd, names=None,
         rmap.show_hist(bins=100, lagbinsize=lagbinsize, figext=figext)
     return(rmap.hpd)
 
+def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
+    if mode == "run" :
+        linfile = ".".join([linfile, "myrun"])
+    zydata = get_data(linfile, names=names)
+    rmap   = Rmap_Model(zydata)
+    if mode == "test" :
+        return(None)
+    else :
+        zypred = rmap.do_pred(linhpd[1,:])
+        zypred.names = names
+    if set_plot :
+        zypred.plot(set_pred=True, obs=zydata)
 
 if __name__ == "__main__":    
     import sys
@@ -226,16 +236,19 @@ if __name__ == "__main__":
     getMock(zydata, confile, topfile, doufile, set_plot=set_plot, mode=mode)
 
     # fit continuum
-    conthpd = fitCon(confile, confchain, threads=threads, set_plot=set_plot,
-            mode=mode)
+    conthpd = fitCon(confile, confchain, names=names[0:1],
+            threads=threads, set_plot=set_plot, mode=mode)
 
     # fit tophat
-    tophpd = fitLag(topfile, topfchain, conthpd, threads=threads,
-            set_plot=set_plot, mode=mode)
+    tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2],
+            threads=threads, set_plot=set_plot, mode=mode)
 
     # fit douhat
-    douhpd = fitLag(doufile, doufchain, conthpd, threads=threads,
-            set_plot=set_plot, mode=mode)
+    douhpd = fitLag(doufile, doufchain, conthpd, names=names,
+        threads=threads, set_plot=set_plot, mode=mode)
+
+    # show fit
+    showfit(douhpd, doufile, names=names, set_plot=set_plot, mode=mode)
 
 
 

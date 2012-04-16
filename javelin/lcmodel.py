@@ -1,4 +1,4 @@
-#Last-modified: 15 Apr 2012 05:57:19 PM
+#Last-modified: 15 Apr 2012 09:37:56 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -968,7 +968,7 @@ class Rmap_Model(object) :
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(14, 10.*self.nlc/3.0))
+        fig  = plt.figure(figsize=(16, 2.*self.nlc))
         for i in xrange(2) :
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)

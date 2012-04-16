@@ -82,8 +82,7 @@ try::
 
 
 .. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
-   :height: 600px
-   :width:  600 px
+   :scale: 80%
    :alt: output of python plotcov.py
    :align: right
 

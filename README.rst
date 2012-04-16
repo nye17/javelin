@@ -100,12 +100,19 @@ file in turn, by running::
 
     python demo.py show
 
-on the command line.
+on the command line, starting form the first figure.
 
-Variability Signals
--------------------
+.. image:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
+   :scale: 80%
+   :alt: first figure of demo
+   :align: right
 
-The first figure
+We assume the quasar variability on scales longer than a few days can be well
+described by a Damped random walk (DRW) model, and the emission line light
+curves are simply the lagged, smoothed, and scaled versions of the continuum
+light curve.
+
+
 
 
 

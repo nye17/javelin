@@ -97,9 +97,8 @@ Demonstration
 =============
 
 Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
-hosted by an imaginary `Loopdeloop galaxy
-<http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
-observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>` and Zing.  Every file and
+hosted by an imaginary `Loopdeloop galaxy <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
+observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing.  Every file and
 script referred to here can be found inside ``examples`` directory::
 
     $ cd javelin/examples

@@ -73,9 +73,8 @@ try::
 
 
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png :scale:
-80%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png 
+   :scale: 80%
 
    Fig. 1 : Illustration of four continuum models available in JAVELIN.
 
@@ -117,9 +116,8 @@ and three parameters for each emission line model, lag, width of the tophat
 smoothing function, and scale.
 
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png :scale:
-80%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png 
+   :scale: 80%
 
    Fig. 2: True light curves of loopdeeloop (from top to bottom: the Zing
    emission line, the Ylem emission line, and the continuum).
@@ -128,9 +126,8 @@ In practice, what we could observe are down-sampled versions of the true light
 curves, sometimes with seasonal gaps because of the conflict with our Sun's
 schedule, as shown by Fig. 3.
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png :scale:
-80%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png 
+   :scale: 80%
 
    Fig. 3: Same as Fig. 2, but observed versions.
 
@@ -142,9 +139,8 @@ parameters of the continuum light curve. Fig. 4 shows the posterior distribution
 of the two DRW parameters of the continuum variability as calculated from
 JAVELIN,
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png :scale:
-80%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png 
+   :scale: 80%
 
    Fig. 4: Posterior distributions of the DRW parameters.
 
@@ -160,9 +156,8 @@ derives the posterior distribution of the lag t, the tophat width w, and the
 scale factor s of the emission line, along with updated posteriors for the
 timescale tau and the amplitude sigma of the continuum, as shown in Fig. 5.
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png :scale:
-150%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png 
+   :scale: 150%
 
    Fig. 5: Posterior distributions of the emission line lag t, tophat width w,
    and the scale factor s for the Ylem light curve (bottom), with the top two
@@ -182,9 +177,8 @@ compare to the two line light curves! After another MCMC run, JAVELIN is able to
 eliminate the second peak at 180 days and solve the lags for both emission lines
 simultaneously, as shown in Fig. 6.
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png :scale:
-150%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png 
+   :scale: 150%
 
    Fig. 6: Similar as Fig. 5, but after running JAVELIN with all three light
    curves simultaneously.
@@ -197,9 +191,8 @@ the best-fit parameters? Fig. 7 compares the best-fit light curves and the
 observed ones shown earlier in Fig. 3. Apparently JAVELIN does a great job of
 recovering the true light curves (compare to Fig. 2).
 
-.. figure::
-http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
-:scale: 80%
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
+   :scale: 80%
 
    Fig. 7: Comparison between the simulated light curves as computed from the
    best-fit parameters, and the observed light curves.

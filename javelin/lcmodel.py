@@ -1,4 +1,4 @@
-#Last-modified: 16 Apr 2012 05:25:01 PM
+#Last-modified: 17 Apr 2012 06:01:35 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -771,6 +771,7 @@ class Rmap_Model(object) :
             self.npt      = zydata.npt
             self.cont_npt = zydata.nptlist[0]
             self.cont_cad = zydata.cont_cad
+            self.cont_std = zydata.cont_std
             self.rj       = zydata.rj
             self.jstart   = zydata.jstart
             self.jend     = zydata.jend

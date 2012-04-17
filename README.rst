@@ -1,6 +1,3 @@
-.. role:: raw-math(raw)
-    :format: latex html
-
 
 =======
 JAVELIN
@@ -325,12 +322,42 @@ Without exploring any further options, you can simply run::
 
 to start a MCMC analysis and the chain will be saved into "mychain0.dat" file.
 By default, the chain will go through 5000 iterations for burn-in period, and
-then another 5000 iterations for the actual chain. JAVELIN uses the kick-ass
-MCMC sampler wrote by 
+then another 5000 iterations for the actual chain. JAVELIN uses the `kick-ass
+MCMC sampler named emcee <http://danfm.ca/emcee/>`_ introduced by  `Dan
+Foreman-Mackey et al (2012) <http://arxiv.org/abs/1202.3665>`. ``emcee`` works
+by releasing numerous ``walkers`` at every possible corner of the parameter
+space, which then collaboratively sample the posterior probability
+distributions. The number of ``walkers``, the number of burn-in iterations, and
+the number of sampling iterations for each ``walker`` are specified by ``nwalker``
+(default: 100), ``nchain`` (default: 50), and ``nburn`` (default: 50),
+respectively. For examples, if you want to double the chain length of both
+burn-in and sampling periods (well, you do not want to do it right now)::
 
+    >>>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100, fchain="mychain0_long.dat")
 
+After sampling, you can check the 1D posterior distributions of tau and sigma::
 
+    >>>cont.show_hist(bins=100)
 
+which looks like Fig. 4.
+
+The output ``fchain`` is simply a two-column txt file with the first column
+log(sigma) and the second one log(tau), both natural logs.
+
+Olders chains can be reloaded for analysis by::
+
+    >>>cont.load_chain("mychain0.dat")
+
+and the highest posterior density (HPD) intervals can be retrieved by::
+
+    >>>conthpd = cont.hpd
+    >>>print(conthpd)
+    [[ 0.363  3.923]
+     [ 0.518  4.29 ]
+     [ 0.737  4.743]]
+
+which is a 3x2 array with the three elements of the first(second) column being
+the 18%, 50%, and 84% values for log sigma (log tau).
 
 
 

@@ -2,27 +2,33 @@
 ======= JAVELIN =======
 
 
-What is JAVELIN ===============
+What is JAVELIN 
+===============
 
 **JAVELIN** stands (reluctantly) for Just Another Version of Estimating Lags In
 Nuclei. As an updated version of SPEAR, it is also completely re-written in
 Python, providing much more flexibilities in both functionality and
 visualization.
 
-.. Caution:: JAVELIN is still an ongoing project that has not reached a full
-release version yet.
+.. Caution:: 
+
+    JAVELIN is still an ongoing project that has not reached a full
+    release version yet.
 
 
-Install JAVELIN ===============
+Install JAVELIN 
+===============
 
-Prerequisites -------------
+Prerequisites 
+-------------
 
 JAVELIN requires
 
-#. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90) #. `Python
-   <http://python.org>`_ (>2.5) #. `Numpy <http://numpy.org>`_ (>1.4) #. `Scipy
-   <http://scipy.org>`_ (>0.1) #. `Matplotlib
-   <http://matplotlib.sourceforge.net/>`_ (>1.0)
+#. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90) 
+#. `Python <http://python.org>`_ (>2.5) 
+#. `Numpy <http://numpy.org>`_ (>1.4) 
+#. `Scipy <http://scipy.org>`_ (>0.1) 
+#. `Matplotlib <http://matplotlib.sourceforge.net/>`_ (>1.0)
 
 We strongly recommend that you have ``Lapack`` and ``Atlas`` library installed
 in the system, although they are not necessary. It requires no extra effort to
@@ -30,7 +36,8 @@ install them as many systems either come with LAPACK and BLAS pre-installed
 (MAC), or have them conveniently in software repositories (Linux distributions).
 
 
-Installation ------------
+Installation 
+------------
 
 You can install JAVELIN by the standard Python package installation procedure::
 
@@ -56,7 +63,8 @@ you can check the list of available Fortran compilers in your system using::
 and you can find them in the ``Fortran compilers found:`` section of the output.
 
 
-Test Installation -----------------
+Test Installation 
+-----------------
 
 After installing JAVELIN, navigate into the ``examples`` directory::
 
@@ -83,7 +91,8 @@ which is exactly the Figure 1 in `Zu et al. (2012)
 
 
 
-Demonstration =============
+Demonstration 
+=============
 
 Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
 hosted by an imaginary `Loopdeloop galaxy
@@ -199,7 +208,8 @@ recovering the true light curves (compare to Fig. 2).
 
 
 
-Usage =====
+Usage 
+=====
 
 To use JAVELIN, it is useful to have some a priori knowledge of Python, but not
 necessary. Here we will walk you through the actual procedures outlined in the
@@ -207,7 +217,8 @@ last section. In this section, we will manipulate the files in two different
 terminals, one is the usual Unix command line marked by ``\$`` in the beginning,
 one is the Python terminal started with ``>>>``. 
 
-Reading Light Curves --------------------
+Reading Light Curves 
+--------------------
 
 Starting from the data files in the ``examples/dat`` directly::
 
@@ -221,8 +232,9 @@ current directory. If you do::
 
 to show the first 3 rows of the continuum light curve file ``con.dat``::
     
-    250.06252   10.93763    0.50000 260.06502   10.33037    0.50000 270.06752
-    10.70079    0.50000
+    250.06252   10.93763    0.50000 
+    260.06502   10.33037    0.50000
+    270.06752   10.70079    0.50000
 
 where the 1st, 2nd, and 3rd columns are *observing epoch*, *light curve value*,
 and *measurement uncertainty*, respectively. Since the basic data unit in
@@ -235,8 +247,8 @@ directory and do::
 so that you could call JAVELIN within current session of the Python terminal,
 and then do::
 
-    >>>from javelin.zylc import get_data >>>javdata1 = get_data(["con.dat",
-    "yelm.dat"], names=["Continuum", "Yelm"])
+    >>>from javelin.zylc import get_data 
+    >>>javdata1 = get_data(["con.dat", "yelm.dat"], names=["Continuum", "Yelm"])
 
 to load the continuum light curve ``con.dat`` and the Yelm light curve
 ``yelm.dat`` into a ``LightCurve`` object called ``javdata1``, with ``names`` as
@@ -262,13 +274,18 @@ continuum light curves and the second one be the line light curve. If the
 continuum light curve has 5 data points while the line light curve has 4, the
 data file should be like (texts after # are comments, not part of the file) ::
 
-    2                       # number of light curves, continuum first 5
-    # number of data points in the first light curve 461.5  22.48    0.36   #
-    each light curve entry consists of "epoch", "value", and  "uncertainty"
-    490.6  20.30    0.30 520.3  19.59    0.56 545.8  20.11    0.15 769.6  21.12
-    1.20 4                       # number of data points in the second light
-    curve 545.8   9.82    0.23 890.4  11.86    0.58 949.4  10.55    0.87 988.6
-    11.06    0.27    
+    2                       # number of light curves, continuum first 
+    5                       # number of data points in the first light curve 
+    461.5  22.48    0.36    # each light curve entry consists of "epoch", "value", and  "uncertainty"
+    490.6  20.30    0.30 
+    520.3  19.59    0.56 
+    545.8  20.11    0.15 
+    769.6  21.12    1.20 
+    4                       # number of data points in the second light curve 
+    545.8   9.82    0.23 
+    890.4  11.86    0.58 
+    949.4  10.55    0.87
+    988.6  11.06    0.27    
 
 To read the second type of files, simply do::
 
@@ -280,7 +297,8 @@ packing ``con.dat`` and ``yelm.dat`` together, ``javdata`` and ``javedata2`` are
 equivalent to each other. You can varify this by doing ``javdata2.plot()``.
 
 
-Fitting the Continuum ---------------------
+Fitting the Continuum 
+---------------------
 
 As shown in the last section, we need to fit the continuum frist, i.e., work
 with the continuum light curve alone to derive the posterior distributions of
@@ -299,11 +317,12 @@ After loading the data, we need to set up a continuum model. In JAVELIN the
 light curve models are described in the ``javelin.lcmodel`` module, for now we
 need to initiate the ``Cont_Model`` class::
 
-    >>>from javelin.lcmodel import Cont_Model >>>cont = Cont_Model(javdata3)
+    >>>from javelin.lcmodel import Cont_Model 
+    >>>cont = Cont_Model(javdata3)
 
 Without exploring any further options, you can simply run::
 
-    >>>>cont.do_mcmc(fchain="mychain0.dat")
+    >>>cont.do_mcmc(fchain="mychain0.dat")
 
 to start a MCMC analysis and the chain will be saved into "mychain0.dat" file.
 By default, the chain will go through 5000 iterations for burn-in period, and
@@ -318,7 +337,7 @@ the number of sampling iterations for each ``walker`` are specified by
 50), respectively. For examples, if you want to double the chain length of both
 burn-in and sampling periods (well, you do not want to do it right now)::
 
-    >>>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100,
+    >>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100,
     fchain="mychain0_long.dat")
 
 After sampling, you can check the 1D posterior distributions of tau and sigma::
@@ -336,8 +355,12 @@ Olders chains can be reloaded for analysis by::
 
 and the highest posterior density (HPD) intervals can be retrieved by::
 
-    >>>cont.get_hpd() >>>conthpd = cont.hpd >>>print(conthpd) [[ 0.363  3.923] [
-    0.518  4.29 ] [ 0.737  4.743]]
+    >>>cont.get_hpd() 
+    >>>conthpd = cont.hpd 
+    >>>print(conthpd) 
+    [[ 0.363  3.923]
+     [ 0.518  4.29 ] 
+     [ 0.737  4.743]]
 
 which is a 3x2 array with the three elements of the first(second) column being
 the 18%, 50%, and 84% values for log sigma (log tau). ``cont.hpd`` here is
@@ -354,7 +377,8 @@ simply the ``javdata1`` or the ``javdata2`` we created earlier. Also, we need to
 construct a model, this time a Continuum+Line model, which is called a
 ``Rmap_Model`` in JAVELIN::
 
-    >>>from javelin.lcmodel import Rmap_Model >>>rmap1 = Rmap_Model(javdata1)
+    >>>from javelin.lcmodel import Rmap_Model 
+    >>>rmap1 = Rmap_Model(javdata1)
 
 Remember that we need the results from fitting the continuum as priors on the
 DRW parameters in finding lags, ::
@@ -367,8 +391,7 @@ where ``conthpd`` is the HPD interval array we obtained from last subsection and
 There are several interesting optoins that you may want to tweak with for the
 MCMC sampler::
 
-    >>>rmap1.do_mcmc(conthpd=conthpd, lagtobaseline=0.3, laglimit='baseline',
-    nwalkers=100, nburn=100, nchain=100, threads=1, fchain="mychain1.dat")
+    >>>rmap1.do_mcmc(conthpd=conthpd, lagtobaseline=0.3, laglimit='baseline', nwalkers=100, nburn=100, nchain=100, threads=1, fchain="mychain1.dat")
 
 In particular, ``lagtobaseline`` indicates that a logarithmic prior is applied
 to logarithmically penalize lag values larger than ``lagtobaseline`` times the
@@ -381,8 +404,7 @@ first run with ``baseline``, you identify the possible ranges of lags are much
 smaller, for example, well within 100 and 200 days, you can narrow down the
 boundaries and rerun a finer MCMC search::
 
-    >>>rmap1.do_mcmc(conthpd=conthpd, fchain="mychain1_fine.dat",
-    laglimit=[[100, 200],])
+    >>>rmap1.do_mcmc(conthpd=conthpd, fchain="mychain1_fine.dat", laglimit=[[100, 200],])
 
 where ``laglimit`` is a list that is comprised of a single 2-element list
 because we have only one emission line here.
@@ -391,8 +413,7 @@ The ``emcee`` sampler is well paralleled, so if your system has multiple, say 2
 cores, you should run the above command with ``threads`` set to 2 to speed
 things up::
 
-    >>>rmap1.do_mcmc(conthpd=conthpd, fchain="mychain1_fine.dat",
-    laglimit=[[100, 200],], threads=2)
+    >>>rmap1.do_mcmc(conthpd=conthpd, fchain="mychain1_fine.dat", laglimit=[[100, 200],], threads=2)
 
 The other chain length related parameters are similar as in the continuum case.
 
@@ -437,8 +458,7 @@ Fitting the Continuum and two lines (Yelm and Zing)
 The extrapolation from using one emission line to using two is rather trivial.
 Read the light curves by::
 
-    >>>javdata4 = get_data(["con.dat", "yelm.dat", "zing.dat"],
-    names=["Continuum", "Yelm", "Zing"])
+    >>>javdata4 = get_data(["con.dat", "yelm.dat", "zing.dat"], names=["Continuum", "Yelm", "Zing"])
 
 , set the model by::
 
@@ -469,8 +489,9 @@ emission-line model fit::
    
 and the medians can be obtained by::
 
-    >>>par_best = rmap2hpd[1,:] >>>print(par_best) array([   0.592,    4.262,
-    127.169,    0.525,    1.024,  254.262,    0.564,   0.498])
+    >>>par_best = rmap2hpd[1,:] 
+    >>>print(par_best) 
+    array([ 0.592, 4.262, 127.169, 0.525, 1.024, 254.262, 0.564, 0.498])
 
 , which shows the median values for log(sigma), log(tau), lag_yelm, width_yelm,
 scale_yelm, lag_zing, width_zing, and scale_zing, respectively.

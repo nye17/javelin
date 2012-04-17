@@ -98,8 +98,10 @@ Demonstration
 
 Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
 hosted by an imaginary `Loopdeloop galaxy <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
-observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing.  Every file and
-script referred to here can be found inside ``examples`` directory::
+observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing. If you are
+already familiar with the `Zu et al. (2011) <http://arxiv.org/abs/1008.0641>`_
+paper, feel free to skip to the next section.  Every file and script referred to
+here can be found inside ``examples`` directory::
 
     $ cd javelin/examples
 
@@ -205,8 +207,126 @@ great job of recovering the true light curves (compare to Fig. 2).
 
 
 
+Usage
+=====
+
+To use JAVELIN, it is useful to have some a pirori knowledge of Python, but not
+necessary. Here we will walk you through the actual procedures outlined in the
+last section. In this section, we will manipulate the files in two different
+terminals, one is the usual Unix command line marked by ``\$`` in the beginning,
+one is the Python terminal started with ``>>>``. 
+
+Reading Light Curves
+--------------------
+
+Starting from the data files in the ``examples/dat`` directly::
+
+    $ cd javelin/examples/dat
+
+JAVELIN could work on two types of light curve files, the first one is the typical
+3-column file like ``con.dat``, ``yelm.dat``, and ``zing.dat`` in the current
+directory. If you do::
+
+    $ head -n 3 con.dat
+
+to show the first 3 rows of the continuum light curve file ``con.dat``::
+    
+    250.06252   10.93763    0.50000
+    260.06502   10.33037    0.50000
+    270.06752   10.70079    0.50000
+
+where the 1st, 2nd, and 3rd columns are *observing epoch*, *light curve value*,
+and *measurement uncertainty*, respectively. Since the basic data unit in JAVELIN  is
+a ``LightCurve`` object, you need to read the data files through a function
+into the ``LightCurve`` object. Open a Python terminal in the ``dat`` directory
+and do::
+
+    >>>import javelin
+
+so that you could call JAVELIN within current session of the Python terminal,
+and then do::
+
+    >>>from javelin.zylc import get_data
+    >>>javdata = get_data(["con.dat", "yelm.dat"], names=["Continuum", "Yelm"])
+
+to load the continuum light curve ``con.dat`` and the Yelm light curve
+``yelm.dat`` into a ``LightCurve`` object called ``javdata``, with ``names`` as
+"Continuum" and "Yelm". The brackets ``[]`` tell JAVELIN that the two light
+curves should be analyzed in one set, and if you want to check out the light
+curves in figures just run::
+
+    >>>javdata.plot()
+
+Note that in Python you have to keep the parentheses even no arguments are needed.
 
 
+The second type of file JAVELIN likes is
+a slight variant of the 3-column format, like ``loopdeloop_con.dat``,
+``loopdeloop_con_y.dat``, and ``loopdeloop_con_y_z.dat`` in the current
+directory. As suggested by the names of these files, since JAVELIN usually works
+on several light curves simultaneously, it is useful (at least to me) to keep
+different set of data files separated (similar to the brackets used in the
+reading of 3-column files). 
+
+Imagine you want to fit two light curves, the first one should always
+be the continuum light curves and the second one be the line light curve. If the
+continuum light curve has 5 data points while the line light curve has 4, the
+data file should be like (texts after # are comments, not part of the file) ::
+
+    2                       # number of light curves, continuum first
+    5                       # number of data points in the first light curve
+    461.5  22.48    0.36   # each light curve entry consists of "epoch", "value", and  "uncertainty"
+    490.6  20.30    0.30
+    520.3  19.59    0.56
+    545.8  20.11    0.15
+    769.6  21.12    1.20
+    4                       # number of data points in the second light curve
+    545.8   9.82    0.23
+    890.4  11.86    0.58
+    949.4  10.55    0.87
+    988.6  11.06    0.27    
+
+To read the second type of files, simply do::
+
+    >>>javdata2 = get_data("loopdeloop_con_y.dat", names=["Continuum", "Yelm"])
+
+Note right now there are only brakets from the ``names``, but a single string
+for the input file. Given ``loopdeloop_con_y.dat`` is just another version of
+packing ``con.dat`` and ``yelm.dat`` together, ``javdata`` and ``javedata2``
+are equivalent to each other. You can varify this by doing ``javdata2.plot()``.
+
+
+Fiting the Continuum
+--------------------
+
+As shown in the last section, we need to fit the continuum frist, i.e., work
+with the continuum light curve alone to derive the posterior distributions of
+DRW parameters. Since for now we only work on the continuum model, we can load
+the continuum light curve either by::
+
+    >>>javdata3 = get_data(["con.dat",], names=["Continuum",]) 
+
+or by::
+
+    >>>javdata3 = get_data("loopdeloop_con.dat", names=["Continuum",]) 
+
+Note the brakets are still needed even for loading a single light curve.
+
+After loading the data, we need to set up a continuum model. In JAVELIN the
+light curve models are described in the ``javelin.lcmodel`` module, for now we
+need to initiate the ``Cont_Model`` class::
+
+    >>>from javelin.lcmodel import Cont_Model
+    >>>cont = Cont_Model(javdata3)
+
+Without exploring any further options, you can simply run::
+
+    >>>>cont.do_mcmc(fchain="mychain0.dat")
+
+to start a MCMC analysis and the chain will be saved into "mychain0.dat" file.
+By default, the chain will go through 5000 iterations for burn-in period, and
+then another 5000 iterations for the actual chain. JAVELIN uses the kick-ass
+MCMC sampler wrote by 
 
 
 

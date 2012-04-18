@@ -367,7 +367,7 @@ to start a MCMC analysis and the chain will be saved into "mychain0.dat" file.
 By default, the chain will go through 5000 iterations for burn-in period, and
 then another 5000 iterations for the actual chain. JAVELIN uses the `kick-ass
 MCMC sampler named emcee <http://danfm.ca/emcee/>`_ introduced by  `Dan
-Foreman-Mackey et al (2012) <http://arxiv.org/abs/1202.3665>`. ``emcee`` works
+Foreman-Mackey et al (2012) <http://arxiv.org/abs/1202.3665>`_. ``emcee`` works
 by releasing numerous ``walkers`` at every possible corner of the parameter
 space, which then collaboratively sample the posterior probability
 distributions. The number of ``walkers``, the number of burn-in iterations, and

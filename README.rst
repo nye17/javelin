@@ -544,7 +544,7 @@ of the observed ones as shown in Fig. 7.::
 Citation
 --------
 
-You are welcome to use and modify the JAVELIN, however please acknowledge its
+You are welcome to use and modify JAVELIN, however please acknowledge its
 use either as is or with modifications with a citation to::
 
     Zu Y, Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80

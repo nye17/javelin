@@ -219,12 +219,54 @@ last section. In this section, we will manipulate the files in two different
 terminals, one is the usual Unix command line marked by ``\$`` in the beginning,
 one is the Python terminal started with ``>>>``. 
 
-Reading Light Curves 
---------------------
+
+Running JAVELIN is Easy
+-----------------------
+
+Lag determination can usually be done by JAVELIN within a few lines of codes.
 
 Starting from the data files in the ``examples/dat`` directly::
 
     $ cd javelin/examples/dat
+
+Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommened!),::
+
+    $ python
+    Python 2.7.2+ (default, Jan 20 2012, 23:05:38) 
+    [GCC 4.6.2] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> 
+
+and do ::
+
+    >>>from javelin.zylc import get_data
+    >>>from javelin.lcmodel import Cont_Model, Rmap_Model
+
+to load the necessary modules, then::
+
+    >>>c = get_data(["con.dat"]) 
+    >>>cmod = Cont_Model(c)
+    >>>cmod.do_mcmc()
+
+to fit the continuum data, then::
+
+    >>>cy = get_data(["con.dat", "yelm.dat"]) 
+    >>>cymod = Rmap_Model(cy)
+    >>>cymod.do_mcmc(conthpd=cmod.hpd)
+
+to fit the continuum+line data. The results can be shown by::
+
+    >>>cymod.show_hist()
+
+as the 1D posterior distributions of model parameters, including the lag (``t``).
+
+
+For the more patient users, now I will go through each step in detail, starting
+from the supported data files.
+
+Reading Light Curves 
+--------------------
+
 
 JAVELIN could work on two types of light curve files, the first one is the
 typical 3-column file like ``con.dat``, ``yelm.dat``, and ``zing.dat`` in the
@@ -242,12 +284,7 @@ where the 1st, 2nd, and 3rd columns are *observing epoch*, *light curve value*,
 and *measurement uncertainty*, respectively. Since the basic data unit in
 JAVELIN  is a ``LightCurve`` object, you need to read the data files through a
 function into the ``LightCurve`` object. Open a Python terminal in the ``dat``
-directory and do::
-
-    >>>import javelin
-
-so that you could call JAVELIN within current session of the Python terminal,
-and then do::
+directory and then do::
 
     >>>from javelin.zylc import get_data 
     >>>javdata1 = get_data(["con.dat", "yelm.dat"], names=["Continuum", "Yelm"])
@@ -339,8 +376,7 @@ the number of sampling iterations for each ``walker`` are specified by
 50), respectively. For examples, if you want to double the chain length of both
 burn-in and sampling periods (well, you do not want to do it right now)::
 
-    >>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100,
-    fchain="mychain0_long.dat")
+    >>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100, fchain="mychain0_long.dat")
 
 After sampling, you can check the 1D posterior distributions of tau and sigma::
 

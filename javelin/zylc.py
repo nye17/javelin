@@ -111,6 +111,27 @@ class LightCurve(object):
                 self.update_qlist(qlist)
 
     def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
+        """ Plot light curves.
+
+        Parameters
+        ----------
+        set_pred: bool, optional
+            True if the current light curve data are simulated or predicted from
+            javelin, rather than real data (default: False).
+
+        obs: bool, optional
+            The observed light curve data to be overplotted on the current light
+            curves, usually used when set_pred is True (default: None).
+
+        figout: str, optional
+            Output figure name (default: None).
+
+        figext: str, optional
+            Output figure extension, ``png``, ``eps``, or ``pdf``. Set to None
+            for drawing without saving to files (default: None)
+
+
+        """
         fig  = plt.figure(figsize=(8, 2*self.nlc))
         height = 0.85/self.nlc
         for i in xrange(self.nlc) :
@@ -149,7 +170,23 @@ class LightCurve(object):
             leg.get_frame().set_alpha(0.5)
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-    def plotdt(self, set_logdt=False, figout=None, figext=None, **params) :
+    def plotdt(self, set_logdt=False, figout=None, figext=None, **histparams) :
+        """ Plot the time interval distribution.
+
+        set_logdt: bool, optional
+            True if Delta t is in log (default: False)
+
+        figout: str, optional
+            Output figure name (default: None).
+
+        figext: str, optional
+            Output figure extension, ``png``, ``eps``, or ``pdf``. Set to None
+            for drawing without saving to files (default: None)
+
+        histparams: kargs, optional
+            Parameters for ax.hist.
+
+        """
         _np  = self.nptlist[0]
         _ndt = _np*(_np-1)/2
         dtarr = np.zeros(_ndt)
@@ -162,7 +199,7 @@ class LightCurve(object):
             dtarr = np.log10(dtarr)
         fig = plt.figure(figsize=(8, 8))
         ax  = fig.add_axes([0.1, 0.1, 0.85, 0.85])
-        ax.hist(dtarr, **params)
+        ax.hist(dtarr, **histparams)
         if set_logdt :
             ax.set_xlabel(r"$\log\;\Delta t$")
         else :
@@ -171,7 +208,16 @@ class LightCurve(object):
 
 
     def save(self, fname, set_overwrite=True):
-        """ save zydata into zylc file format.
+        """ Save current LightCurve into zylc file format.
+
+        Parameters
+        ----------
+        fname : str
+            Output file name.
+
+        set_overwrite: bool, optional
+            True to overwrite existing files (default: True).
+
         """
         try :
             f=open(fname, "r")
@@ -185,7 +231,16 @@ class LightCurve(object):
             writelc(self.zylclist, fname)
 
     def save_continuum(self, fname, set_overwrite=True):
-        """ save the continuum part of zydata into zylc file format.
+        """ Save the continuum part of LightCurve into zylc file format.
+
+        Parameters
+        ----------
+        fname : str
+            Output file name.
+
+        set_overwrite: bool, optional
+            True to overwrite existing files (default: True).
+
         """
         try :
             f=open(fname, "r")
@@ -199,13 +254,14 @@ class LightCurve(object):
             writelc([self.zylclist[0]], fname)
 
     def update_qlist(self, qlist_new):
-        """ update blist and mlist of the LightCurve object according to the 
+        """ Update blist and mlist of the LightCurve object according to the 
         newly acquired qlist values. 
 
         Parameters
         ----------
         qlist_new: list
             Best-fit light curve mean modulation factors.
+
         """
         for i in xrange(self.nlc):
             # recover original data when qlist=0
@@ -230,6 +286,7 @@ class LightCurve(object):
         -------
         blist: list
             list of light curve means.
+
         """
         blist = []
         for i in xrange(self.nlc):
@@ -239,6 +296,28 @@ class LightCurve(object):
         return(blist)
 
     def sorteddatalist(self, zylclist):
+        """ Sort the input lists by time epochs.
+
+        Parameters
+        ----------
+        zylclist: list of lists/ndarrays
+            List of light curves.
+
+        Returns
+        -------
+        jlist:
+            List of time ndarrays.
+
+        mlist:
+            List of flux/mag ndarrays.
+
+        elist:
+            List of error ndarrays.
+
+        ilist:
+            List of index ndarrays.
+
+        """
         jlist = []
         mlist = []
         elist = []
@@ -258,6 +337,23 @@ class LightCurve(object):
         return(jlist, mlist, elist, ilist)
         
     def combineddataarr(self):
+        """ Combine lists into ndarrays.
+
+        Returns
+        -------
+        jarr:
+            Sorted time ndarray.
+
+        marr:
+            Sorted tFlux/mag ndarray.
+
+        earr:
+            Sorted tError ndarray.
+
+        iarr:
+            Sorted tindex ndarray.
+
+        """
         jarr = np.empty(self.npt)
         marr = np.empty(self.npt)
         earr = np.empty(self.npt)

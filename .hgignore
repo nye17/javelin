@@ -6,11 +6,9 @@ syntax: glob
 *.so
 *.o
 dist/**
-doc/**
 build/**
 *.lprof
 *.bak
 *.ori
 *.orig
 *.mod
-zypy/zycosmo/EH_Transfer/*

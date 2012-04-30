@@ -1,12 +1,37 @@
 #!/usr/bin/env python
-# Do not add setuptools here; use setupegg.py instead. Nose still has problems running
-# tests inside of egg packages, so it is useful to be able to install without eggs as needed.
+
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
+import distutils
+import shutil
 import os, sys
 
+
+class MyClean(distutils.command.clean.clean):
+    '''
+    Subclass to remove any files created in an inplace build.
+
+    This subclasses distutils' clean because neither setuptools nor
+    numpy.distutils implements a clean command.
+
+    '''
+    def run(self):
+        distutils.command.clean.clean.run(self)
+        # Clean any build or dist directory
+        if os.path.isdir("build"):
+            shutil.rmtree("build", ignore_errors=True)
+        if os.path.isdir("dist"):
+            shutil.rmtree("dist", ignore_errors=True)
+
+
 config = Configuration('javelin',parent_package=None,top_path=None)
-dist = sys.argv[1]
+
+# finding sdist or bdist
+dist = "null"
+for arg in sys.argv :
+    if "dist" in arg :
+        dist = arg
+
 
 
 # ==============================
@@ -79,6 +104,10 @@ if __name__ == '__main__':
                 'Programming Language :: Fortran',
                 'Topic :: Scientific/Engineering',
                  ],
+            cmdclass = {
+                # Use our customized commands
+                'clean': MyClean,
+                },
             requires=['NumPy (>=1.3)',],
             long_description="""
             Ongoing effort to combine an integral GP module to the AGN variablility study.
@@ -91,4 +120,7 @@ if __name__ == '__main__':
                       ],
             **(config_dict)
             )
+
+
+
 

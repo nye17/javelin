@@ -551,7 +551,7 @@ scale_yelm, lag_zing, width_zing, and scale_zing, respectively.
 To make the story more completely, you can draw the best-fit light curves on top
 of the observed ones as shown in Fig. 7.::
     
-    >>>javdata_best =  rmap2.pred(par_best)
+    >>>javdata_best =  rmap2.do_pred(par_best)
     >>>javdata_best.plot(set_pred=True, obs=javdata4)
 
 

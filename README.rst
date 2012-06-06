@@ -537,7 +537,8 @@ between 100 and 300 days)::
 Now you can retrieve and print out the HPD intervals for the double
 emission-line model fit::
 
-    >>>rmap2.get_hpd() >>>rmap2hpd = rmap2.hpd
+    >>>rmap2.get_hpd() 
+    >>>rmap2hpd = rmap2.hpd
    
 and the medians can be obtained by::
 

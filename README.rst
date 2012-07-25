@@ -387,6 +387,13 @@ burn-in and sampling periods (well, you do not want to do it right now)::
 
     >>>cont.do_mcmc(nwalkers=100, nburn=100, nchain=100, fchain="mychain0_long.dat")
 
+The default values of ``nwalker``, ``nchain``, and ``nburn`` would usually be
+enough for fitting continuum or fitting continuum+one line, but the required
+values would rise quickly with the number of lines if you are doing fitting with
+muliple lines. So, whenever you find the MCMC chain does not converge well ---
+JAVELIN fail to find a unique combination of solutions but a broad lag distribution, 
+try to increase these three parameters.
+
 After sampling, you can check the 1D posterior distributions of tau and sigma::
 
     >>>cont.show_hist(bins=100)
@@ -565,6 +572,12 @@ list of light curves to ``get_data`` and constructing a new ``Rmap_Model``.
 The estimation will improve a lot if the additional emission lines have drastically
 different lags.  However, the estimation may also become worse if the additional light
 curves are intrinsically noisy or the uncertainties are overly underestimated.
+
+Another important issue in fitting more than two line is, as mentioned earlier
+in the manual, the default values for ``nwalkers``, ``nchain``, and ``nburn``
+won't be adequate because you have a rapid increase in the dimension of the
+problem. Therefore, try to increase these parameters whenever you find the MCMC
+does not converge well.
 
 
 Additional Information

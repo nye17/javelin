@@ -575,8 +575,8 @@ curves are intrinsically noisy or the uncertainties are overly underestimated.
 
 Another important issue in fitting more than two line is, as mentioned earlier
 in the manual, the default values for ``nwalkers``, ``nchain``, and ``nburn``
-won't be adequate because you have a rapid increase in the dimension of the
-problem. Therefore, try to increase these parameters whenever you find the MCMC
+may not be adequate because you have a rapid increase in the dimensionality of the
+problem. Therefore, try to increase the values of these parameters whenever you find the MCMC
 does not converge well.
 
 

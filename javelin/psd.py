@@ -15,7 +15,8 @@ def getMatplotlibVersion():
     try:
         import matplotlib
         version = matplotlib.__version__.replace('svn', '')
-        version = map(int, version.split("."))
+        version = matplotlib.__version__.replace('svn', '')
+        version = map(int, version.split(".")[:2])
     except ImportError:
         version = None
     return version
@@ -95,7 +96,7 @@ def psd(x, NFFT=256, Fs=2, detrend=detrend_none, window=window_hanning,
         raise ImportError(msg_matplotlib_ImportError)
 
     # check matplotlib version
-    elif MATPLOTLIB_VERSION >= [0, 98, 4]:
+    elif MATPLOTLIB_VERSION >= [0, 99]:
         new_matplotlib = True
     else:
         new_matplotlib = False

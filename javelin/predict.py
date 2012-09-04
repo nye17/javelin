@@ -276,7 +276,7 @@ class PredictSignal(object):
         covfunc_dict = get_covfunc_dict(covfunc, **covparams)
         if rank is "Full" :
             self.C  = FullRankCovariance(**covfunc_dict)
-        elif rank is "NearlyFull" :
+        elif (rank is "NearlyFull") or rank is ("NearlyFullRankCovariance") :
             self.C  = NearlyFullRankCovariance(**covfunc_dict)
         # observe zydata
         if zydata is None :

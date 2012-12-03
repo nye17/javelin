@@ -1,4 +1,4 @@
-#Last-modified: 17 Apr 2012 06:01:35 PM
+#Last-modified: 03 Dec 2012 05:45:22 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -479,7 +479,6 @@ class Cont_Model(object) :
             print("with logp  %10.5g "%-v_bst)
         return(p_bst, -v_bst)
 
-
     def do_grid1d(self, p_ini, fixed, rangex, dx, fgrid1d, **lnpostparams) :
         set_verbose = lnpostparams.pop("set_verbose", True)
         xs = np.arange(rangex[0], rangex[-1]+dx, dx)
@@ -591,7 +590,6 @@ class Cont_Model(object) :
         ax.set_ylabel(self.texs[retdict['posy']])
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-
     def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", 
             nwalkers=100, nburn=50, nchain=50,
             fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
@@ -649,7 +647,6 @@ class Cont_Model(object) :
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
-
 
     def get_hpd(self, set_verbose=True):
         """
@@ -728,13 +725,18 @@ class Cont_Model(object) :
     def restore_chain(self) :
         self.flatchain = np.copy(self.flatchain_whole)
 
+    def get_qlist(self, p_bst) :
+        """ get the linear responses.
+        """
+        self.qlist = lnpostfn_single_p(p_bst, self.zydata, self.covfunc,
+                uselognu=self.uselognu, rank="Full", set_retq=True)[4]
+
     def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
             set_overwrite=True) :
         """
         """
-        qlist = lnpostfn_single_p(p_bst, self.zydata, self.covfunc,
-                uselognu=self.uselognu, rank="Full", set_retq=True)[4]
-        self.zydata.update_qlist(qlist)
+        self.get_qlist(p_bst)
+        self.zydata.update_qlist(self.qlist)
         sigma, tau, nu = unpacksinglepar(p_bst, self.covfunc, uselognu=self.uselognu)
         lcmean=self.zydata.blist[0]
         P = PredictSignal(zydata=self.zydata, lcmean=lcmean,
@@ -1037,6 +1039,12 @@ class Rmap_Model(object) :
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
+
+    def get_qlist(self, p_bst):
+        self.qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
+                    set_threading=True, blocksize=10000,
+                    set_retq=True, set_verbose=False)[4]
+
     def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
@@ -1063,13 +1071,11 @@ class Rmap_Model(object) :
             Predicted light curves packaged as a LightCurve object.
 
         """
-        qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
-                    set_threading=True, blocksize=10000,
-                    set_retq=True, set_verbose=False)[4]
+        self.get_qlist(p_bst)
         sigma, tau, lags, wids, scales = unpackspearpar(p_bst,
                 self.zydata.nlc, hascontlag=True)
         # update qlist
-        self.zydata.update_qlist(qlist)
+        self.zydata.update_qlist(self.qlist)
         # initialize PredictRmap object
         P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
                 lags=lags, wids=wids, scales=scales)

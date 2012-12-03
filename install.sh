@@ -6,7 +6,7 @@ python setup.py clean
 
 if [ $name = "mitchell" ];then
     echo "mitchell"
-    python setup.py config_fc --fcompiler=intel install --prefix="~/local" sdist
+    python setup.py config_fc --fcompiler=intelem install --prefix="~/local" sdist
 #    python setup.py config_fc --fcompiler=gnu95 install --prefix="~/local" sdist
 elif [ $name = "Sing-Sing" ];then
     echo "sing-sing"

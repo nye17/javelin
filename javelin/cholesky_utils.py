@@ -1,9 +1,9 @@
-#Last-modified: 16 Jan 2012 05:55:45 PM
+#Last-modified: 19 Feb 2013 04:36:08 PM
 
 __all__ = ['cholesky', 'trisolve', 'chosolve', 'chodet', 'chosolve_from_tri', 'chodet_from_tri']
 
 import unittest
-from javelin.gp.linalg_utils import dpotrf_wrap, dtrsm_wrap
+from javelin.gp.linalg_utils import dpotrf_wrap, dpotrf2_wrap, dtrsm_wrap
 import numpy as np
 from numpy.testing import assert_equal,  assert_almost_equal, assert_array_equal
 
@@ -14,7 +14,7 @@ decomposition.
 
 
 def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
-    """
+    """ Cholesky into upper triangular matrix.
     U = cholesky(A, nugget=None])
 
     """
@@ -35,6 +35,27 @@ def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
     else:
         return(U, info)
 
+def cholesky2(A, nugget=None, inplace=False, raiseinfo=True):
+    """ Cholesky into lower triangular matrix.
+    L = cholesky2(A, nugget=None])
+
+    """
+    n = A.shape[0]
+    if inplace:
+        L=A
+    else:
+        L = A.copy('F')
+    if nugget is not None:
+        for i in xrange(n):
+            L[i,i] += nugget[i]
+    info = dpotrf2_wrap(L)
+    if raiseinfo:
+        if info>0:
+            raise RuntimeError("Matrix does not appear to be positive definite by row %i." % info)
+        else:
+            return(L)
+    else:
+        return(L, info)
 
 def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     """
@@ -58,7 +79,6 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     dtrsm_wrap(a=U,b=x,side='L',uplo=uplo,transa=transa,alpha=alpha)
     return(x)
 
-
 def chosolve_from_tri(U, b, nugget=None, inplace=False):
     """ 
         solve A   x =b given U where A = U^T U, by the following steps:
@@ -79,7 +99,6 @@ def chosolve(A, b, nugget=None, inplace=False):
     U = cholesky(A, nugget=nugget, inplace=inplace)
     x = chosolve_from_tri(U, b, nugget=nugget, inplace=inplace)
     return(x)
-
 
 def chodet_from_tri(U, nugget=None, retlog=True):
     """
@@ -126,6 +145,23 @@ class CholeskyTests(unittest.TestCase):
                      ])
         assert_almost_equal(U, B)
         assert_almost_equal(np.dot(U.T, U), A)
+
+    def testCholesky2_Decompose(self):
+        A = np.array([
+                      [25., -5., 10.], 
+                      [-5., 17., 10.],
+                      [10., 10., 62.],
+                     ])
+        L = cholesky2(A)
+        print "L"
+        print L
+        B = np.array([
+                      [ 5.,  0.,  0.], 
+                      [-1.,  4.,  0.],
+                      [ 2.,  3.,  7.],
+                     ])
+        assert_almost_equal(L, B)
+        assert_almost_equal(np.dot(L, L.T), A)
 
     def testCholesky_Solve(self):
         b = np.array([55., -19., 114.]).T

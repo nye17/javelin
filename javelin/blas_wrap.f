@@ -92,6 +92,32 @@ cf2py threadsafe
       return
       END
 
+      
+      SUBROUTINE dpotrf2_wrap(A,n,info)
+
+cf2py double precision dimension(n,n), intent(inplace) :: A
+cf2py integer depend(A),intent(hide)::n=shape(A,0)
+cf2py integer intent(out)::info
+cf2py threadsafe
+
+      DOUBLE PRECISION A(n,n)
+      INTEGER n, info, i, j
+
+      EXTERNAL DPOTRF
+! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
+      
+!     C <- cholesky(C)      
+      call DPOTRF( 'L', n, A, n, info )
+      do i=1,n
+        !do j=1,i-1
+        do j=i+1,n
+          A(i,j)=0.0D0
+        enddo
+      enddo
+      
+      return
+      END
+
 
       subroutine dchdc_wrap(a,p,work,piv,info)
 

@@ -58,7 +58,7 @@ class LightCurve(object):
         self.cont_mean     = np.mean(self.mlist[0])
         self.cont_mean_err = np.mean(self.elist[0])
         self.cont_std      = np.std(self.mlist[0])
-        self.cont_cad_arr  = self.jlist[0][1:] - self.jlist[0][:-1]  
+        self.cont_cad_arr  = self.jlist[0][1 :] - self.jlist[0][:-1]  
         self.cont_cad      = np.median(self.cont_cad_arr)
         self.cont_cad_min  = np.min(self.cont_cad_arr)
         self.cont_cad_max  = np.max(self.cont_cad_arr)
@@ -206,7 +206,6 @@ class LightCurve(object):
             ax.set_xlabel(r"$\Delta t$")
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-
     def save(self, fname, set_overwrite=True):
         """ Save current LightCurve into zylc file format.
 
@@ -277,7 +276,6 @@ class LightCurve(object):
         self.varr = self.earr*self.earr
         # update qlist
         self.qlist = qlist_new
-
 
     def meansubtraction(self):
         """ Subtract the mean.

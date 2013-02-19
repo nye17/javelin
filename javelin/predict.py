@@ -232,7 +232,6 @@ class PredictRmap(object):
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
 
-
 class PredictSignal(object):
     """
     Predict continuum light curves.
@@ -371,6 +370,111 @@ class PredictSignal(object):
                 mwant_list.append(mwant)
             return(mwant_list)
 
+class PredictSpear(object):
+    """ Generate continuum and line light curves without data constraint.
+    """
+    def __init__(self, sigma, tau, llags, lwids, lscales):
+        """
+        llags, lwids, lscales: properties of the line transfer functions.
+        """
+        self.sigma = sigma
+        self.tau   = tau
+        # number of light curves including continuum
+        self.nlc   = len(llags) + 1
+        self.lags  = np.zeros(self.nlc)
+        self.wids  = np.zeros(self.nlc)
+        self.scales = np.ones(self.nlc)
+        self.lags[1 :]   = llags
+        self.wids[1 :]   = lwids
+        self.scales[1 :] = lscales
+
+    def generate(self, zylclist) :
+        """ Presumably zylclist has our input j, and e, and the values in m
+        should be the mean.
+
+        Parameters
+        ----------
+        zylclist: list of 3-list light curves 
+            Pre-simulated light curves in zylclist, with the values in m-column as
+            the light curve mean.
+
+        Returns
+        -------
+        zylclist_new: list of 3-list light curves
+            Simulated light curves in zylclist.
+
+        """
+        nlc = len(zylclist)
+        if nlc != self.nlc :
+            raise RuntimeError("zylclist has unmatched nlc with input llags")
+        jlist = []
+        mlist = []
+        elist = []
+        ilist = []
+        nptlist = []
+        npt   = 0
+        for ilc, lclist in enumerate(zylclist):
+            if (len(lclist) == 3):
+                jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
+                if (np.min(msubarr) != np.max(msubarr)) : 
+                    print("WARNING: input zylclist has inequal m elements in "+
+                          "light curve %d, please make sure the m elements "+
+                          "are filled with the desired mean of the mock "+
+                          "light curves, now reset to zero"%ilc)
+                    msubarr = msubarr * 0.0
+                nptlc = len(jsubarr)
+                # sort the date, safety
+                p = jsubarr.argsort()
+                jlist.append(jsubarr[p])
+                mlist.append(msubarr[p])
+                elist.append(esubarr[p])
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+                npt += nptlc
+                nptlist.append(nptlc)
+        # collapse the list to one array
+        jarr, marr, earr, iarr = self._combineddataarr(npt, nptlist, jlist, mlist, elist, ilist)
+        # get covariance function
+        cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+        # FIXME 
+        # cholesky decomposed cmatrix.
+        zylclist_new = []
+        for ilc in xrange(nlc) :
+            m, v = self.mve_var(jlist[ilc], ilist[ilc])
+            # no covariance considered here
+            vcovmat = np.diag(v)
+            if (np.min(elist[ilc]) < 0.0):
+                raise RuntimeError("error for light curve %d should be either"+
+                        " 0 or postive"%ilc)
+            elif np.alltrue(elist[ilc]==0.0):
+                set_error_on_mocklc = False
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
+            else:
+                set_error_on_mocklc = True
+                ecovmat = np.diag(elist[ilc]*elist[ilc])
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) + multivariate_normal(np.zeros_like(m), ecovmat)
+            zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
+        return(zylclist_new)
+
+    def _combineddataarr(self, npt, nptlist, jlist, mlist, elist, ilist):
+        """ Combine lists into ndarrays, taken directly from zylc.LightCurve.
+
+        """
+        jarr = np.empty(npt)
+        marr = np.empty(npt)
+        earr = np.empty(npt)
+        iarr = np.empty(npt, dtype="int")
+        start = 0
+        for i, nptlc in enumerate(nptlist):
+            jarr[start:start+nptlc] = self.jlist[i]
+            marr[start:start+nptlc] = self.mlist[i]
+            earr[start:start+nptlc] = self.elist[i]
+            iarr[start:start+nptlc] = self.ilist[i]
+            start = start+nptlc
+        p = jarr.argsort()
+        return(jarr[p], marr[p], earr[p], iarr[p])
+
+
+
 
 def smooth(x,window_len=11,window='flat'):
     """smooth the data using a window with requested size.
@@ -423,8 +527,6 @@ def smooth(x,window_len=11,window='flat'):
     # chop off the wings to maintain array size before return
     return(y[window_len-1:-window_len+1])
 
-
-
 def mockme(zydata, covfunc="drw", rank="Full", mockname=None, shrinkerr=1.0, **covparams) :
     """ simulate a mock continuum light curve with the same sampling and error
     properties as the input data.
@@ -441,5 +543,3 @@ def mockme(zydata, covfunc="drw", rank="Full", mockname=None, shrinkerr=1.0, **c
         mockname = [zydata.names[0]+"_"+covfunc+"_mock"]
     zymock = LightCurve(zymock_list, names=[mockname,])
     return(zymock)
-    
-

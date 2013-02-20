@@ -435,22 +435,19 @@ class PredictSpear(object):
         jarr, marr, earr, iarr = self._combineddataarr(npt, nptlist, jlist, mlist, elist, ilist)
         # get covariance function
         cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
-        # cholesky decomposed cmatrix to L
-        L = cholesky2(cmatrix) # XXX without the error report.
+        # cholesky decomposed cmatrix to L, for which a C array is desired.
+        L = np.empty(cmatrix.shape, order='C')
+        L[:] = cholesky2(cmatrix) # XXX without the error report.
         # generate gaussian deviates y
         y = multivariate_normal(np.zeros(npt), np.identity(npt)) 
         # get x = L * y + u, where u is the mean of the light curve(s)
-        _x = np.dot(L, y) 
-        x = _x + marr
+        x = np.dot(L, y) + marr
         # generate errors 
         # the way to get around peppering zeros is to generate deviates with unity std and multiply to earr.
         e = earr * multivariate_normal(np.zeros(npt), np.identity(npt))  
         # add e 
         m = x + e 
-        m = m.flatten()
-        print m.shape
-        quit()
-        # XXX unpack the data
+        # unpack the data
         _jlist, _mlist, _elist = self._unpackdataarr(npt, nptlist, jarr, m, earr, iarr)
         zylclist_new = []
         for ilc in xrange(self.nlc) :

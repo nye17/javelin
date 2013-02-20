@@ -1,6 +1,6 @@
 from gp import Mean, Covariance, observe, Realization, GPutils
 from gp import NearlyFullRankCovariance, FullRankCovariance
-from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
+from cholesky_utils import cholesky, cholesky2, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from cov import get_covfunc_dict
@@ -157,7 +157,7 @@ class PredictRmap(object):
         ----------
         zylclist: list of 3-list light curves 
             Pre-simulated light curves in zylclist, with the values in m-column as
-            the light curve mean.
+            the light curve mean, and those in e-column as the designated errorbar.
 
         Returns
         -------
@@ -396,7 +396,7 @@ class PredictSpear(object):
         ----------
         zylclist: list of 3-list light curves 
             Pre-simulated light curves in zylclist, with the values in m-column as
-            the light curve mean.
+            the light curve mean, and those in e-column as the designated errorbar.
 
         Returns
         -------
@@ -435,24 +435,26 @@ class PredictSpear(object):
         jarr, marr, earr, iarr = self._combineddataarr(npt, nptlist, jlist, mlist, elist, ilist)
         # get covariance function
         cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
-        # FIXME 
-        # cholesky decomposed cmatrix.
+        # cholesky decomposed cmatrix to L
+        L = cholesky2(cmatrix) # XXX without the error report.
+        # generate gaussian deviates y
+        y = multivariate_normal(np.zeros(npt), np.identity(npt)) 
+        # get x = L * y + u, where u is the mean of the light curve(s)
+        _x = np.dot(L, y) 
+        x = _x + marr
+        # generate errors 
+        # the way to get around peppering zeros is to generate deviates with unity std and multiply to earr.
+        e = earr * multivariate_normal(np.zeros(npt), np.identity(npt))  
+        # add e 
+        m = x + e 
+        m = m.flatten()
+        print m.shape
+        quit()
+        # XXX unpack the data
+        _jlist, _mlist, _elist = self._unpackdataarr(npt, nptlist, jarr, m, earr, iarr)
         zylclist_new = []
-        for ilc in xrange(nlc) :
-            m, v = self.mve_var(jlist[ilc], ilist[ilc])
-            # no covariance considered here
-            vcovmat = np.diag(v)
-            if (np.min(elist[ilc]) < 0.0):
-                raise RuntimeError("error for light curve %d should be either"+
-                        " 0 or postive"%ilc)
-            elif np.alltrue(elist[ilc]==0.0):
-                set_error_on_mocklc = False
-                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
-            else:
-                set_error_on_mocklc = True
-                ecovmat = np.diag(elist[ilc]*elist[ilc])
-                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) + multivariate_normal(np.zeros_like(m), ecovmat)
-            zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
+        for ilc in xrange(self.nlc) :
+            zylclist_new.append([_jlist[ilc], _mlist[ilc], _elist[ilc]])
         return(zylclist_new)
 
     def _combineddataarr(self, npt, nptlist, jlist, mlist, elist, ilist):
@@ -465,13 +467,29 @@ class PredictSpear(object):
         iarr = np.empty(npt, dtype="int")
         start = 0
         for i, nptlc in enumerate(nptlist):
-            jarr[start:start+nptlc] = self.jlist[i]
-            marr[start:start+nptlc] = self.mlist[i]
-            earr[start:start+nptlc] = self.elist[i]
-            iarr[start:start+nptlc] = self.ilist[i]
+            jarr[start:start+nptlc] = jlist[i]
+            marr[start:start+nptlc] = mlist[i]
+            earr[start:start+nptlc] = elist[i]
+            iarr[start:start+nptlc] = ilist[i]
             start = start+nptlc
         p = jarr.argsort()
         return(jarr[p], marr[p], earr[p], iarr[p])
+
+    def _unpackdataarr(self, npt, nptlist, jarr, marr, earr, iarr):
+        """ to reverse _combineddataarr.
+        """
+        jlist = []
+        mlist = []
+        elist = []
+        for i in xrange(self.nlc) :
+            indxlc = (iarr == (i+1))
+            # print marr.shape
+            if np.sum(indxlc) != nptlist[i] :
+                raise RuntimeError("iarr and data number do not match.")
+            jlist.append(jarr[indxlc])
+            mlist.append(marr[indxlc])
+            elist.append(earr[indxlc])
+        return(jlist, mlist, elist)
 
 
 

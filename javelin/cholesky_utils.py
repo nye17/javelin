@@ -1,4 +1,4 @@
-#Last-modified: 19 Feb 2013 04:36:08 PM
+#Last-modified: 19 Feb 2013 10:10:06 PM
 
 __all__ = ['cholesky', 'trisolve', 'chosolve', 'chodet', 'chosolve_from_tri', 'chodet_from_tri']
 
@@ -15,6 +15,9 @@ decomposition.
 
 def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
     """ Cholesky into upper triangular matrix.
+
+    Note that U is a fortran-array.
+
     U = cholesky(A, nugget=None])
 
     """
@@ -38,6 +41,8 @@ def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
 def cholesky2(A, nugget=None, inplace=False, raiseinfo=True):
     """ Cholesky into lower triangular matrix.
     L = cholesky2(A, nugget=None])
+
+    Note that L is a fortran-array.
 
     """
     n = A.shape[0]

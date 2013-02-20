@@ -444,6 +444,7 @@ class PredictSpear(object):
         x = np.dot(L, y) + marr
         # generate errors 
         # the way to get around peppering zeros is to generate deviates with unity std and multiply to earr.
+        # XXX no covariance implemented here.
         e = earr * multivariate_normal(np.zeros(npt), np.identity(npt))  
         # add e 
         m = x + e 

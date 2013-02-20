@@ -313,7 +313,7 @@ class LightCurve(object):
             List of error ndarrays.
 
         ilist:
-            List of index ndarrays.
+            List of index ndarrays, starting at 1 rather than 0.
 
         """
         jlist = []

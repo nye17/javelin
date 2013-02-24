@@ -1,4 +1,4 @@
-! Last-modified: 24 Feb 2013 02:57:19 AM
+! Last-modified: 24 Feb 2013 05:35:12 PM
 
 MODULE spear_covfunc
 implicit none
@@ -227,6 +227,7 @@ INTEGER(kind=4) :: imax,imin
 imax = max(id1,id2)
 imin = min(id1,id2)
 
+
 if (imin .le. 0) then
     print*,"ids can not be smaller than 1"
     covij = -1.0D0
@@ -236,14 +237,24 @@ endif
 if (imin .eq. imax) then
     ! between two epochs of the same light curve
     if (imin .eq. 1) then
-        ! continuum auto
+        ! continuum auto: cov(c0i,c0j)
         covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
     else
-        ! line auto
+        ! line auto: cov(c1i,c1j) + cov(c1i, lj) + cov(li, c1j) + cov(li, lj)
+        ! XXX cov(c1i, lj) != cov(li, c1j) although the matrix is symmetric.
+        ! cov(c1i,c1j)
+        ! Note the ids are the same, so the only difference is between the jds.
+        covij = getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,scale_hidden,0.0D0,scale_hidden)
+        ! cov(c1i, lj)
+        ! Both (slag1, swid1, scale1) and (slag2, swid2, scale2) are
+        ! referring to the line properties.
         if(swid1 .le. 0.01D0) then
-            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
+            ! when swid is small, no convulted covariance is needed.
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,scale_hidden,slag2,scale2)
         else
-            covij = getcmat_lauto(id1,jd1,jd2,tau,slag1,swid1,scale1)
+            !covij = getcmat_lauto(id1,jd1,jd2,tau,slag1,swid1,scale1)
+            !TODO
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
         endif
     endif
 else
@@ -310,6 +321,9 @@ else if ((id2.eq.1).and.(id1.ge.2)) then
     thig = jd1-jd2-slag1+0.5D0*swid1
     emscale = dabs(scale1)
     twidth  = swid1
+    ! XXX the following code is inherited from the old spear code where the
+    ! DOUBLE_HAT mode used to call getcmat_lc from the cross-correlation
+    ! between two lines with one of their widths zero.
 else if((id1.ge.2).and.(id2.ge.2)) then
     if (swid1.le.0.01D0) then
         tlow = jd2-(jd1-slag1)-slag2-0.5D0*swid2

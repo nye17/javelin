@@ -1,4 +1,4 @@
-#Last-modified: 25 Feb 2013 02:01:10 AM
+#Last-modified: 25 Feb 2013 06:49:45 PM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -8,6 +8,7 @@ from javelin.threadpool import get_threadpool_size, map_noreturn
 from javelin.gp import isotropic_cov_funs 
 from javelin.gp.GPutils import regularize_array
 
+import unittest
 
 """ The SPEAR covariance function, wrapper for the Fortran version.
 """
@@ -88,3 +89,44 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False) :
     if symm:
         isotropic_cov_funs.symmetrize(C)
     return(C)
+
+
+class PmapCovTest(unittest.TestCase):
+    def testPmapCov(self):
+        # dont change
+        # not sorted
+        jdarr = np.array([0, 1, 0, 1]) # not sorted here.
+        idarr = np.array([1, 1, 2, 2])
+        # can be changed
+        tau   = 2.0
+        sigma = 2.0
+        # lags  = np.array([0.00, 0.25, 0.00])
+        lags  = np.array([0.00, 0.25, 0.00])
+        wids  = np.array([0.00, 0.00, 0.00])
+        scales= np.array([1.00, 3.00, 2.00])
+        C_true= np.empty((4,4), order="F")
+        # diagonal
+        C_true[0, 0] = 1.0
+        C_true[1, 1] = 1.0
+        C_true[2, 2] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2
+        C_true[3, 3] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2 
+        # off
+        C_true[0, 1] = C_true[1, 0] = np.exp(-1/tau)
+        C_true[0, 2] = C_true[2, 0] = scales[2] + scales[1]*np.exp(-lags[1]/tau)
+        C_true[0, 3] = C_true[3, 0] = scales[2]*np.exp(-1/tau) + scales[1]*np.exp(-(1.0-lags[1])/tau)
+        C_true[1, 2] = C_true[2, 1] = scales[2]*np.exp(-1/tau) + scales[1]*np.exp(-(1.0+lags[1])/tau)
+        C_true[1, 3] = C_true[3, 1] = scales[2] + scales[1]*np.exp(-lags[1]/tau)
+        C_true[2, 3] = C_true[3, 2] = scales[2]*scales[2]*np.exp(-1/tau) + scales[2]*scales[1]*np.exp(-(1.0-lags[1])/tau) + scales[2]*scales[1]*np.exp(-(1.0+lags[1])/tau) + scales[1]*scales[1]*np.exp(-1/tau)
+        C_true = C_true * sigma * sigma
+        print C_true
+        # calculate from spear
+        C = spear(jdarr, jdarr, idarr, idarr, sigma, tau, lags, wids, scales, symm=None, set_pmap=True)
+        print C
+        # self.assertEqual(C, C_true) 
+        self.assertTrue(np.allclose(C_true, C, rtol=1e-05, atol=1e-08))
+
+
+if __name__ == "__main__":
+    unittest.main()   
+
+

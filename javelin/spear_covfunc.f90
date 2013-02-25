@@ -1,4 +1,4 @@
-! Last-modified: 24 Feb 2013 05:35:12 PM
+! Last-modified: 25 Feb 2013 01:46:47 AM
 
 MODULE spear_covfunc
 implicit none
@@ -59,7 +59,7 @@ endif
 return
 END SUBROUTINE covmat_bit
 
-!FIXME
+!XXX to be test.
 SUBROUTINE covmatpmap_bit(mat,jd1,jd2,id1,id2,sigma,tau,slagarr,swidarr,scalearr,nx,ny,ncurve,cmin,cmax,symm)
 implicit none
 !f2py intent(inplace) mat
@@ -212,7 +212,7 @@ covij = sigma*sigma*covij
 return
 END SUBROUTINE covmatij
 
-!FIXME
+! pmap version of covmatij, now only allows two light curves.
 SUBROUTINE covmatpmapij(covij,id1,id2,jd1,jd2,sigma,tau,slag1,swid1,scale1,slag2,swid2,scale2,scale_hidden)
 implicit none
 REAL(kind=8),intent(out) :: covij
@@ -227,7 +227,7 @@ INTEGER(kind=4) :: imax,imin
 imax = max(id1,id2)
 imin = min(id1,id2)
 
-
+! here imin(imax) is either one or two.
 if (imin .le. 0) then
     print*,"ids can not be smaller than 1"
     covij = -1.0D0
@@ -237,48 +237,50 @@ endif
 if (imin .eq. imax) then
     ! between two epochs of the same light curve
     if (imin .eq. 1) then
-        ! continuum auto: cov(c0i,c0j)
+        ! id1 = id2 = 1
+        ! continuum band auto: cov(c0i,c0j)
         covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
     else
-        ! line auto: cov(c1i,c1j) + cov(c1i, lj) + cov(li, c1j) + cov(li, lj)
-        ! XXX cov(c1i, lj) != cov(li, c1j) although the matrix is symmetric.
-        ! cov(c1i,c1j)
-        ! Note the ids are the same, so the only difference is between the jds.
-        covij = getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,scale_hidden,0.0D0,scale_hidden)
-        ! cov(c1i, lj)
+        ! id1 = id2 = 2
+        ! line band auto: cov(c1i,c1j) + cov(c1i, lj) + cov(li, c1j) + cov(li, lj)
         ! Both (slag1, swid1, scale1) and (slag2, swid2, scale2) are
         ! referring to the line properties.
-        if(swid1 .le. 0.01D0) then
+        ! cov(c1i,c1j)
+        covij = getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,scale_hidden,0.0D0,scale_hidden)
+        ! cov(c1i, lj)
+        if(swid2 .le. 0.01D0) then
             ! when swid is small, no convulted covariance is needed.
             covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,scale_hidden,slag2,scale2)
         else
             !covij = getcmat_lauto(id1,jd1,jd2,tau,slag1,swid1,scale1)
-            !TODO
-            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,0.0D0,0.0D0,scale_hidden,slag2,swid2,scale2)
+        endif
+        ! cov(li, c1j)
+        ! similar to cov(cli, lj), simple mutation of indices.
+        if(swid1 .le. 0.01D0) then
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,0.0D0,scale_hidden)
+        else
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,0.0D0,0.0D0,scale_hidden)
+        endif
+        ! cov(li, lj)
+        if(swid1 .le. 0.01D0) then
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
+        else
+            covij = covij + getcmat_lauto(id1,jd1,jd2,tau,slag1,swid1,scale1)
         endif
     endif
 else
-    ! between two epochs of different light curves
-    if (imin .eq. 1) then
-        ! continuum and line cross
-        ! assume swid of the continuum is 0.0
-        twidth = max(swid1, swid2)
-        if (twidth .le. 0.01D0) then
-            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
-        else
-            covij = getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
-        endif
-    else 
-        ! line1 and line2 cross
-        twidth1 = swid1
-        twidth2 = swid2
-        if((twidth1.le.0.01D0).and.(twidth2.le.0.01D0)) then
-            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
-        else if((twidth1 .le. 0.01D0).or.(twidth2 .le. 0.01D0)) then
-            covij = getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
-        else
-            covij = getcmat_lcross(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
-        endif
+    ! between two epochs of different light curves 
+    !XXX now just the continuum and line bands
+    ! continuum band and line band cross cov(c0i, c1j) + cov(c0i, lj)
+    ! cov(c0i, c1j)
+    covij = getcmat_delta(id1,id2,jd1,jd2,tau,0.0D0,1.0D0,0.0D0,scale_hidden)
+    ! cov(c0i, lj)
+    twidth = max(swid1, swid2)
+    if (twidth .le. 0.01D0) then
+        covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
+    else
+        covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
     endif
 endif
 covij = sigma*sigma*covij
@@ -323,7 +325,8 @@ else if ((id2.eq.1).and.(id1.ge.2)) then
     twidth  = swid1
     ! XXX the following code is inherited from the old spear code where the
     ! DOUBLE_HAT mode used to call getcmat_lc from the cross-correlation
-    ! between two lines with one of their widths zero.
+    ! between two lines with one of their widths zero (DEPRECATED, but no harm
+    ! if kept).
 else if((id1.ge.2).and.(id2.ge.2)) then
     if (swid1.le.0.01D0) then
         tlow = jd2-(jd1-slag1)-slag2-0.5D0*swid2

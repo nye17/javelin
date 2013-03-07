@@ -1,4 +1,4 @@
-#Last-modified: 25 Feb 2013 06:49:45 PM
+#Last-modified: 25 Feb 2013 09:43:53 PM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -93,14 +93,12 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False) :
 
 class PmapCovTest(unittest.TestCase):
     def testPmapCov(self):
-        # dont change
-        # not sorted
+        # fixed
         jdarr = np.array([0, 1, 0, 1]) # not sorted here.
         idarr = np.array([1, 1, 2, 2])
-        # can be changed
-        tau   = 2.0
-        sigma = 2.0
-        # lags  = np.array([0.00, 0.25, 0.00])
+        # parameters, can be changed
+        tau   = 1.0
+        sigma = 1.0
         lags  = np.array([0.00, 0.25, 0.00])
         wids  = np.array([0.00, 0.00, 0.00])
         scales= np.array([1.00, 3.00, 2.00])
@@ -122,9 +120,8 @@ class PmapCovTest(unittest.TestCase):
         # calculate from spear
         C = spear(jdarr, jdarr, idarr, idarr, sigma, tau, lags, wids, scales, symm=None, set_pmap=True)
         print C
-        # self.assertEqual(C, C_true) 
+        # compare
         self.assertTrue(np.allclose(C_true, C, rtol=1e-05, atol=1e-08))
-
 
 if __name__ == "__main__":
     unittest.main()   

@@ -375,7 +375,7 @@ class PredictSpear(object):
     """
     def __init__(self, sigma, tau, llags, lwids, lscales):
         """
-        llags, lwids, lscales: properties of the line transfer functions.
+        llags, lwids, lscales: properties of the line transfer functions, all lists of length n_line.
         """
         self.sigma = sigma
         self.tau   = tau

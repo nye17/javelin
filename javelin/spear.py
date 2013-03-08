@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2013 04:24:14 PM
+#Last-modified: 08 Mar 2013 04:26:31 PM
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
@@ -36,7 +36,6 @@ def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=Fa
         idy = np.ones(nx, dtype="int", order="F")*idy
     # Figure out how to divide job up between threads (along y)
     n_threads = min(get_threadpool_size(), nx*ny/blocksize)
-    print n_threads
     if n_threads > 1 :
         if not symm:
             # divide ny evenly if x is not y

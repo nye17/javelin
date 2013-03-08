@@ -99,7 +99,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
 class PredictRmap(object):
     """ Predict light curves for spear.
     """
-    def __init__(self, zydata, **covparams):
+    def __init__(self, zydata, set_threading=False,  **covparams):
         """ PredictRmap object.
 
         Parameters
@@ -121,7 +121,7 @@ class PredictRmap(object):
         # variance
         self.vd = np.power(self.zydata.earr, 2.)
         # preparation
-        self._get_covmat()
+        self._get_covmat(set_threading=set_threading)
         self._get_cholesky()
         self._get_cplusninvdoty()
 
@@ -204,9 +204,11 @@ class PredictRmap(object):
             zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
         return(zylclist_new)
 
-    def _get_covmat(self) :
-        self.cmatrix = spear_threading(self.jd,self.jd,self.id,self.id, 
-                **self.covparams)
+    def _get_covmat(self, set_threading=False) :
+        if set_threading :
+            self.cmatrix = spear_threading(self.jd,self.jd,self.id,self.id, **self.covparams)
+        else :
+            self.cmatrix = spear(self.jd,self.jd,self.id,self.id, **self.covparams)
         print("covariance matrix calculated")
 
     def _get_cholesky(self) :
@@ -218,16 +220,22 @@ class PredictRmap(object):
         #    mag = cpnmatrix*x, so we solve this equation for x
         self.cplusninvdoty = chosolve_from_tri(self.U, self.md, nugget=None, inplace=False)
 
-    def _fastpredict(self, jw, iw) :
+    def _fastpredict(self, jw, iw, set_threading=False) :
         """ jw : jwant
             iw : iwant
         """
         mw = np.zeros_like(jw)
         vw = np.zeros_like(jw)
         for i, (jwant, iwant) in enumerate(zip(jw, iw)):
-            covar = spear_threading(jwant,self.jd,iwant,self.id, **self.covparams)
+            if set_threading :
+                covar = spear_threading(jwant,self.jd,iwant,self.id, **self.covparams)
+            else :
+                covar = spear(jwant,self.jd,iwant,self.id, **self.covparams)
             cplusninvdotcovar = chosolve_from_tri(self.U, covar.T, nugget=None, inplace=False)
-            vw[i] = spear_threading(jwant, jwant, iwant, iwant, **self.covparams)
+            if set_threading :
+                vw[i] = spear_threading(jwant, jwant, iwant, iwant, **self.covparams)
+            else :
+                vw[i] = spear(jwant, jwant, iwant, iwant, **self.covparams)
             mw[i] = np.dot(covar, self.cplusninvdoty)
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
@@ -388,7 +396,7 @@ class PredictSpear(object):
         self.wids[1 :]   = lwids
         self.scales[1 :] = lscales
 
-    def generate(self, zylclist) :
+    def generate(self, zylclist, set_threading=False) :
         """ Presumably zylclist has our input j, and e, and the values in m
         should be the mean.
 
@@ -434,7 +442,10 @@ class PredictSpear(object):
         # collapse the list to one array
         jarr, marr, earr, iarr = self._combineddataarr(npt, nptlist, jlist, mlist, elist, ilist)
         # get covariance function
-        cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+        if set_threading :
+            cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+        else :
+            cmatrix = spear(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
         # cholesky decomposed cmatrix to L, for which a C array is desired.
         L = np.empty(cmatrix.shape, order='C')
         L[:] = cholesky2(cmatrix) # XXX without the error report.

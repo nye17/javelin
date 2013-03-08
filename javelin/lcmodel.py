@@ -1,4 +1,4 @@
-#Last-modified: 03 Dec 2012 05:45:22 PM
+#Last-modified: 08 Mar 2013 04:33:03 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -1041,9 +1041,7 @@ class Rmap_Model(object) :
 
 
     def get_qlist(self, p_bst):
-        self.qlist = lnpostfn_spear_p(p_bst, self.zydata, conthpd=None, lagtobaseline=0.3, 
-                    set_threading=True, blocksize=10000,
-                    set_retq=True, set_verbose=False)[4]
+        self.qlist = lnpostfn_spear_p(p_bst, self.zydata, set_retq=True, set_verbose=False)[4]
 
     def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
         """ Calculate the predicted mean and variance of each light curve on a

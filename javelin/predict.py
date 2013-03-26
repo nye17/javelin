@@ -121,6 +121,7 @@ class PredictRmap(object):
         # variance
         self.vd = np.power(self.zydata.earr, 2.)
         # preparation
+        self.set_threading = set_threading
         self._get_covmat(set_threading=set_threading)
         self._get_cholesky()
         self._get_cplusninvdoty()
@@ -144,7 +145,7 @@ class PredictRmap(object):
         v: array_like
             Variance at simulated point.
         """
-        m, v = self._fastpredict(jwant, iwant)
+        m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
         for i in xrange(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
@@ -192,8 +193,7 @@ class PredictRmap(object):
             # no covariance considered here
             vcovmat = np.diag(v)
             if (np.min(elist[ilc]) < 0.0):
-                raise RuntimeError("error for light curve %d should be either"+
-                        " 0 or postive"%ilc)
+                raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
             elif np.alltrue(elist[ilc]==0.0):
                 set_error_on_mocklc = False
                 mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 

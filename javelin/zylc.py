@@ -122,6 +122,11 @@ class LightCurve(object):
             else :
                 self.update_qlist(qlist)
 
+    def __add__(self, other) :
+        _zylclist = self.zylclist + other.zylclist
+        _names    = self.names + other.names
+        return(LightCurve(_zylclist, names=_names))
+
     def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
         """ Plot light curves.
 

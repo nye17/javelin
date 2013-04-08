@@ -33,9 +33,21 @@ class LightCurve(object):
         if not isinstance(zylclist, list):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
         else :
-            self.zylclist = zylclist
+            self.zylclist = []
+            for i in xrange(len(zylclist)) :
+                if isinstance(zylclist[i], np.ndarray) :
+                    if zylclist[i].shape[-1] == 3 :
+                        # if each element is an ndarray, convert to a list of 1d arrays
+                        self.zylclist.append([zylclist[i][:,0], zylclist[i][:,1], zylclist[i][:,2]])
+                    else :
+                        raise RuntimeError("each single light curve array should have shape (#, 3)")
+                elif isinstance(zylclist[i], list) :
+                    if len(zylclist[i]) == 3 :
+                        self.zylclist.append([zylclist[i][0], zylclist[i][1], zylclist[i][2]])
+                    else :
+                        raise RuntimeError("each single light curve list should have 3 ndarrays")
         # number of light curves
-        self.nlc = len(zylclist)
+        self.nlc = len(self.zylclist)
         if names is None :
             # simply use the sequences as their names (start from 0)
             self.names = [str(i) for i in xrange(self.nlc)]
@@ -52,7 +64,7 @@ class LightCurve(object):
             self.issingle = False
 
         # jlist/mlist/elist/ilist: list of j, m, e, i of each individual light curve 
-        self.jlist, self.mlist, self.elist, self.ilist = self.sorteddatalist(zylclist)
+        self.jlist, self.mlist, self.elist, self.ilist = self.sorteddatalist(self.zylclist)
 
         # continuum properties, useful in determining continuum variability
         self.cont_mean     = np.mean(self.mlist[0])

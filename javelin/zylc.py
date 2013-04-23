@@ -1,4 +1,3 @@
-import numpy as np
 
 __all__ = ['LightCurve', 'get_data']
 
@@ -6,6 +5,8 @@ from lcio import readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from graphic import figure_handler
+import numpy as np
+
 
 """ load light curve files into a LightCurve object.
 """
@@ -126,6 +127,20 @@ class LightCurve(object):
         _zylclist = self.zylclist + other.zylclist
         _names    = self.names + other.names
         return(LightCurve(_zylclist, names=_names))
+    
+    def shift_time(self, timeoffset) :
+        """ shift the time axies by `timeoffset`
+        """
+        # fix jarr
+        self.jarr = self.jarr + timeoffset
+        self.jstart = self.jarr[0]
+        self.jend   = self.jarr[-1]
+        # fix jlist and zylclist
+        for i in xrange(self.nlc) :
+            # fix jlist
+            self.jlist[i] = self.jlist[i] + timeoffset
+            # fix the original zylclist
+            self.zylclist[i][0] = np.atleast_1d(zylclist[i][0]) + timeoffset
 
     def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
         """ Plot light curves.
@@ -387,7 +402,7 @@ class LightCurve(object):
         return(jarr[p], marr[p], earr[p], iarr[p])
 
 
-def get_data(lcfile, names=None, set_subtractmean=True):
+def get_data(lcfile, names=None, set_subtractmean=True, timeoffset=0.0):
     """ Read light curve file(s) into a LightCurve object.
 
     Parameters
@@ -401,6 +416,9 @@ def get_data(lcfile, names=None, set_subtractmean=True):
 
     set_subtractmean: bool
         Subtract mean in LightCurve if True (default: True).
+
+    timeoffset: float
+        The offset added to the time array in `lcfile`, so that t_final = t_orig + timeoffset
 
     Returns
     -------
@@ -427,6 +445,8 @@ def get_data(lcfile, names=None, set_subtractmean=True):
         for lcf in lcfile :
             lc = readlc_3c(lcf)
             lclist.append(lc[0])
+    for ilc in xrange(len(lclist)) :
+        lclist[ilc][0] = np.atleast_1d(lclist[ilc][0]) + timeoffset
     zydata = LightCurve(lclist, names=names, set_subtractmean=set_subtractmean)
     return(zydata)
 

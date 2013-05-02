@@ -15,7 +15,7 @@ visualization.
 .. Caution:: 
 
     JAVELIN is still an ongoing project that has not reached a full
-    release version yet.
+    release version yet. 
 
 
 Install JAVELIN 
@@ -42,6 +42,11 @@ JAVELIN will simply install a subset of the the ``Lapack`` source from scratch.
 
 Installation 
 ------------
+
+To download the package, you can either go to the ``Downloads`` tab for stable
+releases or directly pull the cutting-edge version using ``mercurial``. We
+strongly suggest you clone the repo for the latest version, as we are updating
+the package on a regular basis.
 
 You can install JAVELIN by the standard Python package installation procedure::
 

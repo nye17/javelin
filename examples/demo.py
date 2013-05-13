@@ -1,4 +1,4 @@
-#Last-modified: 16 Apr 2012 06:04:19 PM
+#Last-modified: 03 May 2013 02:52:15 PM
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError
@@ -143,7 +143,7 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
     zydata = get_data(confile, names=names)
     cont   = Cont_Model(zydata, "drw")
     if mode == "test" :
-        print(cont([np.log(2.), np.log(100)]))
+        print(cont([np.log(2.), np.log(100)], set_retq=True))
         return(None)
     elif mode == "show" :
         cont.load_chain(confchain)

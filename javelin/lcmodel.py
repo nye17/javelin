@@ -1,4 +1,4 @@
-#Last-modified: 08 Mar 2013 04:33:03 PM
+#Last-modified: 10 May 2013 04:36:37 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -34,7 +34,74 @@ lognu_floor   = np.log(nu_floor)
 nu_ceiling    = 1.e+3
 lognu_ceiling = np.log(nu_ceiling)   
 
+# generic functions
+def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
+    """ calculate the log-likelihoods from the upper triangle of cholesky
+    decomposition.
+    """
+    # log determinant of C^-1
+    detC_log = chodet_from_tri(U, retlog=True)
+    # solve for C a = y so that a = C^-1 y 
+    a = chosolve_from_tri(U, zydata.marr)
+    # solve for C b = L so that b = C^-1 L
+    b = chosolve_from_tri(U, zydata.larr)
+    # multiply L^T and b so that C_p = L^T C^-1 L = C_q^-1
+    C_p = np.dot(zydata.larrTr, b)
+    # for 'issingle is True' case, C_p is a scalar.
+    if np.isscalar(C_p):
+        # for single-mode, cholesky of C_p is simply squre-root of C_p
+        W = np.sqrt(C_p)
+        detCp_log = np.log(C_p.squeeze())
+        # for single-mode, simply devide L^T by C_p
+        d = zydata.larrTr/C_p
+    else:
+        # cholesky decompose C_p so that W^T W = C_p
+        W, info = cholesky(C_p, raiseinfo=False)
+        if info > 0 :
+            return(_exit_with_retval(zydata.nlc, set_retq, 
+                errmsg="Warning: non positive-definite covariance W", 
+                set_verbose=set_verbose))
+        detCp_log = chodet_from_tri(W, retlog=True)
+        # solve for C_p d = L^T so that d = C_p^-1 L^T = C_q L^T
+        d = chosolve_from_tri(W, zydata.larrTr)
+    # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y 
+    e = np.dot(b, np.dot(d, a))
+    # a minus e so that f = a - e = C^-1 y - C^-1 L C_p^-1 L^T C^-1 y
+    #              thus f = C_v^-1 y
+    f = a - e
+    # multiply y^T  and f so that h = y^T C_v^-1 y
+    h = np.dot(zydata.marr, f)
+    # chi2_PRH = -0.5*h
+    _chi2 = -0.5*h
+    # following Carl Rasmussen's term, a penalty on the complexity of 
+    # the model
+    _compl_pen = -0.5*detC_log
+    # penalty on blatant linear drift
+    _wmean_pen = -0.5*detCp_log
+    # final log_likelhood
+    _log_like = _chi2 + _compl_pen + _wmean_pen
+    if set_retq:
+        q = np.dot(d, a)
+        return(_log_like, _chi2, _compl_pen, _wmean_pen, q)
+    else:
+        return(_log_like)
 
+def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
+    """ Return failure elegantly.
+
+    When you are desperate and just want to leave the calculation with 
+    appropriate return values that quietly speak out your angst.
+    """
+    if errmsg is not None:
+        if set_verbose:
+            print("Exit: %s"%errmsg)
+    if set_retq :
+        return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, 
+              [my_neg_inf]*nlc)
+    else:
+        return(my_neg_inf)
+
+# Cont_Model
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     """ Unpack the physical parameters from input 1-d array for single mode.
     """
@@ -63,34 +130,6 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     else :
         nu = p[2]
     return(sigma, tau, nu)
-
-
-def unpackspearpar(p, nlc=None, hascontlag=False) :
-    """ Unpack the physical parameters from input 1-d array for spear mode.
-    """
-    if nlc is None:
-        # possible to figure out nlc from the size of p
-        nlc = (len(p) - 2)//3 + 1
-    sigma   = np.exp(p[0])
-    tau     = np.exp(p[1])
-    if hascontlag :
-        lags    = np.zeros(nlc)
-        wids    = np.zeros(nlc)
-        scales  =  np.ones(nlc)
-        for i in xrange(1, nlc) : 
-            lags[i]   = p[2+(i-1)*3]
-            wids[i]   = p[3+(i-1)*3]
-            scales[i] = p[4+(i-1)*3]
-        return(sigma, tau, lags, wids, scales)
-    else :
-        llags   = np.zeros(nlc-1)
-        lwids   = np.zeros(nlc-1)
-        lscales =  np.ones(nlc-1)
-        for i in xrange(nlc-1) : 
-            llags[i]   = p[2+i*3]
-            lwids[i]   = p[3+i*3]
-            lscales[i] = p[4+i*3]
-        return(sigma, tau, llags, lwids, lscales)
 
 def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True,
         conthpd=None, rank="Full",
@@ -197,205 +236,6 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
     # calculate RPH likelihood
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
     return(retval)
-
-
-def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
-        set_threading=False, blocksize=10000,
-        set_retq=False, set_verbose=False):
-    """ log-posterior function of p.
-
-        Parameters
-        ----------
-        p : array_like
-            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
-            ...]
-
-        zydata: LightCurve object
-            Light curve data.
-
-        conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
-            np.array([[log(sigma_low), log(tau_low)],
-                      [log(sigma_med), log(tau_med)],
-                      [log(sigma_hig), log(tau_hig)]])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
-        lagtobaseline: float, optional
-            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
-            logarithmic prior will be applied.
-
-        set_threading: bool, optional
-            True if you want threading in filling matrix. It conflicts with the
-            'threads' option in Rmap_Model.run_mcmc (default: False).
-
-        blocksize: int, optional
-            Maximum matrix block size in threading (default: 10000).
-
-        set_retq: bool, optional
-            Return the value(s) of q along with each component of the
-            log-likelihood if True (default: False).
-
-        set_verbose: bool, optional
-            True if you want verbosity (default: False).
-
-    """
-    # unpack the parameters from p
-    sigma, tau, llags, lwids, lscales = unpackspearpar(p, zydata.nlc,
-            hascontlag=False)
-    if set_retq :
-        vals = list(lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
-                set_retq=True, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize))
-    else :
-        logl = lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
-                set_retq=False, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize)
-    # conthpd is in natural log
-    if conthpd is not None : 
-        # for sigma
-        if p[0] < conthpd[1,0] :
-            prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
-        else :
-            prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
-        # for tau
-        if p[1] < conthpd[1,1] :
-            prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
-        else :
-            prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
-    else :
-        prior0 = 0.0
-        prior1 = 0.0
-    # for each lag
-    prior2 = 0.0
-    for i in xrange(zydata.nlc-1) :
-        if lagtobaseline < 1.0 :
-            if np.abs(llags[i]) > lagtobaseline*zydata.rj :
-                # penalize long lags when they are larger than 0.3 times the baseline,
-                # as it is too easy to fit the model with non-overlapping
-                # signals in the light curves.
-                prior2 += np.log(np.abs(llags[i])/(lagtobaseline*zydata.rj))
-        # penalize long lags to be impossible
-        if laglimit is not None :
-            if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0] :
-                # try not stack priors
-                prior2 = my_pos_inf
-    # add logp of all the priors
-    prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
-    if set_retq :
-        vals[0] = vals[0] + prior
-        vals.extend([prior0, prior1, prior2])
-        return(vals)
-    else :
-        logp = logl + prior
-        return(logp)
-
-def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
-        set_retq=False, set_verbose=False, 
-        set_threading=False, blocksize=10000):
-    """ Log-likelihood function.
-    """
-    if zydata.issingle:
-        raise UsageError("lnlikefn_spear does not work for single mode")
-    # impossible scenarios
-    if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<=0.0
-                   or np.max(np.abs(llags))>zydata.rj) :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: illegal input of parameters", 
-              set_verbose=set_verbose))
-    # fill in lags/wids/scales
-    lags  = np.zeros(zydata.nlc)
-    wids  = np.zeros(zydata.nlc)
-    scales = np.ones(zydata.nlc)
-    lags[1:]   = llags
-    wids[1:]   = lwids
-    scales[1:] = lscales
-    # calculate covariance matrix
-    if set_threading :
-        C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales, 
-              blocksize=blocksize)
-    else :
-        C = spear(zydata.jarr,zydata.jarr,
-              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales)
-    # decompose C inplace
-    U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
-    # handle exceptions here
-    if info > 0 :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: non positive-definite covariance C", 
-              set_verbose=set_verbose))
-    retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
-    return(retval)
-
-
-def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
-    """ calculate the log-likelihoods from the upper triangle of cholesky
-    decomposition.
-    """
-    # log determinant of C^-1
-    detC_log = chodet_from_tri(U, retlog=True)
-    # solve for C a = y so that a = C^-1 y 
-    a = chosolve_from_tri(U, zydata.marr)
-    # solve for C b = L so that b = C^-1 L
-    b = chosolve_from_tri(U, zydata.larr)
-    # multiply L^T and b so that C_p = L^T C^-1 L = C_q^-1
-    C_p = np.dot(zydata.larrTr, b)
-    # for 'issingle is True' case, C_p is a scalar.
-    if np.isscalar(C_p):
-        # for single-mode, cholesky of C_p is simply squre-root of C_p
-        W = np.sqrt(C_p)
-        detCp_log = np.log(C_p.squeeze())
-        # for single-mode, simply devide L^T by C_p
-        d = zydata.larrTr/C_p
-    else:
-        # cholesky decompose C_p so that W^T W = C_p
-        W, info = cholesky(C_p, raiseinfo=False)
-        if info > 0 :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                errmsg="Warning: non positive-definite covariance W", 
-                set_verbose=set_verbose))
-        detCp_log = chodet_from_tri(W, retlog=True)
-        # solve for C_p d = L^T so that d = C_p^-1 L^T = C_q L^T
-        d = chosolve_from_tri(W, zydata.larrTr)
-    # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y 
-    e = np.dot(b, np.dot(d, a))
-    # a minus e so that f = a - e = C^-1 y - C^-1 L C_p^-1 L^T C^-1 y
-    #              thus f = C_v^-1 y
-    f = a - e
-    # multiply y^T  and f so that h = y^T C_v^-1 y
-    h = np.dot(zydata.marr, f)
-    # chi2_PRH = -0.5*h
-    _chi2 = -0.5*h
-    # following Carl Rasmussen's term, a penalty on the complexity of 
-    # the model
-    _compl_pen = -0.5*detC_log
-    # penalty on blatant linear drift
-    _wmean_pen = -0.5*detCp_log
-    # final log_likelhood
-    _log_like = _chi2 + _compl_pen + _wmean_pen
-    if set_retq:
-        q = np.dot(d, a)
-        return(_log_like, _chi2, _compl_pen, _wmean_pen, q)
-    else:
-        return(_log_like)
-
-def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
-    """ Return failure elegantly.
-
-    When you are desperate and just want to leave the calculation with 
-    appropriate return values that quietly speak out your angst.
-    """
-    if errmsg is not None:
-        if set_verbose:
-            print("Exit: %s"%errmsg)
-    if set_retq :
-        return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, 
-              [my_neg_inf]*nlc)
-    else:
-        return(my_neg_inf)
-
 
 class Cont_Model(object) :
     def __init__(self, zydata=None, covfunc="drw") :
@@ -754,6 +594,163 @@ class Cont_Model(object) :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
+# Rmap_Model
+def unpackspearpar(p, nlc=None, hascontlag=False) :
+    """ Unpack the physical parameters from input 1-d array for spear mode.
+    """
+    if nlc is None:
+        # possible to figure out nlc from the size of p
+        nlc = (len(p) - 2)//3 + 1
+    sigma   = np.exp(p[0])
+    tau     = np.exp(p[1])
+    if hascontlag :
+        lags    = np.zeros(nlc)
+        wids    = np.zeros(nlc)
+        scales  =  np.ones(nlc)
+        for i in xrange(1, nlc) : 
+            lags[i]   = p[2+(i-1)*3]
+            wids[i]   = p[3+(i-1)*3]
+            scales[i] = p[4+(i-1)*3]
+        return(sigma, tau, lags, wids, scales)
+    else :
+        llags   = np.zeros(nlc-1)
+        lwids   = np.zeros(nlc-1)
+        lscales =  np.ones(nlc-1)
+        for i in xrange(nlc-1) : 
+            llags[i]   = p[2+i*3]
+            lwids[i]   = p[3+i*3]
+            lscales[i] = p[4+i*3]
+        return(sigma, tau, llags, lwids, lscales)
+
+def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
+        set_threading=False, blocksize=10000,
+        set_retq=False, set_verbose=False):
+    """ log-posterior function of p.
+
+        Parameters
+        ----------
+        p : array_like
+            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
+            ...]
+
+        zydata: LightCurve object
+            Light curve data.
+
+        conthpd: ndarray, optional
+            Priors on sigma and tau as an ndarray with shape (3, 2), 
+            np.array([[log(sigma_low), log(tau_low)],
+                      [log(sigma_med), log(tau_med)],
+                      [log(sigma_hig), log(tau_hig)]])
+            where 'low', 'med', and 'hig' are defined as the 68% confidence
+            limits around the median. conthpd usually comes in as an attribute
+            of the DRW_Model object DRW_Model.hpd (default: None).
+
+        lagtobaseline: float, optional
+            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+            logarithmic prior will be applied.
+
+        set_threading: bool, optional
+            True if you want threading in filling matrix. It conflicts with the
+            'threads' option in Rmap_Model.run_mcmc (default: False).
+
+        blocksize: int, optional
+            Maximum matrix block size in threading (default: 10000).
+
+        set_retq: bool, optional
+            Return the value(s) of q along with each component of the
+            log-likelihood if True (default: False).
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: False).
+
+    """
+    # unpack the parameters from p
+    sigma, tau, llags, lwids, lscales = unpackspearpar(p, zydata.nlc,
+            hascontlag=False)
+    if set_retq :
+        vals = list(lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
+                set_retq=True, set_verbose=set_verbose,
+                set_threading=set_threading, blocksize=blocksize))
+    else :
+        logl = lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
+                set_retq=False, set_verbose=set_verbose,
+                set_threading=set_threading, blocksize=blocksize)
+    # conthpd is in natural log
+    if conthpd is not None : 
+        # for sigma
+        if p[0] < conthpd[1,0] :
+            prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
+        else :
+            prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+        # for tau
+        if p[1] < conthpd[1,1] :
+            prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+        else :
+            prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+    else :
+        prior0 = 0.0
+        prior1 = 0.0
+    # for each lag
+    prior2 = 0.0
+    for i in xrange(zydata.nlc-1) :
+        if lagtobaseline < 1.0 :
+            if np.abs(llags[i]) > lagtobaseline*zydata.rj :
+                # penalize long lags when they are larger than 0.3 times the baseline,
+                # as it is too easy to fit the model with non-overlapping
+                # signals in the light curves.
+                prior2 += np.log(np.abs(llags[i])/(lagtobaseline*zydata.rj))
+        # penalize long lags to be impossible
+        if laglimit is not None :
+            if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0] :
+                # try not stack priors
+                prior2 = my_pos_inf
+    # add logp of all the priors
+    prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
+    if set_retq :
+        vals[0] = vals[0] + prior
+        vals.extend([prior0, prior1, prior2])
+        return(vals)
+    else :
+        logp = logl + prior
+        return(logp)
+
+def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
+        set_retq=False, set_verbose=False, 
+        set_threading=False, blocksize=10000):
+    """ Log-likelihood function.
+    """
+    if zydata.issingle:
+        raise UsageError("lnlikefn_spear does not work for single mode")
+    # impossible scenarios
+    if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<=0.0
+                   or np.max(np.abs(llags))>zydata.rj) :
+       return(_exit_with_retval(zydata.nlc, set_retq, 
+              errmsg="Warning: illegal input of parameters", 
+              set_verbose=set_verbose))
+    # fill in lags/wids/scales
+    lags  = np.zeros(zydata.nlc)
+    wids  = np.zeros(zydata.nlc)
+    scales = np.ones(zydata.nlc)
+    lags[1:]   = llags
+    wids[1:]   = lwids
+    scales[1:] = lscales
+    # calculate covariance matrix
+    if set_threading :
+        C = spear_threading(zydata.jarr,zydata.jarr,
+              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales, 
+              blocksize=blocksize)
+    else :
+        C = spear(zydata.jarr,zydata.jarr,
+              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales)
+    # decompose C inplace
+    U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
+    # handle exceptions here
+    if info > 0 :
+       return(_exit_with_retval(zydata.nlc, set_retq, 
+              errmsg="Warning: non positive-definite covariance C", 
+              set_verbose=set_verbose))
+    retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
+    return(retval)
 
 class Rmap_Model(object) :
     def __init__(self, zydata=None) :

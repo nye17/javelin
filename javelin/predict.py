@@ -378,6 +378,7 @@ class PredictSignal(object):
                 mwant_list.append(mwant)
             return(mwant_list)
 
+# TODO try to tweak it so that it could also predict for Pmap and SPmap models.
 class PredictSpear(object):
     """ Generate continuum and line light curves without data constraint.
     """
@@ -499,9 +500,6 @@ class PredictSpear(object):
             mlist.append(marr[indxlc])
             elist.append(earr[indxlc])
         return(jlist, mlist, elist)
-
-
-
 
 def smooth(x,window_len=11,window='flat'):
     """smooth the data using a window with requested size.

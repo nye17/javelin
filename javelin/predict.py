@@ -382,9 +382,13 @@ class PredictSignal(object):
 class PredictSpear(object):
     """ Generate continuum and line light curves without data constraint.
     """
-    def __init__(self, sigma, tau, llags, lwids, lscales):
+    def __init__(self, sigma, tau, llags, lwids, lscales, spearmode="Rmap"):
         """
         llags, lwids, lscales: properties of the line transfer functions, all lists of length n_line.
+
+        if spearmode is "Rmap" , the transfer functions have nline elmements.
+        if spearmode is "Pmap" , the transfer functions have     2 elmements, first for the line, second for the continuum under line band with lag=0 and width=0.
+        if spearmode is "SPmap", the transfer functions have     1 elmement . 
         """
         self.sigma = sigma
         self.tau   = tau
@@ -396,6 +400,18 @@ class PredictSpear(object):
         self.lags[1 :]   = llags
         self.wids[1 :]   = lwids
         self.scales[1 :] = lscales
+        # mode, sanity checks on array sizes.
+        self.spearmode = spearmode
+        if self.spearmode == "Rmap" :
+            self.nlc_obs = self.nlc
+        elif self.spearmode == "Pmap" :
+            self.nlc_obs = 2
+            if self.nlc != 3 :
+                raise RuntimeError("Pmap mode expects 2 elements in each transfer function array")
+        elif self.spearmode == "SPmap" :
+            self.nlc_obs = 1
+            if self.nlc != 2 :
+                raise RuntimeError("SPmap mode expects 1 elements in each transfer function array")
 
     def generate(self, zylclist, set_threading=False) :
         """ Presumably zylclist has our input j, and e, and the values in m
@@ -413,9 +429,9 @@ class PredictSpear(object):
             Simulated light curves in zylclist.
 
         """
-        nlc = len(zylclist)
-        if nlc != self.nlc :
-            raise RuntimeError("zylclist has unmatched nlc with input llags")
+        nlc_obs = len(zylclist)
+        if nlc_obs != self.nlc_obs :
+            raise RuntimeError("zylclist has unmatched nlc_obs with spearmode %s" % self.spearmode)
         jlist = []
         mlist = []
         elist = []
@@ -437,16 +453,21 @@ class PredictSpear(object):
                 jlist.append(jsubarr[p])
                 mlist.append(msubarr[p])
                 elist.append(esubarr[p])
-                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1) # again, starting at 1.
                 npt += nptlc
                 nptlist.append(nptlc)
         # collapse the list to one array
         jarr, marr, earr, iarr = self._combineddataarr(npt, nptlist, jlist, mlist, elist, ilist)
         # get covariance function
         if set_threading :
-            cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+            if self.spearmode == "Rmap" :
+                cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+            elif self.spearmode == "Pmap" :
+                # TODO
+                pass
         else :
-            cmatrix = spear(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+            if self.spearmode == "Rmap" :
+                cmatrix = spear(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
         # cholesky decomposed cmatrix to L, for which a C array is desired.
         L = np.empty(cmatrix.shape, order='C')
         L[:] = cholesky2(cmatrix) # XXX without the error report.
@@ -463,7 +484,7 @@ class PredictSpear(object):
         # unpack the data
         _jlist, _mlist, _elist = self._unpackdataarr(npt, nptlist, jarr, m, earr, iarr)
         zylclist_new = []
-        for ilc in xrange(self.nlc) :
+        for ilc in xrange(self.nlc_obs) :
             zylclist_new.append([_jlist[ilc], _mlist[ilc], _elist[ilc]])
         return(zylclist_new)
 

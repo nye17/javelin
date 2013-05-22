@@ -378,7 +378,6 @@ class PredictSignal(object):
                 mwant_list.append(mwant)
             return(mwant_list)
 
-# TODO try to tweak it so that it could also predict for Pmap and SPmap models.
 class PredictSpear(object):
     """ Generate continuum and line light curves without data constraint.
     """
@@ -442,10 +441,9 @@ class PredictSpear(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) : 
-                    print("WARNING: input zylclist has inequal m elements in "+
-                          "light curve %d, please make sure the m elements "+
-                          "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                    print("WARNING: input zylclist has inequal m elements in light curve %d," +
+                           "please make sure the m elements are filled with the desired mean" +
+                           "of the mock light curves, now reset to zero"%ilc)
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -461,13 +459,18 @@ class PredictSpear(object):
         # get covariance function
         if set_threading :
             if self.spearmode == "Rmap" :
-                cmatrix = spear_threading(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+                cmatrix = spear_threading(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=False)
             elif self.spearmode == "Pmap" :
-                # TODO
-                pass
+                cmatrix = spear_threading(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
+            elif self.spearmode == "SPmap" :
+                cmatrix = spear_threading(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True) 
         else :
             if self.spearmode == "Rmap" :
-                cmatrix = spear(jarr, jarr, iarr, iarr, self.sigma, self.tau, self.lags, self.wids, self.scales)
+                cmatrix = spear(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=False)
+            elif self.spearmode == "Pmap" :
+                cmatrix = spear(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
+            elif self.spearmode == "SPmap" :
+                cmatrix = spear(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True) 
         # cholesky decomposed cmatrix to L, for which a C array is desired.
         L = np.empty(cmatrix.shape, order='C')
         L[:] = cholesky2(cmatrix) # XXX without the error report.
@@ -512,7 +515,7 @@ class PredictSpear(object):
         jlist = []
         mlist = []
         elist = []
-        for i in xrange(self.nlc) :
+        for i in xrange(self.nlc_obs) :
             indxlc = (iarr == (i+1))
             # print marr.shape
             if np.sum(indxlc) != nptlist[i] :
@@ -589,3 +592,47 @@ def mockme(zydata, covfunc="drw", rank="Full", mockname=None, shrinkerr=1.0, **c
         mockname = [zydata.names[0]+"_"+covfunc+"_mock"]
     zymock = LightCurve(zymock_list, names=[mockname,])
     return(zymock)
+
+if __name__ == "__main__":
+    # testing PredictSpear.
+    sigma = 2.0
+    tau   = 40.0
+    if True :
+        spearmode = "Rmap"
+        llags   = [ 20]
+        lwids   = [  3]
+        lscales = [1.0]
+        ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode=spearmode)
+        t = np.arange(180)
+        m = t * 0 + 10.0
+        e = m * 0.01
+        zylclist = [[t, m, e], [t, m, e]]
+        zylclist_new = ps.generate(zylclist)
+        zymock = LightCurve(zylclist_new)
+        zymock.plot()
+    if False :
+        spearmode = "Pmap"
+        llags   = [ 20, 0.0]
+        lwids   = [  3, 0.0]
+        lscales = [1.0, 1.0]
+        ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode=spearmode)
+        t = np.arange(180)
+        m = t * 0 + 10.0
+        e = m * 0.01
+        zylclist = [[t, m, e], [t, m, e]]
+        zylclist_new = ps.generate(zylclist)
+        zymock = LightCurve(zylclist_new)
+        zymock.plot()
+    if False :
+        spearmode = "SPmap"
+        llags   = [ 20]
+        lwids   = [  3]
+        lscales = [0.5]
+        ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode=spearmode)
+        t = np.arange(180)
+        m = t * 0 + 10.0
+        e = m * 0.01
+        zylclist = [[t, m, e]]
+        zylclist_new = ps.generate(zylclist)
+        zymock = LightCurve(zylclist_new)
+        zymock.plot()

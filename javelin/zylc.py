@@ -133,6 +133,14 @@ class LightCurve(object):
         _names    = [self.names[0],]
         return(LightCurve(_zylclist, names=_names))
 
+    def split(self) :
+        eggs = []
+        for i in xrange(self.nlc) :
+            _zylclist = [self.zylclist[i],]
+            _names    = [self.names[i],]
+            eggs.append(LightCurve(_zylclist, names=_names))
+        return(eggs)
+
     def shift_time(self, timeoffset) :
         """ shift the time axies by `timeoffset`
         """

@@ -127,7 +127,12 @@ class LightCurve(object):
         _zylclist = self.zylclist + other.zylclist
         _names    = self.names + other.names
         return(LightCurve(_zylclist, names=_names))
-    
+
+    def shed_continuum(self) :
+        _zylclist = [self.zylclist[0],]
+        _names    = [self.names[0],]
+        return(LightCurve(_zylclist, names=_names))
+
     def shift_time(self, timeoffset) :
         """ shift the time axies by `timeoffset`
         """

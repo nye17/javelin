@@ -597,7 +597,7 @@ Citation
 You are welcome to use and modify JAVELIN, however please acknowledge its
 use either as is or with modifications with a citation to
 
-`Zu Y, Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
+`Zu, Y., Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
 for spectroscopic reverberation mapping, and to
 

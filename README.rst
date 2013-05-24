@@ -595,13 +595,13 @@ Citation
 --------
 
 You are welcome to use and modify JAVELIN, however please acknowledge its
-use either as is or with modifications with a citation to::
+use either as is or with modifications with a citation to
 
-    `Zu Y, Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
+`Zu Y, Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
-for spectroscopic reverberation mapping, and::
+for spectroscopic reverberation mapping, and to
 
-    `Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
 
 for quasar optical variability studies.
 

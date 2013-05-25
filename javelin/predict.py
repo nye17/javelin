@@ -387,7 +387,7 @@ class PredictSpear(object):
 
         if spearmode is "Rmap" , the transfer functions have nline elmements.
         if spearmode is "Pmap" , the transfer functions have     2 elmements, first for the line, second for the continuum under line band with lag=0 and width=0.
-        if spearmode is "SPmap", the transfer functions have     1 elmement . 
+        if spearmode is "SPmap", the transfer functions have     2 elmement, first for the line, second with lag=0 and width=0.
         """
         self.sigma = sigma
         self.tau   = tau
@@ -409,8 +409,8 @@ class PredictSpear(object):
                 raise RuntimeError("Pmap mode expects 2 elements in each transfer function array")
         elif self.spearmode == "SPmap" :
             self.nlc_obs = 1
-            if self.nlc != 2 :
-                raise RuntimeError("SPmap mode expects 1 elements in each transfer function array")
+            if self.nlc != 3 :
+                raise RuntimeError("SPmap mode expects 2 elements in each transfer function array")
 
     def generate(self, zylclist, set_threading=False) :
         """ Presumably zylclist has our input j, and e, and the values in m

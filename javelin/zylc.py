@@ -297,7 +297,7 @@ class LightCurve(object):
             print("save continuum light curves to %s"%fname)
             writelc([self.zylclist[0]], fname)
 
-    def save_lcarr(self, fname, set_overwrite=True, set_saveid=False) :
+    def save_lcarr(self, fname, set_overwrite=True, set_addmean=True, set_saveid=False) :
         """ Save the data array into a 3-column file.
          
         Parameters
@@ -310,6 +310,9 @@ class LightCurve(object):
 
         set_saveid: bool, optional
             True to save id array (default: False).
+
+        set_addmean: bool, optional
+            True to save original light curve values without no mean subtraction (default: True).
         """
         try :
             f=open(fname, "r")
@@ -318,10 +321,19 @@ class LightCurve(object):
         except IOError :
             print("%s does not exist")
         print("save light curve data array to %s"%fname)
-        if set_saveid :
-            np.savetxt(fname, np.vstack((self.jarr, self.marr, self.earr, self.iarr)).T)
+
+        # TODO
+        _marr = np.empty(self.npt)
+        if set_addmean :
+            for i in xrange(self.nlc) :
+                sel = (self.iarr == i)
+                _marr[sel] = self.marr[sel] + self.blist[i]
         else :
-            np.savetxt(fname, np.vstack((self.jarr, self.marr, self.earr)).T)
+            _marr = self.marr
+        if set_saveid :
+            np.savetxt(fname, np.vstack((self.jarr, _marr, self.earr, self.iarr)).T)
+        else :
+            np.savetxt(fname, np.vstack((self.jarr, _marr, self.earr)).T)
 
     def update_qlist(self, qlist_new):
         """ Update blist and mlist of the LightCurve object according to the 

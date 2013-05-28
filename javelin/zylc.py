@@ -326,7 +326,7 @@ class LightCurve(object):
         _marr = np.empty(self.npt)
         if set_addmean :
             for i in xrange(self.nlc) :
-                sel = (self.iarr == i)
+                sel = (self.iarr == i+1)
                 _marr[sel] = self.marr[sel] + self.blist[i]
         else :
             _marr = self.marr

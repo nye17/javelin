@@ -297,6 +297,32 @@ class LightCurve(object):
             print("save continuum light curves to %s"%fname)
             writelc([self.zylclist[0]], fname)
 
+    def save_lcarr(self, fname, set_overwrite=True, set_saveid=False) :
+        """ Save the data array into a 3-column file.
+         
+        Parameters
+        ----------
+        fname : str
+            Output file name.
+
+        set_overwrite: bool, optional
+            True to overwrite existing files (default: True).
+
+        set_saveid: bool, optional
+            True to save id array (default: False).
+        """
+        try :
+            f=open(fname, "r")
+            if not set_overwrite :
+                raise RuntimeError("%s exists, exit"%fname)
+        except IOError :
+            print("%s does not exist")
+        print("save light curve data array to %s"%fname)
+        if set_saveid :
+            np.savetxt(fname, np.vstack((self.jarr, self.marr, self.earr, self.iarr)).T)
+        else :
+            np.savetxt(fname, np.vstack((self.jarr, self.marr, self.earr)).T)
+
     def update_qlist(self, qlist_new):
         """ Update blist and mlist of the LightCurve object according to the 
         newly acquired qlist values. 

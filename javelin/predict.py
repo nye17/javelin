@@ -27,6 +27,7 @@ def generateError(e, errcov=0.0):
     if np.isscalar(e) :
         print("Warning: e is a scalar, proceed as 1-element array")
         e = np.atleast_1d(e)
+    nwant = len(e)
     ediag = np.diag(e*e)
     if errcov == 0.0 :
         ecovmat = ediag

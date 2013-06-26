@@ -7,7 +7,7 @@ import matplotlib.cm as cm
 from graphic import figure_handler
 import numpy as np
 from numpy.random import normal, multivariate_normal
-# from copy import copy
+from copy import copy, deepcopy
 
 
 """ load light curve files into a LightCurve object.
@@ -148,7 +148,8 @@ class LightCurve(object):
     def spawn(self, errcov=0.0, names=None) : 
         """ generate one LightCurve for which the lightcurve values are the sum of the original ones and gaussian variates from gaussian errors.
         """
-        _zylclist = list(self.zylclist) # copy the original list
+        # _zylclist = list(self.zylclist) # copy the original list
+        _zylclist = deepcopy(self.zylclist) # copy the original list
         for i in xrange(self.nlc) :
             e = np.atleast_1d(_zylclist[i][2])
             nwant = e.size

@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from graphic import figure_handler
 import numpy as np
+from numpy.random import normal, multivariate_normal
+# from copy import copy
 
 
 """ load light curve files into a LightCurve object.
@@ -134,12 +136,34 @@ class LightCurve(object):
         return(LightCurve(_zylclist, names=_names))
 
     def split(self) :
+        """ split into individual LightCurves objects whenever the parent has multiple lightcurves.
+        """
         eggs = []
         for i in xrange(self.nlc) :
             _zylclist = [self.zylclist[i],]
             _names    = [self.names[i],]
             eggs.append(LightCurve(_zylclist, names=_names))
         return(eggs)
+
+    def spawn(self, errcov=0.0, names=None) : 
+        """ generate one LightCurve for which the lightcurve values are the sum of the original ones and gaussian variates from gaussian errors.
+        """
+        _zylclist = list(self.zylclist) # copy the original list
+        for i in xrange(self.nlc) :
+            e = np.atleast_1d(_zylclist[i][2])
+            nwant = e.size
+            ediag = np.diag(e*e)
+            if errcov == 0.0 :
+                ecovmat = ediag
+            else :
+                temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
+                temp2 = (temp1*temp1.T - ediag)*errcov
+                ecovmat = ediag + temp2
+            et = multivariate_normal(np.zeros_like(e), ecovmat)
+            _zylclist[i][1] = _zylclist[i][1] + et
+        if names is None :
+            names = ["-".join([r, "mock"]) for r in self.names]
+        return(LightCurve(_zylclist, names=names))
 
     def shift_time(self, timeoffset) :
         """ shift the time axies by `timeoffset`

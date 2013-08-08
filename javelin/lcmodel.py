@@ -1,4 +1,4 @@
-#Last-modified: 10 May 2013 04:36:37 PM
+#Last-modified: 08 Aug 2013 01:11:59 PM
 
 from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
@@ -783,9 +783,9 @@ class Rmap_Model(object) :
                 self.vars.append("_".join(["lag",   self.names[i]]))
                 self.vars.append("_".join(["wid",   self.names[i]]))
                 self.vars.append("_".join(["scale", self.names[i]]))
-                self.texs.append( "".join([r"$t_{", self.names[i] ,r"}$"]))
-                self.texs.append( "".join([r"$w_{", self.names[i] ,r"}$"]))
-                self.texs.append( "".join([r"$s_{", self.names[i] ,r"}$"]))
+                self.texs.append( "".join([r"$t_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+                self.texs.append( "".join([r"$w_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+                self.texs.append( "".join([r"$s_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
 
     def __call__(self, p, conthpd=None, lagtobaseline=0.3, set_retq=False,
             set_verbose=True, set_threading=False, blocksize=10000) :

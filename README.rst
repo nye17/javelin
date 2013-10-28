@@ -72,7 +72,7 @@ compilers that are available in your system, e.g.,::
 uses ``GFortran`` as its Fortran compiler.
 
 
-.. Caution:: 
+.. caution:: 
 
     Note that the short names for Fortran compilers may vary from system to system,
     you can check the list of available Fortran compilers in your system using::

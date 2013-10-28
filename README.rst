@@ -16,7 +16,7 @@ variability using different covariance functions
 and measure emission line lags using either spectroscopic light cruves 
 (`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_) 
 or photometric light curves 
-(`Zu et al. 2013b <http://arxiv.org/abstract/TBD>`_). 
+(`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_). 
 
 
 Install JAVELIN 

@@ -1,3 +1,4 @@
+# Last-modified: 30 Sep 2013 12:27:52 PM
 
 __all__ = ['LightCurve', 'get_data']
 
@@ -10,7 +11,7 @@ from numpy.random import normal, multivariate_normal
 from copy import copy, deepcopy
 
 
-""" load light curve files into a LightCurve object.
+""" Load light curve files into a LightCurve object.
 """
 
 class LightCurve(object):
@@ -29,8 +30,8 @@ class LightCurve(object):
             True if light curve means are subtracted (default: True).
 
         qlist: list of q values, optional
-            Best-fit q values from javelin fitting, used to obtain the truth
-            mean of light curves (default: None).
+            Best-fit q values from javelin fitting, for accounting for the difference between sample means and 
+            the truth means of light curves (default: None).
 
         """
         if not isinstance(zylclist, list):

@@ -16,4 +16,3 @@ import zylc
 __all__ = ["gp", "emcee", "cov", "cholesky_utils", "err", "graphic",
 "lcio", "lcmodel", "peakdetect", "predict", "psd", "spear",
 "threadpool", "zylc"]
-

@@ -11,6 +11,9 @@ if [ $name = "mitchell" ];then
 elif [ $name = "Sing-Sing" ];then
     echo "sing-sing"
     python setup.py install --prefix="~/usr" sdist
+elif [ $name = "Anyer" ];then
+    echo "Anyer"
+    python setup.py install --prefix="~/usr" sdist
 elif [ $name = "arjuna.mps.ohio-state.edu" ];then
     echo "arjuna"
     echo "JAVELIN does not work in logon macihne, switch to a node"

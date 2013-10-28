@@ -7,15 +7,16 @@ JAVELIN
 What is JAVELIN 
 ===============
 
-**JAVELIN** stands (reluctantly) for Just Another Vehicle for Estimating Lags In
-Nuclei. As a version of our SPEAR algorithm written in
-Python to provide more flexibility in both functionality and
-visualization.
-
-.. Caution:: 
-
-    JAVELIN is still an ongoing project that has not reached a full
-    release version yet. 
+**JAVELIN** stands (reluctantly) for **J**\ust **A**\nother **V**\ehicle
+for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
+*SPEAR* algorithm written in Python to provide more flexibility in both
+functionality and visualization. You can use **JAVELIN** to model quasar
+variability using different covariance functions 
+(`Zu et al. 2013a <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_), 
+and measure emission line lags using either spectroscopic light cruves 
+(`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_) 
+or photometric light curves 
+(`Zu et al. 2013b <http://arxiv.org/abstract/TBD>`_). 
 
 
 Install JAVELIN 
@@ -64,12 +65,15 @@ compilers that are available in your system, e.g.,::
 
 uses ``GFortran`` as its Fortran compiler.
 
-Note that the short names for Fortran compilers may vary from system to system,
-you can check the list of available Fortran compilers in your system using::
 
-    $ python setup.py config_fc --help-fcompiler
+.. Caution:: 
 
-and you can find them in the ``Fortran compilers found:`` section of the output.
+    Note that the short names for Fortran compilers may vary from system to system,
+    you can check the list of available Fortran compilers in your system using::
+
+        $ python setup.py config_fc --help-fcompiler
+
+    and you can find them in the ``Fortran compilers found:`` section of the output.
 
 
 Test Installation 
@@ -88,8 +92,7 @@ try::
 
     $ python plotcov.py
 
-which exactly reproduces Figure 1 in `Zu et al. (2012)
-<http://arxiv.org/abs/1202.3783>`_.
+which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/1202.3783>`_.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png 
@@ -103,13 +106,13 @@ which exactly reproduces Figure 1 in `Zu et al. (2012)
 Demonstration 
 =============
 
-Here we briefly explain how to use JAVELIN to caculate the line lags for the AGN
-hosted by an imaginary `Loopdeloop galaxy
+Here we briefly explain how to use JAVELIN to caculate the spectroscopic
+line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
 <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
 observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing. If you are
 already familiar with the `Zu et al. (2011) <http://arxiv.org/abs/1008.0641>`_
-paper, feel free to skip to the next section.  Every file and script referred to
-here can be found inside ``examples`` directory::
+paper, feel free to skip to the next section.  Every file and script referred
+to here can be found inside ``examples`` directory::
 
     $ cd javelin/examples
 
@@ -121,17 +124,18 @@ show the figures below locally by running::
 
 on the command line. 
 
-We assume the quasar variability on scales longer than a few days can be well
-described by a Damped Random Walk (DRW) model, and the emission line light
-curves are simply the lagged, smoothed, and scaled versions of the continuum
-light curve. Fig. 1 shows the true light curves for the continuum, the Ylem, and
-the Zing lines. In particular, the Ylem (Zing) light curve is lagged by 120
-(250) days, scaled by a factor of 3 (9), and smoothed by a top hat of width 3
-(9) days, from the continuum light curve. The continuum light curve is generated
-from the DRW model with a time scale 100 days and variability amplitude of sigma=2. 
-Thus, we have two parameters for the continuum DRW model, sigma and tau,
-and three parameters for each emission line model --- the lag t, the width of the 
-tophat smoothing function w, and the flux scaling factor s.
+In our RM models, we assume the quasar variability on scales longer than
+a few days can be well described by a Damped Random Walk (DRW) model, and
+the emission line light curves are simply the lagged, smoothed, and scaled
+versions of the continuum light curve. Fig. 1 shows the true light curves
+for the continuum, the Ylem, and the Zing lines. In particular, the Ylem
+(Zing) light curve is lagged by 120 (250) days, scaled by a factor of 3 (9),
+and smoothed by a top hat of width 3 (9) days, from the continuum light
+curve. The continuum light curve is generated from the DRW model with a
+time scale 100 days and variability amplitude of sigma=2.  Thus, we have two
+parameters for the continuum DRW model, sigma and tau, and three parameters
+for each emission line model --- the lag t, the width of the tophat smoothing
+function w, and the flux scaling factor s.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png 
@@ -237,6 +241,7 @@ Running JAVELIN is Easy
 -----------------------
 
 Lag determination can usually be done by JAVELIN within a few lines of codes.
+The following is a quick example of inferring lag using spectroscopic light curves.
 
 Starting from the data files in the ``examples/dat`` directly::
 
@@ -267,7 +272,8 @@ to fit the continuum data, then::
     >>>cymod = Rmap_Model(cy)
     >>>cymod.do_mcmc(conthpd=cmod.hpd)
 
-to fit the continuum+line data. The results can be shown by::
+to fit the continuum+line data, where ``Rmap_Model`` is the the spectroscopic
+reverberation mapping~(RM) model. The results can be shown by::
 
     >>>cymod.show_hist()
 
@@ -349,13 +355,13 @@ packing ``con.dat`` and ``yelm.dat`` together, ``javdata`` and ``javedata2`` are
 equivalent to each other. You can varify this by doing ``javdata2.plot()``.
 
 
-Fitting the Continuum 
----------------------
+Constraining Continuum Variability
+----------------------------------
 
-As shown in the last section, we need to fit the continuum frist, using the 
-continuum light curve alone to derive the posterior distributions of
-DRW parameters. Since for now we only work on the continuum model, we can load
-the continuum light curve either by::
+We can use JAVELIN to model the continuum variability, or as shown in the
+last section, for RM we need to fit the continuum light curve alone first to
+derive set priors on the DRW parameters for the second step of lag fitting. Since for now we only
+work on the continuum model, we can load the continuum light curve either by::
 
     >>>javdata3 = get_data(["con.dat",], names=["Continuum",]) 
 
@@ -371,6 +377,11 @@ need to initiate the ``Cont_Model`` class::
 
     >>>from javelin.lcmodel import Cont_Model 
     >>>cont = Cont_Model(javdata3)
+
+By default, ``Cont_Model`` will model the light curve as a DRW process, but you
+are also specify models like `matern <http://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_, 
+`pow_exp`, `kepler_exp`, etc (see details in `Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_).  However, currently the spectroscopic and photometric RM models `Rmap_Model` and `(S)PMap_Model` 
+do not yet support continuum covariance models other than DRW.
 
 Without exploring any further options, you can simply run::
 
@@ -428,8 +439,8 @@ exactly what we are after in this subsection, as will become apparently below,
 to provide useful constraints on the DRW parameters to help determining lags, 
 
 
-Fitting the Continuum and one line (Yelm)
------------------------------------------
+Spectroscopic RM: Fitting the Continuum and one line (Yelm)
+-----------------------------------------------------------
 
 First, we need to load the necessary light curves files, in this case, both
 the continuum and the Ylem light curves, into a ``LightCurve`` object, which is
@@ -516,8 +527,8 @@ simultaneously to improve the results, as in our example of how fitting multiple
 lines eliminates seasonal aliasing problems.
 
 
-Fitting the Continuum and two lines (Yelm and Zing)
----------------------------------------------------
+Spectroscopic RM: Fitting the Continuum and two lines (Yelm and Zing)
+---------------------------------------------------------------------
 
 The extrapolation from using one emission line to using two is rather trivial.
 Read the light curves by::
@@ -568,8 +579,8 @@ of the observed ones as shown in Fig. 7.::
     >>>javdata_best.plot(set_pred=True, obs=javdata4)
 
 
-JAVELIN is Highly Extensible
-----------------------------
+Spectroscopic RM in JAVELIN is Highly Extensible
+------------------------------------------------
 
 If you have more than three light curves for the same objects at the same
 period, you also plug the additional lines in JAVELIN in the same way, simply by feeding a longer
@@ -585,11 +596,21 @@ problem. Therefore, try to increase the values of these parameters whenever you 
 does not converge well.
 
 
+Two-Band Photometric RM: A Continuum Band and A Line Band
+---------------------------------------------------------
+
+TBD
+
+One-Band Photometric RM: Single Line Band Light Curve
+-----------------------------------------------------
+
+TBD
+
 Additional Information
 ----------------------
 
-Please refer to `the JAVELIN documentation <TBD>`_ for all the modules and
-their arguments.
+Please refer to the JAVELIN source code for all the modules and
+their arguments (the code is in my humble opinion semi-well-documented).
 
 Citation
 --------
@@ -597,13 +618,17 @@ Citation
 You are welcome to use and modify JAVELIN, however please acknowledge its
 use either as is or with modifications with a citation to
 
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
+
+for quasar optical variability studies,
+
 `Zu, Y., Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
 for spectroscopic reverberation mapping, and to
 
-`Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, ApJ, XXX, XX <http://adsabs.harvard.edu/abs/TBD>`_
 
-for quasar optical variability studies.
+for photometric reverberation mapping.
 
 
 

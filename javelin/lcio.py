@@ -1,10 +1,11 @@
-# Last-modified: 21 Apr 2012 11:33:40 PM
+# Last-modified: 30 Sep 2013 12:25:36 PM
 
 __all__ = ['combinelc', 'readlc', 'writelc', 'readlc_3c', 'file_len']
 
-""" 
-i/o functions for light curve data.
-"""
+""" I/O functions for light curve data. 
+
+The functions were originally written in hopes of avoiding numpy dependencies, so
+there are no numpy arrays involved, but the speed should suffice.  """
 
 def combinelc(lctxt, lcdata):
     """ Write a list of 3-column based light curve files into the ZY light curve data file.
@@ -24,16 +25,21 @@ def combinelc(lctxt, lcdata):
 
     >>> combinelc(["mrk50_con.dat", "mrk50_hb.dat"], "lc_mrk50.dat")
 
+    Notes
+    -----
+    The format of ZY light curve data file is explained in the JAVELIN manual.
+
     """
     ofile = open(lcdata,"wa")
-    num_lightcurves = len(lctxt)
+    # count light curve number by file names provided
+    num_lightcurves = len(lctxt) 
     ofile.write(str(num_lightcurves)+"\n")
     for i in range(num_lightcurves):
-        ofile.write(str(file_len(lctxt[i]))+"\n")
+        # count light curve epochs by file lines
+        ofile.write(str(file_len(lctxt[i]))+"\n") 
         ofile.write(open(lctxt[i]).read())
     ofile.close()
-    return(0)
-
+    return(None)
 
 def readlc(lcdata):
     """ Read the ZY light curve data file into a list of lists.
@@ -97,7 +103,6 @@ def readlc(lcdata):
     f.close()
     return(lightcurvearray)
 
-
 def readlc_3c(lcdata):
     """ Read the common 3-column light curve data file into a list of one list.
 
@@ -131,7 +136,6 @@ def readlc_3c(lcdata):
         lightcurvearray.append([jdlist,fluxlist,errorlist])
     f.close()
     return(lightcurvearray)
-
 
 def writelc(lightcurvearray, lcdata, fmt="10.5f"):
     """ Write the list of lists into a ZY light curve data file.
@@ -176,7 +180,6 @@ def writelc(lightcurvearray, lcdata, fmt="10.5f"):
             format(er[i], fmt)]) for i in range(npt)]))
         f.write("\n")
     f.close()
-
 
 def file_len(fname):
     ''' Calculate the number of lines in a file.

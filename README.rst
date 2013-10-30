@@ -1,4 +1,8 @@
 
+.. raw:: html
+
+    <style> .red {color:red} </style>
+
 ======= 
 JAVELIN 
 =======
@@ -18,12 +22,10 @@ and measure emission line lags using either spectroscopic light cruves
 or photometric light curves 
 (`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_). 
 
-.. note::
-   
-    The new release featuring photometric capabilities hasn't come out yet in
-    the download tab, but only available in the bleeding-edge mercurial version.
-    Please send an email to ``yingzu AT astronomy.ohio-state.edu`` for a tar
-    ball of the new version.
+:red:`The new release featuring photometric capabilities hasn't come out yet in
+the download tab, but only available in the bleeding-edge mercurial version.
+Please send an email to ``yingzu AT astronomy.ohio-state.edu`` for a tar
+ball of the new version.`
 
 Install JAVELIN 
 ===============

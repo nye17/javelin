@@ -14,11 +14,17 @@ elif [ $name = "Sing-Sing" ];then
 elif [ $name = "Anyer" ];then
     echo "Anyer"
     python setup.py install --prefix="~/usr" sdist
+elif [ $name = "Midido.local" ];then
+    echo "Midido"
+    python setup.py install --prefix="~/usr" sdist
 elif [ $name = "arjuna.mps.ohio-state.edu" ];then
     echo "arjuna"
     echo "JAVELIN does not work in logon macihne, switch to a node"
 elif [ `echo ${name} | grep -c "node"` -eq 1 ]; then
     echo "arjuna node"
     python setup.py config_fc --fcompiler=intelem install --prefix="~/local" sdist
+else
+    echo "Others"
+    python setup.py install --prefix="~/usr" sdist
 fi 
 

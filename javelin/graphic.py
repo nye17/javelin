@@ -1,8 +1,9 @@
-#Last-modified: 03 Dec 2012 05:13:07 PM
+#Last-modified: 04 Dec 2013 16:42:58
 
 import matplotlib.pyplot as plt
 from glob import glob
 
+__all__ = ['figure_handler']
 
 def figure_handler(fig=None, figout=None, figext=None, dpi=None, pad_inches=0.1, transparent=True):
     """ Handle the saving, drawing, and formating of figure objects.

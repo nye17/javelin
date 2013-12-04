@@ -1,28 +1,41 @@
-#Last-modified: 07 Mar 2012 06:13:07 PM
+#Last-modified: 04 Dec 2013 16:36:10
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
 from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail
 import numpy as np
 
-"""
-Wrapping the all the continuum covariance functions together.
+""" Wrapping the all the continuum (source, without lines) covariance functions together.
 """
 
 covname_dict = {
-                "matern"     :    matern.euclidean,
-                "pow_exp"    :   pow_exp.euclidean,
-                "drw"        :   pow_exp.euclidean,
-                "pareto_exp" :pareto_exp.euclidean,
-                "pow_tail"   :  pow_tail.euclidean,
-                "kepler_exp" :kepler_exp.euclidean,
-                "kepler2_exp":kepler_exp.euclidean,
+                "matern"      : matern.euclidean,
+                "pow_exp"     : pow_exp.euclidean,
+                "drw"         : pow_exp.euclidean,
+                "pareto_exp"  : pareto_exp.euclidean,
+                "pow_tail"    : pow_tail.euclidean,
+                "kepler_exp"  : kepler_exp.euclidean,
+                "kepler2_exp" : kepler_exp.euclidean,
                }
 
 
 def get_covfunc_dict(covfunc, **covparams):
-    """ try to simplify the procedure of calling different covariance functions
-    by unifying the thrid parameter as *nu*.
+    """ Try to simplify the procedure of calling different covariance functions
+    by calling  all the thrid parameters as *nu*.
+
+    Parameters
+    ----------
+    covfunc : str
+        Names of the covariance funcrtions available, i.e., keys in `covname_dict`, currently including `matern`, `pow_exp`, `drw`, `pareto_exp`, `pow_tail`, `kepler_exp`, and `kepler2_exp`.
+
+    **covparams: 
+        keyword arguments for each `convfunc`.
+
+    Returns 
+    -------
+    _cov_dict : dict
+        External namespaces for the name and parameters of `convfunc`.
+
     """
     _cov_dict = {}
     _cov_dict['eval_fun'] = covname_dict[covfunc]
@@ -45,14 +58,18 @@ def get_covfunc_dict(covfunc, **covparams):
     elif covfunc == "pow_tail" : 
         _cov_dict['beta']        = covparams['nu']
     else :
-#        print("covfuncs currently implemented:")
-#        print(" ".join(covname_dict.keys))
         raise RuntimeError("%s has not been implemented"%covfunc)
     return(_cov_dict)
 
 
 class MyCovariance(object):
     def __init__(self, eval_fun, **params):
+        """
+
+        .. note:: Deprecated in Javelin 0.3.
+                  `get_covfunc_dict` and `covname_dict` will be used instead.
+
+        """
         self.eval_fun = eval_fun
         self.params   = params
     def __call__(self, x, y=None):

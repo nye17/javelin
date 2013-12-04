@@ -14,7 +14,7 @@ elif [ $name = "Sing-Sing" ];then
 elif [ $name = "Anyer" ];then
     echo "Anyer"
     python setup.py install --prefix="~/usr" sdist
-elif [ $name = "Midido.local" ];then
+elif [ $name = "Midido" ];then
     echo "Midido"
     python setup.py install --prefix="~/usr" sdist
 elif [ $name = "arjuna.mps.ohio-state.edu" ];then

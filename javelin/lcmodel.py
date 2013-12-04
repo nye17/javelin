@@ -1,4 +1,4 @@
-#Last-modified: 25 Oct 2013 05:54:43 PM
+#Last-modified: 04 Dec 2013 17:39:33
 
 # generic packages
 import numpy as np
@@ -35,10 +35,13 @@ lognu_floor   = np.log(nu_floor)
 nu_ceiling    = 1.e+3
 lognu_ceiling = np.log(nu_ceiling)   
 
+
+__all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model']
+
 # Generic functions
 
 def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
-    """ calculate the log-likelihoods from the upper triangle of cholesky
+    """ Calculate the log-likelihoods from the upper triangle of cholesky
     decomposition.
     """
     # log determinant of C^-1
@@ -133,9 +136,7 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
         nu = p[2]
     return(sigma, tau, nu)
 
-def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True,
-        conthpd=None, rank="Full",
-        set_retq=False, set_verbose=False) :
+def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, conthpd=None, rank="Full", set_retq=False, set_verbose=False) :
     """
     """
     sigma, tau, nu = unpacksinglepar(p, covfunc, uselognu=uselognu)
@@ -182,8 +183,7 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True,
         logp = logl + prior
         return(logp)
 
-def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False, 
-        set_verbose=False, **covparams) :
+def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False, set_verbose=False, **covparams) :
     """
     """
     covfunc_dict = get_covfunc_dict(covfunc, **covparams)
@@ -248,6 +248,9 @@ class Cont_Model(object) :
         zydata: LightCurve object, optional
             Light curve data.
 
+        covfunc: str, optional
+            Name of the covariance function for the continuum (default: drw)
+
         """
         self.zydata  = zydata
         self.covfunc = covfunc
@@ -281,14 +284,45 @@ class Cont_Model(object) :
             self.vars.append("nu")
             self.texs.append(r"$\nu$")
 
-    def __call__(self, p, set_prior=True, rank="Full", set_retq=False,
-            set_verbose=True): 
+    def __call__(self, p, set_prior=True, rank="Full", set_retq=False, set_verbose=True): 
+        """ Calculate the posterior value given one parameter set `p`.
+
+        Parameters
+        ----------
+        p: list
+            Parameter list.
+        set_prior: bool, optional
+            Turn on/off priors that are predefined in `lnpostfn_single_p`.
+        rank: str, optional
+            Type of covariance matrix rank, "Full" or "NearlyFull"
+        set_retq: bool, optional
+            Whether to return all the components of the posterior (default: False).
+        set_verbose: bool, optional
+            Turn on/off verbose mode (default: True).
+
+        Returns
+        -------
+        retval: float (set_retq is False) or list (set_retq is True)
+            if `retval` returns a list, then it contains the full posterior info 
+            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+
+        """
         return(lnpostfn_single_p(p, self.zydata, self.covfunc, 
             uselognu=self.uselognu, set_prior=set_prior, rank=rank,
             set_retq=set_retq, set_verbose=set_verbose))
 
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
         """
+        Maximum A Posterior minimization.
+
+        Parameters
+        ----------
+        p_ini: list
+            Initial guess for the parameters.
+        fixed: list
+            Bit list indicating which parameters are to be fixed during minimization, `1` means varying, while `0` means fixed, so [1, 1, 0] means fixing only the third parameter, and `len(fixed)` equals the number of parameters (default: None, i.e., varying all the parameters simultaneously).
+        lnpostparams: kwargs
+            kwargs for `lnpostfn_single_p`.
         """
         set_verbose = lnpostparams.pop("set_verbose", True)
         set_retq    = lnpostparams.pop("set_retq",    False)
@@ -340,8 +374,7 @@ class Cont_Model(object) :
         if set_verbose :
             print("saved grid1d result to %s"%fgrid1d)
 
-    def do_grid2d(self, p_ini, fixed, rangex, dx, rangey, dy, fgrid2d, 
-            **lnpostparams) :
+    def do_grid2d(self, p_ini, fixed, rangex, dx, rangey, dy, fgrid2d, **lnpostparams) :
         fixed = np.asarray(fixed)
         set_verbose = lnpostparams.pop("set_verbose", True)
         xs = np.arange(rangex[0], rangex[-1]+dx, dx)
@@ -395,9 +428,7 @@ class Cont_Model(object) :
             retdict['nu'] = nu.reshape(dimx, dimy).T
         return(retdict)
 
-    def show_logp_map(self, fgrid2d, set_normalize=True, vmin=None, vmax=None,
-            set_contour=True, clevels=None,
-            set_verbose=True, figout=None, figext=None) :
+    def show_logp_map(self, fgrid2d, set_normalize=True, vmin=None, vmax=None, set_contour=True, clevels=None, set_verbose=True, figout=None, figext=None) :
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(8,8))
         ax  = fig.add_subplot(111)
@@ -432,9 +463,7 @@ class Cont_Model(object) :
         ax.set_ylabel(self.texs[retdict['posy']])
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-    def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", 
-            nwalkers=100, nburn=50, nchain=50,
-            fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
+    def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", nwalkers=100, nburn=50, nchain=50, fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
         """
         """
         # initialize a multi-dim random number array 

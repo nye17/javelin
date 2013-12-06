@@ -1,4 +1,4 @@
-#Last-modified: 05 Dec 2013 00:49:46
+#Last-modified: 05 Dec 2013 18:01:41
 
 # generic packages
 import numpy as np
@@ -41,8 +41,8 @@ __all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model']
 """ Generic functions """
 
 def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
-    """ Calculate the log-likelihoods from the upper triangle of cholesky
-    decomposition.
+    """ Calculate the log-likelihoods from the upper triangle of cholesky decomposition.
+
     """
     # log determinant of C^-1
     detC_log = chodet_from_tri(U, retlog=True)
@@ -106,10 +106,12 @@ def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
     else:
         return(my_neg_inf)
 
+###########################################################
+
 """ Cont_Model: Continuum Variability """
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False) :
-    """ Unpack the physical parameters from input 1-d array for single mode.
+    """ Internal Function: Unpack the physical parameters from input 1-d array for single mode.
     """
     if p[0] > logsigma_ceiling :
         sigma = sigma_ceiling
@@ -136,18 +138,50 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
         nu = p[2]
     return(sigma, tau, nu)
 
-def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, conthpd=None, rank="Full", set_retq=False, set_verbose=False) :
-    """ integernal function to calculate the posterior.
+# try fix the order of arguments as they will be fed by sequence rather than keyword to methods under Cont_Model.
+def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu=False, rank="Full", set_retq=False, set_verbose=False) :
+    """ Calculate the log posterior for parameter set `p`.
+
+    Parameters
+    ----------
+    p: list
+        Parameter list.
+    zydata: LightCurve
+        Input LightCurve data.
+    covfunc: str
+        name of the covariance function.
+    set_prior: bool, optional
+        Turn on/off priors that are predefined in `lnpostfn_single_p` (default: True).
+    conthpd: ndarray, optional
+        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        np.array([[log(sigma_low), log(tau_low)],
+                  [log(sigma_med), log(tau_med)],
+                  [log(sigma_hig), log(tau_hig)]])
+        where 'low', 'med', and 'hig' are defined as the 68% confidence
+        limits around the median. Here it is only used if the `covfunc` is 'kepler2_exp'. 
+    uselognu: bool, optional
+        Whether to use lognu instead of nu (default: False).
+    rank: str, optional
+        Type of covariance matrix rank, "Full" or "NearlyFull" (default: "Full").
+    set_retq: bool, optional
+        Whether to return all the components of the posterior (default: False).
+    set_verbose: bool, optional
+        Turn on/off verbose mode (default: True).
+
+    Returns
+    -------
+    retval: float (set_retq is False) or list (set_retq is True)
+        if `retval` returns a list, then it contains the full posterior info 
+        as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+
     """
     sigma, tau, nu = unpacksinglepar(p, covfunc, uselognu=uselognu)
+    # log-likelihood
     if set_retq :
-        vals = list(lnlikefn_single(zydata, covfunc=covfunc, rank=rank,
-                    sigma=sigma, tau=tau, nu=nu,
-                    set_retq=True, set_verbose=set_verbose))
+        vals = list(lnlikefn_single(zydata, covfunc=covfunc, rank=rank, sigma=sigma, tau=tau, nu=nu, set_retq=True, set_verbose=set_verbose))
     else :
-        logl = lnlikefn_single(zydata, covfunc=covfunc, rank=rank,
-                    sigma=sigma, tau=tau, nu=nu,
-                    set_retq=False, set_verbose=set_verbose)
+        logl = lnlikefn_single(zydata, covfunc=covfunc, rank=rank, sigma=sigma, tau=tau, nu=nu, set_retq=False, set_verbose=set_verbose)
+    # prior
     prior = 0.0
     if set_prior :
         if covfunc == "kepler2_exp" :
@@ -174,7 +208,7 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, conthp
                 prior += my_neg_inf
             else :
                 prior += - np.log(zydata.cont_cad/tau)
-
+    # combine prior and log-likelihood
     if set_retq :
         vals[0] = vals[0] + prior
         vals.append(prior)
@@ -184,7 +218,7 @@ def lnpostfn_single_p(p, zydata, covfunc, uselognu=False, set_prior=True, conthp
         return(logp)
 
 def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False, set_verbose=False, **covparams) :
-    """ integernal function to calculate the likelihood.
+    """ internal function to calculate the log likelihood, see `lnpostfn_single_p` for doc.
     """
     covfunc_dict = get_covfunc_dict(covfunc, **covparams)
     sigma = covparams.pop("sigma")
@@ -246,7 +280,7 @@ class Cont_Model(object) :
         Parameters
         ----------
         zydata: LightCurve object, optional
-            Light curve data.
+            Input LightCurve data, a null input means that `Cont_Model` will be loading existing chains (default: None).
 
         covfunc: str, optional
             Name of the covariance function for the continuum (default: drw)
@@ -284,36 +318,14 @@ class Cont_Model(object) :
             self.vars.append("nu")
             self.texs.append(r"$\nu$")
 
-    def __call__(self, p, set_prior=True, rank="Full", set_retq=False, set_verbose=True): 
-        """ Calculate the posterior value given one parameter set `p`.
-
-        Parameters
-        ----------
-        p: list
-            Parameter list.
-        set_prior: bool, optional
-            Turn on/off priors that are predefined in `lnpostfn_single_p` (default: True).
-        rank: str, optional
-            Type of covariance matrix rank, "Full" or "NearlyFull" (default: "Full").
-        set_retq: bool, optional
-            Whether to return all the components of the posterior (default: False).
-        set_verbose: bool, optional
-            Turn on/off verbose mode (default: True).
-
-        Returns
-        -------
-        retval: float (set_retq is False) or list (set_retq is True)
-            if `retval` returns a list, then it contains the full posterior info 
-            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
-
+    def __call__(self, p, **lnpostparams): 
+        """ Calculate the posterior value given one parameter set `p`. See `lnpostfn_single_p` for doc.
         """
-        return(lnpostfn_single_p(p, self.zydata, self.covfunc, 
-            uselognu=self.uselognu, set_prior=set_prior, rank=rank,
-            set_retq=set_retq, set_verbose=set_verbose))
+        return(lnpostfn_single_p(p, self.zydata, covfunc=self.covfunc, uselognu=self.uselognu, **lnpostparams))
 
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
         """
-        Maximum A Posterior minimization.
+        Maximum A Posterior minimization. See `lnpostfn_single_p` for doc.
 
         Parameters
         ----------
@@ -328,23 +340,33 @@ class Cont_Model(object) :
         set_retq    = lnpostparams.pop("set_retq",    False)
         set_prior   = lnpostparams.pop("set_prior",   True)
         rank        = lnpostparams.pop("rank",       "Full")
+        conthpd     = lnpostparams.pop("conthpd",     None)
         if set_retq is True :
             raise InputError("set_retq has to be False")
         p_ini = np.asarray(p_ini)
         if fixed is not None :
             fixed = np.asarray(fixed)
-            func = lambda _p : -lnpostfn_single_p(_p*fixed+p_ini*(1.-fixed),
-                    self.zydata, self.covfunc, uselognu=self.uselognu, 
+            func = lambda _p : -lnpostfn_single_p(
+                    _p*fixed+p_ini*(1.-fixed), self.zydata, self.covfunc, 
+                    set_prior=set_prior, 
+                    conthpd=conthpd,
+                    uselognu=self.uselognu, 
+                    rank=rank, 
                     set_retq=False,
-                    set_prior=set_prior, rank=rank, set_verbose=set_verbose)
+                    set_verbose=set_verbose
+                    )
         else :
-            func = lambda _p : -lnpostfn_single_p(_p,
-                    self.zydata, self.covfunc, uselognu=self.uselognu, 
+            func = lambda _p : -lnpostfn_single_p(
+                    _p, self.zydata, self.covfunc, 
+                    set_prior=set_prior, 
+                    conthpd=conthpd,
+                    uselognu=self.uselognu, 
+                    rank=rank, 
                     set_retq=False,
-                    set_prior=set_prior, rank=rank, set_verbose=set_verbose)
+                    set_verbose=set_verbose
+                    )
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
-        sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc,
-                uselognu=self.uselognu)
+        sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc, uselognu=self.uselognu)
         if fixed is not None :
             p_bst = p_bst*fixed+p_ini*(1.-fixed)
         if set_verbose :
@@ -356,7 +378,7 @@ class Cont_Model(object) :
         return(p_bst, -v_bst)
 
     def do_grid1d(self, p_ini, fixed, rangex, dx, fgrid1d, **lnpostparams) :
-        """ Minimization over a 1D grid.
+        """ Minimization over a 1D grid. See `lnpostfn_single_p` for doc.
 
         Parameters
         ----------
@@ -384,8 +406,7 @@ class Cont_Model(object) :
         for x in xs :
             _p_ini = p_ini*fixed + x*(1.-fixed) 
             _p, _l = self.do_map(_p_ini, fixed=fixed, **lnpostparams)
-            _line = "".join([format(_l, "20.10g"), 
-                             " ".join([format(r, "10.5f") for r in _p]), "\n"])
+            _line = "".join([format(_l, "20.10g"), " ".join([format(r, "10.5f") for r in _p]), "\n"])
             f.write(_line)
             f.flush()
         f.close()
@@ -393,7 +414,7 @@ class Cont_Model(object) :
             print("saved grid1d result to %s"%fgrid1d)
 
     def do_grid2d(self, p_ini, fixed, rangex, dx, rangey, dy, fgrid2d, **lnpostparams) :
-        """ Minimization over a 2D grid.
+        """ Minimization over a 2D grid. See `lnpostfn_single_p` for doc.
 
         Parameters
         ----------
@@ -434,8 +455,7 @@ class Cont_Model(object) :
                 _p_ini[posx] = x
                 _p_ini[posy] = y
                 _p, _l = self.do_map(_p_ini, fixed=fixed, **lnpostparams)
-                _line = "".join([format(_l, "20.10g"), 
-                             " ".join([format(r, "10.5f") for r in _p]), "\n"])
+                _line = "".join([format(_l, "20.10g"), " ".join([format(r, "10.5f") for r in _p]), "\n"])
                 f.write(_line)
                 f.flush()
         f.close()
@@ -586,10 +606,17 @@ class Cont_Model(object) :
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                     (nburn, nwalkers, nburn*nwalkers))
+        # FIXME
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p, 
-                    args=(self.zydata, self.covfunc, self.uselognu, 
-                        set_prior, conthpd, rank, False, False), 
+                    args=(self.zydata, self.covfunc, set_prior, 
+                        self.uselognu, 
+                        set_prior, 
+                        conthpd, 
+                        rank, 
+                        False, 
+                        False), 
                     threads=threads)
+# def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu=False, rank="Full", set_retq=False, set_verbose=False) :
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
             print("burn-in finished")
@@ -784,10 +811,12 @@ class Cont_Model(object) :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
+###########################################################
+
 """ Rmap_Model: Spectroscopic RM  """
 
 def unpackspearpar(p, nlc=None, hascontlag=False) :
-    """ Unpack the physical parameters from input 1-d array for spear mode.
+    """ Internal Function: unpack the physical parameters from input 1-d array for spear mode.
     """
     if nlc is None:
         # possible to figure out nlc from the size of p
@@ -821,10 +850,8 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
         p : array_like
             Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
             ...]
-
         zydata: LightCurve object
-            Light curve data.
-
+            Input LightCurve data.
         conthpd: ndarray, optional
             Priors on sigma and tau as an ndarray with shape (3, 2), 
             np.array([[log(sigma_low), log(tau_low)],
@@ -832,25 +859,32 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
                       [log(sigma_hig), log(tau_hig)]])
             where 'low', 'med', and 'hig' are defined as the 68% confidence
             limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
+            of the `Cont_Model` object `hpd` (default: None).
         lagtobaseline: float, optional
             Prior on lags. When input lag exceeds lagtobaseline*baseline, a
             logarithmic prior will be applied.
-
+        laglimit: str or list of tuples.
+            hard boundaries for the lag searching during MCMC sampling.
+            'baseline' means the boundaries are naturally determined by the
+            duration of the light curves, or you can set them as a list with
+            `nline` of tuples, with each tuple containing the (min, max) pair
+            for each single line. 
         set_threading: bool, optional
             True if you want threading in filling matrix. It conflicts with the
             'threads' option in Rmap_Model.run_mcmc (default: False).
-
         blocksize: int, optional
             Maximum matrix block size in threading (default: 10000).
-
         set_retq: bool, optional
             Return the value(s) of q along with each component of the
             log-likelihood if True (default: False).
-
         set_verbose: bool, optional
             True if you want verbosity (default: False).
+
+        Returns
+        -------
+        retval: float (set_retq is False) or list (set_retq is True)
+            if `retval` returns a list, then it contains the full posterior info 
+            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
     """
     # unpack the parameters from p
@@ -974,40 +1008,16 @@ class Rmap_Model(object) :
                 self.texs.append( "".join([r"$w_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
                 self.texs.append( "".join([r"$s_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
 
-    def __call__(self, p, conthpd=None, lagtobaseline=0.3, set_retq=False, set_verbose=True, set_threading=False, blocksize=10000) :
-        """ Calculate the posterior value given one parameter set `p`.
+    def __call__(self, p, **lnpostparams) :
+        """ Calculate the posterior value given one parameter set `p`. See `lnpostfn_spear_p` for doc.
 
         Parameters
         ----------
         p : array_like
             Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1, ...]
 
-        conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
-            np.array([[log(sigma_low), log(tau_low)],
-                      [log(sigma_med), log(tau_med)],
-                      [log(sigma_hig), log(tau_hig)]])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
-        lagtobaseline: float, optional
-            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
-            logarithmic prior will be applied.
-
-        set_retq: bool, optional
-            Return the value(s) of q along with each component of the
-            log-likelihood if True (default: False).
-
-        set_verbose: bool, optional
-            True if you want verbosity (default: False).
-
-        set_threading: bool, optional
-            True if you want threading in filling matrix. It conflicts with the
-            'threads' option in Rmap_Model.run_mcmc (default: False).
-
-        blocksize: int, optional
-            Maximum matrix block size in threading (default: 10000).
+        lnpostparams: kwargs
+            Keyword arguments for `lnpostfn_spear_p`.
 
         Returns
         -------
@@ -1016,15 +1026,10 @@ class Rmap_Model(object) :
             as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
         """
-
-        return(lnpostfn_spear_p(p, self.zydata, conthpd=conthpd, 
-            lagtobaseline=lagtobaseline,
-            set_retq=set_retq, set_verbose=set_verbose,
-            set_threading=set_threading, blocksize=blocksize,
-            ))
+        return(lnpostfn_spear_p(p, self.zydata, **lnpostparams))
 
     def do_map(self, p_ini, fixed=None, **lnpostparams) :
-        """ Do an optimization to find the Maximum a Posterior estimates.
+        """ Do an optimization to find the Maximum a Posterior estimates. See `lnpostfn_spear_p` for doc.
 
         Parameters
         ----------
@@ -1091,43 +1096,31 @@ class Rmap_Model(object) :
                       [log(sigma_hig), log(tau_hig)]])
             where 'low', 'med', and 'hig' are defined as the 68% confidence
             limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
+            of the `Cont_Model` object `hpd` (default: None).
         lagtobaseline: float, optional
             Prior on lags. When input lag exceeds lagtobaseline*baseline, a
             logarithmic prior will be applied.
-
         laglimit: str or list of tuples.
             hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line. 
-
         nwalker : integer, optional
             Number of walkers for `emcee` (default: 100).
-
         nburn : integer, optional
             Number of burn-in steps for `emcee` (default: 50).
-
         nchain : integer, optional
             Number of chains for `emcee` (default: 50).
-
         thread : integer
             Number of threads (default: 1).
-
         fburn : str, optional
             filename for burn-in output (default: None).
-
         fchain : str, optional
             filename for MCMC chain output (default: None).
-
         flogp : str, optional
             filename for logp output (default: None).
-
         set_threading: bool, optional
             True if you want threading in filling matrix. It conflicts with the
             'threads' option in Rmap_Model.run_mcmc (default: False).
-
         blocksize: int, optional
             Maximum matrix block size in threading (default: 10000).
-
         set_verbose: bool, optional
             Turn on/off verbose mode (default: True).
         """

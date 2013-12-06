@@ -54,6 +54,16 @@ examples/dat/loopdeloop_con_y_z.dat
 examples/dat/trulc.dat
 examples/dat/yelm.dat
 examples/dat/zing.dat
+examples/dat.bak/chain0.dat
+examples/dat.bak/chain1.dat
+examples/dat.bak/chain2.dat
+examples/dat.bak/con.dat
+examples/dat.bak/loopdeloop_con.dat
+examples/dat.bak/loopdeloop_con_y.dat
+examples/dat.bak/loopdeloop_con_y_z.dat
+examples/dat.bak/trulc.dat
+examples/dat.bak/yelm.dat
+examples/dat.bak/zing.dat
 examples/figs/covdemo.png
 examples/figs/mcmc0.png
 examples/figs/mcmc1.png
@@ -76,10 +86,6 @@ javelin/spear.py
 javelin/spear_covfunc.f90
 javelin/threadpool.py
 javelin/zylc.py
-javelin/bayesian/__init__.py
-javelin/bayesian/data.py
-javelin/bayesian/model.py
-javelin/bayesian/sampler.py
 javelin/emcee/__init__.py
 javelin/emcee/ensemble.py
 javelin/emcee/mh.py

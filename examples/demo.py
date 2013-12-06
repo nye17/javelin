@@ -1,29 +1,32 @@
-#Last-modified: 03 May 2013 02:52:15 PM
+#Last-modified: 06 Dec 2013 01:21:26
 import numpy as np
 import matplotlib.pyplot as plt
-from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError
+from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
 from javelin.lcio import *
 from javelin.zylc import LightCurve, get_data
 from javelin.lcmodel import Cont_Model, Rmap_Model
 
 """
-Test from scratch.
+Tests from scratch.
 """
 
 #************** DO NOT EDIT THIS PART************
-# names of the example light curves
-names  = ["Continuum", "Yelm", "Zing"]
+# names of the true light curves
+names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
 # smapling properties of the underlying signal
-jdense = np.linspace(0.0, 2000.0, 4000)
+jdense = np.linspace(0.0, 1000.0, 1000)
 # DRW parameters
 sigma, tau = (2.00, 100.0)
 # line parameters
-lagy, widy, scaley = (120.0,  3.0, 2.0)
-lagz, widz, scalez = (250.0,  9.0, 0.5)
+lagy, widy, scaley = (120.0,  2.0, 0.4)
+lagz, widz, scalez = (250.0,  4.0, 0.3)
 lags   = [0.0,   lagy,   lagz]
 wids   = [0.0,   widy,   widz]
 scales = [1.0, scaley, scalez]
-lcmeans= [10.0,  15.0,    5.0]
+llags   = [   lagy,   lagz]
+lwids   = [   widy,   widz]
+lscales = [ scaley, scalez]
+lcmeans= [10.0,  4.0,  3.0]
 #************************************************
 
 def file_exists(fname) :
@@ -34,7 +37,34 @@ def file_exists(fname) :
     except IOError:
         return(False)
 
+def getTrue(trufile, set_plot=False, mode="test"):
+    """ Generating dense, error-free light curves as the input signal.
+    """
+    if mode == "test" :
+        return(None)
+    elif mode == "show" :
+        print("read true light curve signal from %s"%trufile)
+        zydata = get_data(trufile, names=names)
+    elif mode == "run" :
+        print("generate true light curve signal")
+        # zydata = generateTrueLC(covfunc="drw")
+        # this is the fast way
+        zydata = generateTrueLC2(covfunc="drw")
+        print("save true light curve signal to %s"%trufile)
+        trufile = ".".join([trufile, "myrun"])
+        zydata.save(trufile)
+    if set_plot :
+        print("plot true light curve signal")
+        zydata.plot()
+    return(zydata)
+
 def generateTrueLC(covfunc="drw"):
+    """generateTrueLC
+
+    covfunc : str, optional
+        Name of the covariance funtion (default: drw).
+
+    """
     # create a `truth' mode light curve set with one continuum and two lines
     # object name: loopdeloop
     # line1 : yelm
@@ -42,7 +72,7 @@ def generateTrueLC(covfunc="drw"):
     jmin = np.max(lags)
     jmax = np.max(jdense)-1.0
     zylist = []
-    # underlying continuum variability
+    # this is for handling the prediction for Continuum.
     if covfunc == "drw" :
         PS = PredictSignal(lcmean=0.0, covfunc=covfunc, sigma=sigma, tau=tau)
     elif covfunc == "kepler2_exp" :
@@ -56,16 +86,42 @@ def generateTrueLC(covfunc="drw"):
     imin = np.searchsorted(jdense, jmin)
     imax = np.searchsorted(jdense, jmax)
     zylist.append([jdense[imin: imax], sdense[imin: imax], edense[imin: imax]])
+    # this is for handling the prediction for Yelm, and Zing.
     for i in xrange(1, 3) :
         lag  = lags[i]
         wid  = wids[i]
         scale= scales[i]
-        jl, sl = generateLine(jdense, sdense, lag, wid, scale,
-                mc_mean=0.0, ml_mean=0.0)
+        jl, sl = generateLine(jdense, sdense, lag, wid, scale, mc_mean=0.0, ml_mean=0.0)
         imin = np.searchsorted(jl, jmin)
         imax = np.searchsorted(jl, jmax)
         zylist.append([jl[imin: imax], sl[imin: imax], edense[imin: imax]])
+    # this is for handling the prediction for YelmBand.
+    # TODO
+
     zydata = LightCurve(zylist, names=names)
+    return(zydata)
+
+def generateTrueLC2(covfunc="drw"):
+    """ Generate RMap light curves first, with the sampling designed to allow a post-processing into the line band light curve. The simlest solution is to build light curves on dense regular time axis. The only downside here is that, only 'drw' covariance is allowed.
+
+    covfunc : str, optional
+        Name of the covariance funtion (default: drw).
+
+    """
+    if covfunc != "drw" :
+        raise RuntimeError("current no such covfunc implemented for generateTrueLC2 %s"%covfunc)
+    ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode="Rmap")
+    mdense = np.zeros_like(jdense)
+    edense = np.zeros_like(jdense)
+    zylistold = [[jdense, mdense+lcmeans[0], edense], [jdense, mdense+lcmeans[1], edense], [jdense, mdense+lcmeans[2], edense],]
+    # this is for handling the prediction for Continuum, Yelm, and Zing.
+    zylistnew = ps.generate(zylistold)
+    # this is for handling the prediction for YelmBand.
+    phlc = [jdense, mdense, edense]
+    phlc[1] = zylistnew[0][1] + zylistnew[1][1]
+    # combine into a single LightCurve
+    zylistnew.append(phlc)
+    zydata = LightCurve(zylistnew, names=names)
     return(zydata)
 
 def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
@@ -98,23 +154,6 @@ def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
         zylclist_new.append([j,m,e])
     zymock = LightCurve(zylclist_new, names=names)
     return(zymock)
-
-def getTrue(trufile, set_plot=False, mode="test"):
-    if mode == "test" :
-        return(None)
-    elif mode == "show" :
-        print("read true light curve signal from %s"%trufile)
-        zydata = get_data(trufile, names=names)
-    elif mode == "run" :
-        print("generate true light curve signal")
-        zydata = generateTrueLC(covfunc="drw")
-        print("save true light curve signal to %s"%trufile)
-        trufile = ".".join([trufile, "myrun"])
-        zydata.save(trufile)
-    if set_plot :
-        print("plot true light curve signal")
-        zydata.plot()
-    return(zydata)
 
 def getMock(zydata, confile, topfile, doufile, set_plot=False, mode="test") :
     # downsample the truth to get more realistic light curves
@@ -199,38 +238,45 @@ def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
     if set_plot :
         zypred.plot(set_pred=True, obs=zydata)
 
-if __name__ == "__main__":    
-    import sys
-    try:
-        import multiprocessing
-        threads = multiprocessing.cpu_count()
-    except (ImportError,NotImplementedError):
-        threads = 1
-        pass
-    if threads > 1 :
-        print("use multiprocessing on %d cpus"%threads)
-    else :
-        print("use single cpu")
-
-    mode = sys.argv[1]
-    if mode == "test" :
-        set_plot = False
-    elif mode == "show" :
-        set_plot = True
-    elif mode == "run" :
-        set_plot = True
-
-    # specified file names
-    trufile   = "dat/trulc.dat"
-    confile   = "dat/loopdeloop_con.dat"
-    topfile   = "dat/loopdeloop_con_y.dat"
-    doufile   = "dat/loopdeloop_con_y_z.dat"
-    confchain = "dat/chain0.dat"
-    topfchain = "dat/chain1.dat"
-    doufchain = "dat/chain2.dat"
+def demo(mode) :
+    """ Demonstrate the main functionalities of JAVELIN.
+    """
+    if True :
+        if mode   == "test" :
+            set_plot = False
+        elif mode == "show" :
+            set_plot = True
+        elif mode == "run" :
+            set_plot = True
+        try :
+            import multiprocessing
+            threads = multiprocessing.cpu_count()
+        except (ImportError,NotImplementedError) :
+            threads = 1
+        if threads > 1 :
+            print("use multiprocessing on %d cpus"%threads)
+        else :
+            print("use single cpu")
+        # source variability
+        trufile   = "dat/trulc.dat"
+        # observed continuum light curve w/ seasonal gap
+        confile   = "dat/loopdeloop_con.dat"
+        # observed continuum+y light curve w/ seasonal gap
+        topfile   = "dat/loopdeloop_con_y.dat"
+        # observed continuum+y+z light curve w/ seasonal gap
+        doufile   = "dat/loopdeloop_con_y_z.dat"
+        # observed continuum band+y band light curve w/out seasonal gap
+        phofile   = "dat/loopdeloop_cb_yb.dat"
+        # file for storing MCMC chains
+        confchain = "dat/chain0.dat"
+        topfchain = "dat/chain1.dat"
+        doufchain = "dat/chain2.dat"
+        phofchain = "dat/chain3.dat"
 
     # generate truth drw signal
     zydata  = getTrue(trufile, set_plot=set_plot, mode=mode)
+
+    quit()
 
     # generate mock light curves
     getMock(zydata, confile, topfile, doufile, set_plot=set_plot, mode=mode)
@@ -250,6 +296,8 @@ if __name__ == "__main__":
     # show fit
     showfit(douhpd, doufile, names=names, set_plot=set_plot, mode=mode)
 
-
-
-
+if __name__ == "__main__":    
+    import sys
+    mode = sys.argv[1]
+    # run demo.
+    demo(mode)

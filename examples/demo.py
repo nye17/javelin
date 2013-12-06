@@ -1,4 +1,4 @@
-#Last-modified: 06 Dec 2013 01:21:26
+#Last-modified: 06 Dec 2013 03:50:03
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
@@ -14,7 +14,8 @@ Tests from scratch.
 # names of the true light curves
 names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
 # smapling properties of the underlying signal
-jdense = np.linspace(0.0, 1000.0, 1000)
+# jdense = np.arange(0.0, 1440.0, 1.0)
+jdense = np.linspace(0.0, 1500.0, 1500)
 # DRW parameters
 sigma, tau = (2.00, 100.0)
 # line parameters
@@ -55,7 +56,7 @@ def getTrue(trufile, set_plot=False, mode="test"):
         zydata.save(trufile)
     if set_plot :
         print("plot true light curve signal")
-        zydata.plot()
+        zydata.plot(marker="None", ms=1.0, ls="-", lw=2)
     return(zydata)
 
 def generateTrueLC(covfunc="drw"):
@@ -124,59 +125,81 @@ def generateTrueLC2(covfunc="drw"):
     zydata = LightCurve(zylistnew, names=names)
     return(zydata)
 
-def True2Mock(zydata, lcmeans=lcmeans, sparse=[2, 4, 4], errfac=[0.05, 0.05,
-    0.05], set_seasongap=True):
+def True2Mock(zydata, sparse=[2, 4, 4], errfac=[0.05, 0.05, 0.05], hasgap=[True, True, True], errcov=0.0):
+    """ Postprocess true light curves to observed light curves.
+
+    Parameters
+    ----------
+    zydata: LightCurve
+        Input true LightCurve.
+    """
+    test = np.array([len(sparse), len(errfac), len(hasgap)])  == zydata.nlc
+    if not np.all(test) :
+        raise RuntimeError("input dimensions do not match")
     zylclist= zydata.zylclist
     names   = zydata.names
-    if set_seasongap :
+    zylclist_new = []
+    if any(hasgap) :
+        # some may have gaps, to make sure the sun is synchronized in all light curves, we have to do this globally.
         rj = zydata.rj
         j0 = zydata.jarr[0]
         j1 = zydata.jarr[-1]
         ng = np.floor(rj/180.0)
-    zylclist_new = []
     for i in xrange(zydata.nlc):
         ispa = np.arange(0, zydata.nptlist[i], sparse[i])
         j = zydata.jlist[i][ispa]
         # strip off gaps
-        if set_seasongap :
+        if hasgap[i] :
             dj = np.floor((j - j0)/180.0)
             igap = np.where(np.mod(dj, 2) == 0)
             indx = ispa[igap]
         else :
             indx = ispa
         j = zydata.jlist[i][indx]
-        m = zydata.mlist[i][indx]
+        m = zydata.mlist[i][indx] + zydata.blist[i]
         e = zydata.elist[i][indx]
         # adding errors
-        e = e*0.0+lcmeans[i]*errfac[i]
-        et= generateError(e, errcov=0.0)
-        m = m + et + lcmeans[i]
+        e = e*0.0+m*errfac[i]
+        et= generateError(e, errcov=errcov)
+        m = m + et
         zylclist_new.append([j,m,e])
     zymock = LightCurve(zylclist_new, names=names)
     return(zymock)
 
-def getMock(zydata, confile, topfile, doufile, set_plot=False, mode="test") :
-    # downsample the truth to get more realistic light curves
+def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="test") :
+    """ downsample the truth to get more realistic light curves
+    """
     if mode == "test" :
         return(None)
     else :
-        zydata_dou = True2Mock(zydata, lcmeans=lcmeans, sparse=[20, 20, 20], 
-            errfac=[0.05, 0.05, 0.05], set_seasongap=True)
+        _c, _y, _z, _yb = zydata.split()
+        _zydata = _c + _y + _z
+        zydata_dou = True2Mock(_zydata, sparse=[5, 10, 10], errfac=[0.01, 0.02, 0.02], hasgap=[True, True, True], errcov=0.0)
         zylclist_top = zydata_dou.zylclist[:2]
         zydata_top = LightCurve(zylclist_top, names=names[0:2])
+        _zydata = _c + _yb
+        zydata_pho = True2Mock(_zydata, sparse=[5, 5], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0) 
         if mode == "run" :
             confile = ".".join([confile, "myrun"])
             doufile = ".".join([doufile, "myrun"])
             topfile = ".".join([topfile, "myrun"])
+            phofile = ".".join([phofile, "myrun"])
             zydata_dou.save_continuum(confile)
             zydata_dou.save(doufile)
             zydata_top.save(topfile)
+            zydata_pho.save(phofile)
     if set_plot :
-        print("plot mock light curves for continuum, yelm, and zing lines")
-        zydata_dou.plot()
+        print("plot mock light curves for continuum, yelm, zing, and yelm band lines")
+        _c, _yb = zydata_pho.split()
+        zymock = zydata_dou + _yb
+        zymock.plot()
+        # zydata_dou.plot()
+        # print("plot mock light curves for continuum and yelm band lines")
+        # zydata_pho.plot()
 
-def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100,
-        nburn=50, nchain=50, figext=None, mode="test") :
+def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+    """ fit the continuum model.
+    """
     if mode == "run" :
         confile = ".".join([confile, "myrun"])
     zydata = get_data(confile, names=names)
@@ -188,18 +211,16 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
         cont.load_chain(confchain)
     elif mode == "run" :
         confchain = ".".join([confchain, "myrun"])
-        cont.do_mcmc(nwalkers=nwalkers, nburn=nburn, nchain=nchain, fburn=None,
-                fchain=confchain, threads=1)
+        cont.do_mcmc(nwalkers=nwalkers, nburn=nburn, nchain=nchain, fburn=None, fchain=confchain, threads=1)
     if set_plot :
         cont.show_hist(bins=100, figext=figext)
     return(cont.hpd)
 
-def fitLag(linfile, linfchain, conthpd, names=None, 
-        lagrange=[50, 350], lagbinsize=1, 
-        threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50,
-        figext=None, mode="test") :
-    if mode == "run" :
-        linfile = ".".join([linfile, "myrun"])
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 350], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+    """ fit the Rmap model.
+    """
+    # if mode == "run" :
+        # linfile = ".".join([linfile, "myrun"])
     zydata = get_data(linfile, names=names)
     rmap   = Rmap_Model(zydata)
     if mode == "test" :
@@ -216,7 +237,7 @@ def fitLag(linfile, linfchain, conthpd, names=None,
         print(laglimit)
 #        laglimit = "baseline"
         linfchain = ".".join([linfchain, "myrun"])
-        rmap.do_mcmc(conthpd=conthpd, laglimit=laglimit, 
+        rmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit, 
                 nwalkers=nwalkers, nburn=nburn, nchain=nchain,
                 fburn=None, fchain=linfchain, threads=threads)
     if set_plot :
@@ -266,28 +287,30 @@ def demo(mode) :
         # observed continuum+y+z light curve w/ seasonal gap
         doufile   = "dat/loopdeloop_con_y_z.dat"
         # observed continuum band+y band light curve w/out seasonal gap
-        phofile   = "dat/loopdeloop_cb_yb.dat"
+        phofile   = "dat/loopdeloop_con_yb.dat"
         # file for storing MCMC chains
         confchain = "dat/chain0.dat"
         topfchain = "dat/chain1.dat"
         doufchain = "dat/chain2.dat"
         phofchain = "dat/chain3.dat"
 
+
+
     # generate truth drw signal
     zydata  = getTrue(trufile, set_plot=set_plot, mode=mode)
 
-    quit()
-
     # generate mock light curves
-    getMock(zydata, confile, topfile, doufile, set_plot=set_plot, mode=mode)
+    getMock(zydata, confile, topfile, doufile, phofile, set_plot=set_plot, mode=mode)
 
     # fit continuum
     conthpd = fitCon(confile, confchain, names=names[0:1],
             threads=threads, set_plot=set_plot, mode=mode)
 
+    if True :
+        mode = "run"; set_plot = True; threads = 1
     # fit tophat
-    tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2],
-            threads=threads, set_plot=set_plot, mode=mode)
+    tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
+    quit()
 
     # fit douhat
     douhpd = fitLag(doufile, doufchain, conthpd, names=names,
@@ -298,6 +321,7 @@ def demo(mode) :
 
 if __name__ == "__main__":    
     import sys
-    mode = sys.argv[1]
+    # mode = sys.argv[1]
     # run demo.
+    mode = "show"
     demo(mode)

@@ -1,4 +1,4 @@
-#Last-modified: 05 Dec 2013 18:01:41
+#Last-modified: 06 Dec 2013 03:27:36
 
 # generic packages
 import numpy as np
@@ -606,17 +606,14 @@ class Cont_Model(object) :
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                     (nburn, nwalkers, nburn*nwalkers))
-        # FIXME
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p, 
                     args=(self.zydata, self.covfunc, set_prior, 
-                        self.uselognu, 
-                        set_prior, 
                         conthpd, 
+                        self.uselognu, 
                         rank, 
                         False, 
                         False), 
                     threads=threads)
-# def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu=False, rank="Full", set_retq=False, set_verbose=False) :
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
             print("burn-in finished")

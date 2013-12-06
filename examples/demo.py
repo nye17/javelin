@@ -1,4 +1,4 @@
-#Last-modified: 06 Dec 2013 03:50:03
+#Last-modified: 06 Dec 2013 04:58:58 AM
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
@@ -307,7 +307,8 @@ def demo(mode) :
             threads=threads, set_plot=set_plot, mode=mode)
 
     if True :
-        mode = "run"; set_plot = True; threads = 1
+        # mode = "run"; set_plot = True; threads = 1
+        mode = "run"; set_plot = True; threads = 2
     # fit tophat
     tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
     quit()

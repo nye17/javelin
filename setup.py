@@ -88,8 +88,8 @@ except:
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="0.2alpha",
-            description="JAVELIN: Python Version of SPEAR",
+    setup(  version="0.3alpha",
+            description="JAVELIN: Just Another Vehicle for Estimting Lags In Nuclei",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
             url="https://bitbucket.org/nye17/javelin",
@@ -119,7 +119,3 @@ if __name__ == '__main__':
                       ],
             **(config_dict)
             )
-
-
-
-

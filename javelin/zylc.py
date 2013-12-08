@@ -1,4 +1,4 @@
-# Last-modified: 30 Sep 2013 12:27:52 PM
+# Last-modified: 06 Dec 2013 01:58:44
 
 __all__ = ['LightCurve', 'get_data']
 
@@ -9,7 +9,6 @@ from graphic import figure_handler
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from copy import copy, deepcopy
-
 
 """ Load light curve files into a LightCurve object.
 """
@@ -181,7 +180,7 @@ class LightCurve(object):
             # fix the original zylclist
             self.zylclist[i][0] = np.atleast_1d(zylclist[i][0]) + timeoffset
 
-    def plot(self, set_pred=False, obs=None, figout=None, figext=None) :
+    def plot(self, set_pred=False, obs=None, marker="o", ms=4, ls='None', lw=1, figout=None, figext=None) :
         """ Plot light curves.
 
         Parameters
@@ -193,6 +192,18 @@ class LightCurve(object):
         obs: bool, optional
             The observed light curve data to be overplotted on the current light
             curves, usually used when set_pred is True (default: None).
+
+        marker: str, optional
+            Marker symbol (default: 'o').
+
+        ms : float, optional
+            Marker size (default: 4).
+
+        ls : str, optional
+            Line style (default: 'None').
+
+        lw: float, optional
+            Line width (default: 1).
 
         figout: str, optional
             Output figure name (default: None).
@@ -207,7 +218,7 @@ class LightCurve(object):
         height = 0.85/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.10, 0.1+i*height, 0.85, height])
-            mfc = cm.jet(1.*(i-1)/self.nlc)
+            mfc = cm.jet(i/(self.nlc-1.))
             if set_pred :
                 ax.plot(self.jlist[i], self.mlist[i]+self.blist[i],
                     color=mfc, ls="-", lw=2,
@@ -221,13 +232,19 @@ class LightCurve(object):
                 if obs is not None :
                     ax.errorbar(obs.jlist[i], obs.mlist[i]+obs.blist[i], 
                             yerr=obs.elist[i], 
-                            ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
+                            ecolor='k', marker=marker, ms=ms, mfc=mfc, mec='k', ls=ls, lw=lw,
                             label=" ".join([self.names[i], "observed"]))
             else :
-                ax.errorbar(self.jlist[i], self.mlist[i]+self.blist[i], 
-                    yerr=self.elist[i], 
-                    ecolor='k', marker="o", ms=4, mfc=mfc, mec='k', ls='None',
-                    label=self.names[i])
+                if np.sum(self.elist[i]) == 0.0 :
+                    # no error, pure signal.
+                    ax.plot(self.jlist[i], self.mlist[i]+self.blist[i], 
+                        marker=marker, ms=ms, mfc=mfc, mec='k', ls=ls, lw=lw,
+                        label=self.names[i], color=mfc)
+                else :
+                    ax.errorbar(self.jlist[i], self.mlist[i]+self.blist[i], 
+                        yerr=self.elist[i], 
+                        ecolor='k', marker=marker, ms=ms, mfc=mfc, mec='k', ls=ls, lw=lw,
+                        label=self.names[i])
 
             ax.set_xlim(self.jstart, self.jend)
             ax.set_ylim(np.min(self.mlist[i])+self.blist[i]-np.min(self.elist[i]),
@@ -477,7 +494,6 @@ class LightCurve(object):
             start = start+nptlc
         p = jarr.argsort()
         return(jarr[p], marr[p], earr[p], iarr[p])
-
 
 def get_data(lcfile, names=None, set_subtractmean=True, timeoffset=0.0):
     """ Read light curve file(s) into a LightCurve object.

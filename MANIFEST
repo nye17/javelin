@@ -51,6 +51,8 @@ examples/dat/con.dat
 examples/dat/loopdeloop_con.dat
 examples/dat/loopdeloop_con_y.dat
 examples/dat/loopdeloop_con_y_z.dat
+examples/dat/loopdeloop_con_yb.dat
+examples/dat/rename.py
 examples/dat/trulc.dat
 examples/dat/yelm.dat
 examples/dat/zing.dat
@@ -76,15 +78,13 @@ javelin/spear.py
 javelin/spear_covfunc.f90
 javelin/threadpool.py
 javelin/zylc.py
-javelin/bayesian/__init__.py
-javelin/bayesian/data.py
-javelin/bayesian/model.py
-javelin/bayesian/sampler.py
 javelin/emcee/__init__.py
 javelin/emcee/ensemble.py
 javelin/emcee/mh.py
+javelin/emcee/ptsampler.py
 javelin/emcee/sampler.py
 javelin/emcee/tests.py
+javelin/emcee/utils.py
 javelin/gp/BasisCovariance.py
 javelin/gp/Covariance.py
 javelin/gp/FullRankCovariance.py

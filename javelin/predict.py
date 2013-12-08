@@ -9,6 +9,7 @@ from zylc import LightCurve
 
 np.set_printoptions(precision=3)
 
+__all__ = ["PredictSignal", ]
 
 """ Generate random realizations based on the covariance function.
 """
@@ -43,7 +44,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     """ Convolve with the top-hat kernel to get line light curve, however, the
     input continuum signal has to be dense enough and regularly sampled.
 
-    This should be deprecated if using tophat.
+    .. note:: this should be deprecated.
 
     Parameters
     ----------
@@ -100,8 +101,145 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     print(len(ml))
     return(jl, ml)
 
+class PredictSignal(object):
+    """
+    Predict continuum light curves.
+    """
+    def __init__(self, zydata=None, lcmean=0.0, covfunc="drw", rank="Full", **covparams):
+        """ PredictSignal object for simulating continuum light curves.
+
+        Parameters
+        ----------
+        zydata: LightCurve object, optional
+            Observed light curve in LightCurve format, set to 'None' if no observation
+            is done (default: Done)
+
+        lcmean: scalar or a Mean object, optional
+            Mean amplitude of the underlying signal (default: 0).
+
+        covfunc: string, optional
+            Name of the covariance function (default: drw).
+
+        rank: string, optional
+            Rank of the covariance function, could potentially use 'NearlyFull'
+            rank covariance when the off-diagonal terms become strong (default:
+            'Full').
+
+        covparams: kwargs
+            Parameters for 'covfunc'.
+
+        """
+        # make the Mean object
+        try :
+            const = float(lcmean)
+            meanfunc = lambda x: const*(x*0.0+1.0)
+            self.M = Mean(meanfunc)
+        except ValueError:
+            if isinstance(lcmean, Mean):
+                self.M = lcmean
+            else:
+                raise RuntimeError("lcmean is neither a Mean obj or a const")
+        # generate covariance parameters
+        covfunc_dict = get_covfunc_dict(covfunc, **covparams)
+        if rank is "Full" :
+            self.C  = FullRankCovariance(**covfunc_dict)
+        elif (rank is "NearlyFull") or rank is ("NearlyFullRankCovariance") :
+            self.C  = NearlyFullRankCovariance(**covfunc_dict)
+        # observe zydata
+        if zydata is None :
+            print("No *zydata* Observed, Unconstrained Realization")
+        else:
+            print("Observed *zydata*, Constrained Realization")
+            jdata = zydata.jarr
+            mdata = zydata.marr + zydata.blist[0]
+            edata = zydata.earr
+            observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
+
+    def mve_var(self, jwant):
+        """ Generate the minimum variance estimate and its associated variance.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        Returns
+        -------
+        m: array_like
+            Minimum variance estimate of the underlying signal.
+
+        v: array_like
+            Variance at simulated point.
+
+        """
+        m, v = GPutils.point_eval(self.M, self.C, jwant)
+        return(m,v)
+
+    def generate(self, jwant, ewant=0.0, num=1, errcov=0.0):
+        """ Draw random realizations as simulated light curves.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        ewant: scalar or array_like, optional
+            Errors in the simulated light curve (default: 0.0).
+
+        errcov: scalar, optional
+            Correlation coefficient of errors (default: 0.0).
+
+        num: scalar, optional
+            Number of simulated light curves to be generated.
+        
+        Returns
+        -------
+        mwant: array_like (num=1) or list of arrays (num>1)
+            Simulated light curve(s)
+
+        """
+        if (np.min(ewant) < 0.0):
+            raise RuntimeError("ewant should be either 0  or postive")
+        elif np.alltrue(ewant==0.0):
+            set_error_on_mocklc = False
+        else:
+            set_error_on_mocklc = True
+
+        # number of desired epochs
+        nwant = len(jwant)
+
+        if np.isscalar(ewant):
+            e = np.zeros(nwant) + ewant
+        else :
+            e = ewant
+
+        # generate covariance function
+        ediag = np.diag(e*e)
+        if errcov == 0.0 :
+            ecovmat = ediag
+        else :
+            temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
+            temp2 = (temp1*temp1.T - ediag)*errcov
+            ecovmat = ediag + temp2
+
+        if num == 1:
+            f = Realization(self.M, self.C)
+            mwant = f(jwant)
+            if set_error_on_mocklc:
+                mwant += multivariate_normal(np.zeros(nwant), ecovmat)
+            return(mwant)
+        else:
+            mwant_list = []
+            for i in xrange(num):
+                f = Realization(self.M, self.C)
+                mwant = f(jwant)
+                if set_error_on_mocklc:
+                    mwant += multivariate_normal(np.zeros(nwant), ecovmat)
+                mwant_list.append(mwant)
+            return(mwant_list)
+
 class PredictRmap(object):
-    """ Predict light curves for spear.
+    """ Predict light curves for Rmap, with data constraints.
     """
     def __init__(self, zydata, set_threading=False,  **covparams):
         """ PredictRmap object.
@@ -244,154 +382,17 @@ class PredictRmap(object):
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
 
-class PredictSignal(object):
-    """
-    Predict continuum light curves.
-    """
-    def __init__(self, zydata=None, lcmean=0.0, covfunc="drw", 
-            rank="Full", **covparams):
-        """ PredictSignal object for simulating continuum light curves.
-
-        Parameters
-        ----------
-        zydata: LightCurve object, optional
-            Observed light curve in LightCurve format, set to 'None' if no observation
-            is done (default: Done)
-
-        lcmean: scalar or a Mean object, optional
-            Mean amplitude of the underlying signal (default: 0).
-
-        covfunc: string, optional
-            Name of the covariance function (default: drw).
-
-        rank: string, optional
-            Rank of the covariance function, could potentially use 'NearlyFull'
-            rank covariance when the off-diagonal terms become strong (default:
-            'Full').
-
-        covparams: kwargs
-            Parameters for 'covfunc'.
-
-        """
-        # make the Mean object
-        try :
-            const = float(lcmean)
-            meanfunc = lambda x: const*(x*0.0+1.0)
-            self.M = Mean(meanfunc)
-        except ValueError:
-            if isinstance(lcmean, Mean):
-                self.M = lcmean
-            else:
-                raise RuntimeError("lcmean is neither a Mean obj or a const")
-        # generate covariance parameters
-        covfunc_dict = get_covfunc_dict(covfunc, **covparams)
-        if rank is "Full" :
-            self.C  = FullRankCovariance(**covfunc_dict)
-        elif (rank is "NearlyFull") or rank is ("NearlyFullRankCovariance") :
-            self.C  = NearlyFullRankCovariance(**covfunc_dict)
-        # observe zydata
-        if zydata is None :
-            print("No *zydata* Observed, Unconstrained Realization")
-        else:
-            print("Observed *zydata*, Constrained Realization")
-            jdata = zydata.jarr
-            mdata = zydata.marr + zydata.blist[0]
-            edata = zydata.earr
-            observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
-
-    def mve_var(self, jwant):
-        """ Generate the minimum variance estimate and its associated variance.
-
-        Parameters
-        ----------
-        jwant: array_like
-            Desired epochs for simulated light curve.
-
-        Returns
-        -------
-        m: array_like
-            Minimum variance estimate of the underlying signal.
-
-        v: array_like
-            Variance at simulated point.
-
-        """
-        m, v = GPutils.point_eval(self.M, self.C, jwant)
-        return(m,v)
-
-    def generate(self, jwant, ewant=0.0, num=1, errcov=0.0):
-        """ Draw random realizations as simulated light curves.
-
-        Parameters
-        ----------
-        jwant: array_like
-            Desired epochs for simulated light curve.
-
-        ewant: scalar or array_like, optional
-            Errors in the simulated light curve (default: 0.0).
-
-        errcov: scalar, optional
-            Correlation coefficient of errors (default: 0.0).
-
-        num: scalar, optional
-            Number of simulated light curves to be generated.
-        
-        Returns
-        -------
-        mwant: array_like (num=1) or list of arrays (num>1)
-            Simulated light curve(s)
-
-        """
-        if (np.min(ewant) < 0.0):
-            raise RuntimeError("ewant should be either 0  or postive")
-        elif np.alltrue(ewant==0.0):
-            set_error_on_mocklc = False
-        else:
-            set_error_on_mocklc = True
-
-        # number of desired epochs
-        nwant = len(jwant)
-
-        if np.isscalar(ewant):
-            e = np.zeros(nwant) + ewant
-        else :
-            e = ewant
-
-        # generate covariance function
-        ediag = np.diag(e*e)
-        if errcov == 0.0 :
-            ecovmat = ediag
-        else :
-            temp1 = np.repeat(e, nwant).reshape(nwant,nwant)
-            temp2 = (temp1*temp1.T - ediag)*errcov
-            ecovmat = ediag + temp2
-
-        if num == 1:
-            f = Realization(self.M, self.C)
-            mwant = f(jwant)
-            if set_error_on_mocklc:
-                mwant += multivariate_normal(np.zeros(nwant), ecovmat)
-            return(mwant)
-        else:
-            mwant_list = []
-            for i in xrange(num):
-                f = Realization(self.M, self.C)
-                mwant = f(jwant)
-                if set_error_on_mocklc:
-                    mwant += multivariate_normal(np.zeros(nwant), ecovmat)
-                mwant_list.append(mwant)
-            return(mwant_list)
-
 class PredictSpear(object):
-    """ Generate continuum and line light curves without data constraint.
+    """ Generate continuum and line light curves for 'Rmap', 'Pmap', and 'SPmap' `spearmodes`, but without data constraint.
     """
     def __init__(self, sigma, tau, llags, lwids, lscales, spearmode="Rmap"):
         """
+
         llags, lwids, lscales: properties of the line transfer functions, all lists of length n_line.
 
-        if spearmode is "Rmap" , the transfer functions have nline elmements.
-        if spearmode is "Pmap" , the transfer functions have     2 elmements, first for the line, second for the continuum under line band with lag=0 and width=0.
-        if spearmode is "SPmap", the transfer functions have     2 elmement, first for the line, second with lag=0 and width=0.
+        1) if spearmode is "Rmap" , the transfer functions have nline elmements.
+        2) if spearmode is "Pmap" , the transfer functions have     2 elmements, first for the line, second for the continuum under line band with lag=0 and width=0.
+        3) if spearmode is "SPmap", the transfer functions have     2 elmement, first for the line, second with lag=0 and width=0.
         """
         self.sigma = sigma
         self.tau   = tau
@@ -530,7 +531,7 @@ class PredictSpear(object):
         return(jlist, mlist, elist)
 
 class PredictPmap(object):
-    """ Predict light curves for spear.
+    """ Predict light curves for Pmap, with data constraints.
     """
     def __init__(self, zydata, set_threading=False,  **covparams):
         """ PredictPmap object.
@@ -674,7 +675,7 @@ class PredictPmap(object):
         return(mw, vw)
 
 class PredictSPmap(object):
-    """ Predict light curves for single band reverberation mapping.
+    """ Predict light curves for SPmap, with data constraints.
     """
     def __init__(self, zydata, set_threading=False, **covparams):
         """ PredictPmap object.
@@ -897,6 +898,23 @@ def mockme(zydata, covfunc="drw", rank="Full", mockname=None, shrinkerr=1.0, **c
     zymock = LightCurve(zymock_list, names=[mockname,])
     return(zymock)
 
+def test_PredictSpear():
+    """
+    """
+    sigma = 0.2
+    tau = 40.0
+    llags = [10.0, 30.0]
+    lwids = [ 2.0,  5.0]
+    lscales = [ 0.5,  2.0]
+    ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode="Rmap")
+    npt = 100
+    jarr = np.linspace(0.0, 200.0, npt)
+    marr = np.ones(npt)*10.0
+    earr = np.zeros(npt)
+    lcdat = [ [jarr, marr, earr], [jarr, marr, earr], [jarr, marr, earr],]
+    lcnew = ps.generate(lcdat, set_threading=False)
+    zylc = LightCurve(lcnew)
+    zylc.plot()
+
 if __name__ == "__main__":
-    # TODO need to write test units
-    pass
+    test_PredictSpear()

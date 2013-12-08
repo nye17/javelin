@@ -1,4 +1,4 @@
-#Last-modified: 08 Dec 2013 03:28:24
+#Last-modified: 08 Dec 2013 15:48:26
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
@@ -10,6 +10,8 @@ from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
 """
 
 #************** PLEASE DO NOT EDIT THIS PART*****
+figext = "png"
+# figext = None
 # names of the true light curves
 names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
 # dense sampling of the underlying signal
@@ -54,7 +56,7 @@ def getTrue(trufile, set_plot=False, mode="test"):
         zydata.save(trufile)
     if set_plot :
         print("plot true light curve signal")
-        zydata.plot(marker="None", ms=1.0, ls="-", lw=2)
+        zydata.plot(marker="None", ms=1.0, ls="-", lw=2, figout="signal", figext=figext)
     return(zydata)
 
 def generateTrueLC(covfunc="drw"):
@@ -190,9 +192,9 @@ def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="te
         print("plot mock light curves for continuum, yelm, zing, and yelm band lines")
         _c, _yb = zydata_pho.split()
         zymock = zydata_dou + _yb
-        zymock.plot()
+        zymock.plot(figout="mocklc", figext=figext)
 
-def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, mode="test") :
     """ fit the continuum model.
     """
     if mode == "run" :
@@ -208,10 +210,10 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
         confchain = ".".join([confchain, "myrun"])
         cont.do_mcmc(nwalkers=nwalkers, nburn=nburn, nchain=nchain, fburn=None, fchain=confchain, threads=1)
     if set_plot :
-        cont.show_hist(bins=100, figext=figext)
+        cont.show_hist(bins=100, figout="mcmc0", figext=figext)
     return(cont.hpd)
 
-def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, mode="test") :
     """ fit the Rmap model.
     """
     if mode == "run" :
@@ -222,8 +224,7 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
         if zydata.nlc == 2 :
             print(rmap([np.log(2.), np.log(100), lagy, widy, scaley ]))
         elif zydata.nlc == 3 :
-            print(rmap([np.log(2.), np.log(100), lagy, widy, scaley, lagz, widz,
-                scalez]))
+            print(rmap([np.log(2.), np.log(100), lagy, widy, scaley, lagz, widz, scalez]))
         return(None)
     elif mode == "show" :
         rmap.load_chain(linfchain, set_verbose=False)
@@ -238,10 +239,14 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
     if set_plot :
         rmap.break_chain([lagrange,]*(zydata.nlc-1))
         rmap.get_hpd()
-        rmap.show_hist(bins=100, lagbinsize=lagbinsize, figext=figext)
+        if zydata.nlc == 2 :
+            figout = "mcmc1"
+        else :
+            figout = "mcmc2"
+        rmap.show_hist(bins=100, lagbinsize=lagbinsize, figout=figout, figext=figext)
     return(rmap.hpd)
 
-def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50,mode="test") :
     """ fit the Pmap model.
     """
     if mode == "run" :
@@ -262,7 +267,7 @@ def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbins
     if set_plot :
         pmap.break_chain([lagrange,])
         pmap.get_hpd()
-        pmap.show_hist(bins=100, lagbinsize=lagbinsize, figext=figext)
+        pmap.show_hist(bins=100, lagbinsize=lagbinsize, figout="mcmc3", figext=figext)
     return(pmap.hpd)
 
 def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
@@ -277,10 +282,19 @@ def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
         zypred = rmap.do_pred(linhpd[1,:])
         zypred.names = names
     if set_plot :
-        zypred.plot(set_pred=True, obs=zydata)
+        zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
 
 def demo(mode) :
     """ Demonstrate the main functionalities of JAVELIN.
+
+    Parameters
+    ----------
+
+    mode: string
+        "test" : just go through some likelihood calculation to make sure JAVELIN is correctly installed.
+        "show" : load example light curves and chains and show plots.
+        "run" : regenerate all the light curves and chains.
+
     """
     from sys import platform as _platform
     if True :
@@ -340,10 +354,7 @@ def demo(mode) :
     # fit pmap
     phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[0, 150], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
 
-
 if __name__ == "__main__":    
     import sys
-    # mode = sys.argv[1]
-    # run demo.
-    mode = "show"
+    mode = sys.argv[1]
     demo(mode)

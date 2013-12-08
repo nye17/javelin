@@ -1,4 +1,9 @@
-#Last-modified: 06 Mar 2012 12:02:02 PM
+#Last-modified: 04 Dec 2013 16:21:16
+
+all = ['InputError', 'UsageError', 'Error']
+
+""" Error handlers. 
+"""
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -13,7 +18,6 @@ class InputError(Error):
     def __init__(self, msg):
         self.msg = msg
         print(msg)
-
 
 class UsageError(Error):
     """Exception raised for errors in the usage of methods.

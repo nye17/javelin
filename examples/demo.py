@@ -1,33 +1,31 @@
-#Last-modified: 06 Dec 2013 04:58:58 AM
+#Last-modified: 08 Dec 2013 03:28:24
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
 from javelin.lcio import *
 from javelin.zylc import LightCurve, get_data
-from javelin.lcmodel import Cont_Model, Rmap_Model
+from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
 
-"""
-Tests from scratch.
+""" Tests from scratch.
 """
 
-#************** DO NOT EDIT THIS PART************
+#************** PLEASE DO NOT EDIT THIS PART*****
 # names of the true light curves
 names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
-# smapling properties of the underlying signal
-# jdense = np.arange(0.0, 1440.0, 1.0)
-jdense = np.linspace(0.0, 1500.0, 1500)
+# dense sampling of the underlying signal
+jdense = np.linspace(0.0, 2000.0, 2000)
 # DRW parameters
-sigma, tau = (2.00, 100.0)
+sigma, tau = (3.00, 400.0)
 # line parameters
-lagy, widy, scaley = (120.0,  2.0, 0.4)
-lagz, widz, scalez = (250.0,  4.0, 0.3)
+lagy, widy, scaley = (100.0,   2.0, 0.5)
+lagz, widz, scalez = (250.0,   4.0, 0.25)
 lags   = [0.0,   lagy,   lagz]
 wids   = [0.0,   widy,   widz]
 scales = [1.0, scaley, scalez]
 llags   = [   lagy,   lagz]
 lwids   = [   widy,   widz]
 lscales = [ scaley, scalez]
-lcmeans= [10.0,  4.0,  3.0]
+lcmeans= [10.0,  5.0,  2.5]
 #************************************************
 
 def file_exists(fname) :
@@ -125,7 +123,7 @@ def generateTrueLC2(covfunc="drw"):
     zydata = LightCurve(zylistnew, names=names)
     return(zydata)
 
-def True2Mock(zydata, sparse=[2, 4, 4], errfac=[0.05, 0.05, 0.05], hasgap=[True, True, True], errcov=0.0):
+def True2Mock(zydata, sparse=[2, 4, 4], errfac=[0.01, 0.01, 0.01], hasgap=[True, True, True], errcov=0.0):
     """ Postprocess true light curves to observed light curves.
 
     Parameters
@@ -174,11 +172,11 @@ def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="te
     else :
         _c, _y, _z, _yb = zydata.split()
         _zydata = _c + _y + _z
-        zydata_dou = True2Mock(_zydata, sparse=[5, 10, 10], errfac=[0.01, 0.02, 0.02], hasgap=[True, True, True], errcov=0.0)
+        zydata_dou = True2Mock(_zydata, sparse=[8, 8, 8], errfac=[0.01, 0.01, 0.01], hasgap=[True, True, True], errcov=0.0)
         zylclist_top = zydata_dou.zylclist[:2]
         zydata_top = LightCurve(zylclist_top, names=names[0:2])
         _zydata = _c + _yb
-        zydata_pho = True2Mock(_zydata, sparse=[5, 5], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0) 
+        zydata_pho = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0) 
         if mode == "run" :
             confile = ".".join([confile, "myrun"])
             doufile = ".".join([doufile, "myrun"])
@@ -193,9 +191,6 @@ def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="te
         _c, _yb = zydata_pho.split()
         zymock = zydata_dou + _yb
         zymock.plot()
-        # zydata_dou.plot()
-        # print("plot mock light curves for continuum and yelm band lines")
-        # zydata_pho.plot()
 
 def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
     """ fit the continuum model.
@@ -216,11 +211,11 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
         cont.show_hist(bins=100, figext=figext)
     return(cont.hpd)
 
-def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 350], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
     """ fit the Rmap model.
     """
-    # if mode == "run" :
-        # linfile = ".".join([linfile, "myrun"])
+    if mode == "run" :
+        linfile = ".".join([linfile, "myrun"])
     zydata = get_data(linfile, names=names)
     rmap   = Rmap_Model(zydata)
     if mode == "test" :
@@ -246,9 +241,34 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 350], lagbinsi
         rmap.show_hist(bins=100, lagbinsize=lagbinsize, figext=figext)
     return(rmap.hpd)
 
+def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, figext=None, mode="test") :
+    """ fit the Pmap model.
+    """
+    if mode == "run" :
+        phofile = ".".join([phofile, "myrun"])
+    zydata = get_data(phofile, names=names)
+    pmap   = Pmap_Model(zydata)
+    if mode == "test" :
+        print(pmap([np.log(2.), np.log(100), lagy, widy, scaley,  1.0]))
+        return(None)
+    elif mode == "show" :
+        pmap.load_chain(phofchain, set_verbose=False)
+    elif mode == "run" :
+        laglimit = [[50.0, 130.0]] # XXX here we want to avoid 180 day limit.
+        phofchain = ".".join([phofchain, "myrun"])
+        pmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit, 
+                nwalkers=nwalkers, nburn=nburn, nchain=nchain,
+                fburn=None, fchain=phofchain, threads=threads)
+    if set_plot :
+        pmap.break_chain([lagrange,])
+        pmap.get_hpd()
+        pmap.show_hist(bins=100, lagbinsize=lagbinsize, figext=figext)
+    return(pmap.hpd)
+
 def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
     if mode == "run" :
         linfile = ".".join([linfile, "myrun"])
+    print linfile
     zydata = get_data(linfile, names=names)
     rmap   = Rmap_Model(zydata)
     if mode == "test" :
@@ -262,6 +282,7 @@ def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
 def demo(mode) :
     """ Demonstrate the main functionalities of JAVELIN.
     """
+    from sys import platform as _platform
     if True :
         if mode   == "test" :
             set_plot = False
@@ -271,7 +292,11 @@ def demo(mode) :
             set_plot = True
         try :
             import multiprocessing
-            threads = multiprocessing.cpu_count()
+            if _platform == "darwin" :
+                # for some reason, Mac cannot handle the pools in emcee.
+                threads = 1
+            else :
+                threads = multiprocessing.cpu_count()
         except (ImportError,NotImplementedError) :
             threads = 1
         if threads > 1 :
@@ -294,8 +319,6 @@ def demo(mode) :
         doufchain = "dat/chain2.dat"
         phofchain = "dat/chain3.dat"
 
-
-
     # generate truth drw signal
     zydata  = getTrue(trufile, set_plot=set_plot, mode=mode)
 
@@ -303,22 +326,20 @@ def demo(mode) :
     getMock(zydata, confile, topfile, doufile, phofile, set_plot=set_plot, mode=mode)
 
     # fit continuum
-    conthpd = fitCon(confile, confchain, names=names[0:1],
-            threads=threads, set_plot=set_plot, mode=mode)
+    conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode)
 
-    if True :
-        # mode = "run"; set_plot = True; threads = 1
-        mode = "run"; set_plot = True; threads = 2
     # fit tophat
     tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
-    quit()
 
     # fit douhat
-    douhpd = fitLag(doufile, doufchain, conthpd, names=names,
-        threads=threads, set_plot=set_plot, mode=mode)
+    douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
 
     # show fit
-    showfit(douhpd, doufile, names=names, set_plot=set_plot, mode=mode)
+    showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
+
+    # fit pmap
+    phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[0, 150], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
+
 
 if __name__ == "__main__":    
     import sys

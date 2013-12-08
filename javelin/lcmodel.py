@@ -1,4 +1,4 @@
-#Last-modified: 06 Dec 2013 03:27:36
+#Last-modified: 08 Dec 2013 01:13:36
 
 # generic packages
 import numpy as np
@@ -842,46 +842,46 @@ def unpackspearpar(p, nlc=None, hascontlag=False) :
 def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, set_threading=False, blocksize=10000, set_retq=False, set_verbose=False):
     """ log-posterior function of p.
 
-        Parameters
-        ----------
-        p : array_like
-            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
-            ...]
-        zydata: LightCurve object
-            Input LightCurve data.
-        conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
-            np.array([[log(sigma_low), log(tau_low)],
-                      [log(sigma_med), log(tau_med)],
-                      [log(sigma_hig), log(tau_hig)]])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. conthpd usually comes in as an attribute
-            of the `Cont_Model` object `hpd` (default: None).
-        lagtobaseline: float, optional
-            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
-            logarithmic prior will be applied.
-        laglimit: str or list of tuples.
-            hard boundaries for the lag searching during MCMC sampling.
-            'baseline' means the boundaries are naturally determined by the
-            duration of the light curves, or you can set them as a list with
-            `nline` of tuples, with each tuple containing the (min, max) pair
-            for each single line. 
-        set_threading: bool, optional
-            True if you want threading in filling matrix. It conflicts with the
-            'threads' option in Rmap_Model.run_mcmc (default: False).
-        blocksize: int, optional
-            Maximum matrix block size in threading (default: 10000).
-        set_retq: bool, optional
-            Return the value(s) of q along with each component of the
-            log-likelihood if True (default: False).
-        set_verbose: bool, optional
-            True if you want verbosity (default: False).
+    Parameters
+    ----------
+    p : array_like
+        Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1,
+        ...]
+    zydata: LightCurve object
+        Input LightCurve data.
+    conthpd: ndarray, optional
+        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        np.array([[log(sigma_low), log(tau_low)],
+                  [log(sigma_med), log(tau_med)],
+                  [log(sigma_hig), log(tau_hig)]])
+        where 'low', 'med', and 'hig' are defined as the 68% confidence
+        limits around the median. conthpd usually comes in as an attribute
+        of the `Cont_Model` object `hpd` (default: None).
+    lagtobaseline: float, optional
+        Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+        logarithmic prior will be applied.
+    laglimit: str or list of tuples.
+        hard boundaries for the lag searching during MCMC sampling.
+        'baseline' means the boundaries are naturally determined by the
+        duration of the light curves, or you can set them as a list with
+        `nline` of tuples, with each tuple containing the (min, max) pair
+        for each single line. 
+    set_threading: bool, optional
+        True if you want threading in filling matrix. It conflicts with the
+        'threads' option in Rmap_Model.run_mcmc (default: False).
+    blocksize: int, optional
+        Maximum matrix block size in threading (default: 10000).
+    set_retq: bool, optional
+        Return the value(s) of q along with each component of the
+        log-likelihood if True (default: False).
+    set_verbose: bool, optional
+        True if you want verbosity (default: False).
 
-        Returns
-        -------
-        retval: float (set_retq is False) or list (set_retq is True)
-            if `retval` returns a list, then it contains the full posterior info 
-            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+    Returns
+    -------
+    retval: float (set_retq is False) or list (set_retq is True)
+        if `retval` returns a list, then it contains the full posterior info 
+        as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
     """
     # unpack the parameters from p
@@ -1098,7 +1098,7 @@ class Rmap_Model(object) :
             Prior on lags. When input lag exceeds lagtobaseline*baseline, a
             logarithmic prior will be applied.
         laglimit: str or list of tuples.
-            hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line. 
+            Hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line. 
         nwalker : integer, optional
             Number of walkers for `emcee` (default: 100).
         nburn : integer, optional
@@ -1374,6 +1374,8 @@ class Rmap_Model(object) :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
+###########################################################
+
 """ Pmap_Model: Two-Band Spectroscopic RM  """
 
 def unpackphotopar(p, nlc=2, hascontlag=False) :
@@ -1411,45 +1413,42 @@ def unpackphotopar(p, nlc=2, hascontlag=False) :
 def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False, lagtobaseline=0.3, laglimit=None, widtobaseline=0.2, widlimit=None, set_threading=False, blocksize=10000, set_retq=False, set_verbose=False):
     """ log-posterior function of p.
 
-        Parameters
-        ----------
-        p : array_like
-            Pmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1, alpha]
-
-        zydata: LightCurve object
-            Light curve data.
-
-        conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
-            np.array([[log(sigma_low), log(tau_low)],
-                      [log(sigma_med), log(tau_med)],
-                      [log(sigma_hig), log(tau_hig)]])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
-        set_extraprior: bool
-            Whether to add extra priors (other than those on sigma and tau and 
-            imposed by lagtobaseline and limit.), effectively returning
-            a maximum likelihood estimate.
-
-        lagtobaseline: float, optional
-            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
-            logarithmic prior will be applied.
-
-        set_threading: bool, optional
-            True if you want threading in filling matrix. It conflicts with the
-            'threads' option in Pmap_Model.run_mcmc (default: False).
-
-        blocksize: int, optional
-            Maximum matrix block size in threading (default: 10000).
-
-        set_retq: bool, optional
-            Return the value(s) of q along with each component of the
-            log-likelihood if True (default: False).
-
-        set_verbose: bool, optional
-            True if you want verbosity (default: False).
+    Parameters
+    ----------
+    p : array_like
+        Pmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1, alpha]
+    zydata: LightCurve object
+        Light curve data.
+    conthpd: ndarray, optional
+        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        np.array([[log(sigma_low), log(tau_low)],
+                  [log(sigma_med), log(tau_med)],
+                  [log(sigma_hig), log(tau_hig)]])
+        where 'low', 'med', and 'hig' are defined as the 68% confidence
+        limits around the median. conthpd usually comes in as an attribute
+        of the DRW_Model object DRW_Model.hpd (default: None).
+    set_extraprior: bool, optional 
+        DEPRECATED, keep it for backward compatibilit and debugging purposes.
+    lagtobaseline: float, optional
+        Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+        logarithmic prior will be applied.
+    laglimit: list of tuples.
+        hard boundaries for the lag searching.
+    widtobaseline: float, optional
+        Prior on wids. When input wid exceeds widtobaseline*baseline, a
+        logarithmic prior will be applied.
+    widlimit: list of tuples, optional
+        hard boundaries for the wid searching.
+    set_threading: bool, optional
+        True if you want threading in filling matrix. It conflicts with the
+        'threads' option in Pmap_Model.run_mcmc (default: False).
+    blocksize: int, optional
+        Maximum matrix block size in threading (default: 10000).
+    set_retq: bool, optional
+        Return the value(s) of q along with each component of the
+        log-likelihood if True (default: False).
+    set_verbose: bool, optional
+        True if you want verbosity (default: False).
 
     """
     # unpack the parameters from p
@@ -1673,7 +1672,11 @@ class Pmap_Model(object) :
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, set_extraprior=False, lagtobaseline=0.3, laglimit="baseline", widtobaseline=0.2, widlimit="nyquist", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
-        """ test
+        """ See `lnpostfn_photo_p` for doc, except for `laglimit` and `widlimit`,
+        both of which have different default values ('baseline' / 'nyquist').
+        'baseline' means the boundaries are naturally determined by the
+        duration of the light curves, and 'nyquist' means the transfer function
+        width has to be within two times the typical cadence of light curves.
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
@@ -1726,8 +1729,9 @@ class Pmap_Model(object) :
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim,
                     lnpostfn_photo_p,
-                    args=(self.zydata, conthpd, set_extraprior, lagtobaseline, laglimit, widtobaseline, widlimit, 
-                          set_threading, blocksize, False, False), 
+                    args=(self.zydata, conthpd, set_extraprior, 
+                        lagtobaseline, laglimit, widtobaseline, widlimit, 
+                        set_threading, blocksize, False, False), 
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -1940,6 +1944,8 @@ class Pmap_Model(object) :
         else :
             return(zydata_pred)
 
+###########################################################
+
 """ SPmap_Model: One-Band Photometric RM """
 
 def unpacksbphotopar(p, nlc=1) :
@@ -1956,47 +1962,47 @@ def unpacksbphotopar(p, nlc=1) :
 
 def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3, laglimit=None, widtobaseline=0.2, widlimit=None, set_threading=False, blocksize=10000, set_retq=False, set_verbose=False) :
     """ log-posterior function of p.
-        Parameters
-        ----------
-        p : array_like
-            SPmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1]
 
-        zydata: LightCurve object
-            Light curve data.
-
-        conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
-            np.array([[log(sigma_low), log(tau_low)],
-                      [log(sigma_med), log(tau_med)],
-                      [log(sigma_hig), log(tau_hig)]])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. conthpd usually comes in as an attribute
-            of the DRW_Model object DRW_Model.hpd (default: None).
-
-        scalehpd: ndarray, optional
-            Prior on ln(scale) as an 1D ndarray with size 3. 
-            np.array([lnscale_low, lnscale_med, lnscale_hig])
-            where 'low', 'med', and 'hig' are defined as the 68% confidence
-            limits around the median. Use scalehpd if you have a rough idea of 
-            how large the ratio of line variation over the underlying continuum is.
-
-        lagtobaseline: float, optional
-            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
-            logarithmic prior will be applied.
-
-        set_threading: bool, optional
-            True if you want threading in filling matrix. It conflicts with the
-            'threads' option in Pmap_Model.run_mcmc (default: False).
-
-        blocksize: int, optional
-            Maximum matrix block size in threading (default: 10000).
-
-        set_retq: bool, optional
-            Return the value(s) of q along with each component of the
-            log-likelihood if True (default: False).
-
-        set_verbose: bool, optional
-            True if you want verbosity (default: False).
+    Parameters
+    ----------
+    p : array_like
+        SPmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1]
+    zydata: LightCurve object
+        Light curve data.
+    conthpd: ndarray, optional
+        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        np.array([[log(sigma_low), log(tau_low)],
+                  [log(sigma_med), log(tau_med)],
+                  [log(sigma_hig), log(tau_hig)]])
+        where 'low', 'med', and 'hig' are defined as the 68% confidence
+        limits around the median. conthpd usually comes in as an attribute
+        of the `Cont_Model` object `hpd` (default: None).
+    scalehpd: ndarray, optional
+        Prior on ln(scale) as an 1D ndarray with size 3. 
+        np.array([lnscale_low, lnscale_med, lnscale_hig])
+        where 'low', 'med', and 'hig' are defined as the 68% confidence
+        limits around the median. Use scalehpd if you have a rough idea of 
+        how large the ratio of line variation over the underlying continuum is.
+    lagtobaseline: float, optional
+        Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+        logarithmic prior will be applied.
+    laglimit: list of tuples.
+        hard boundaries for the lag searching.
+    widtobaseline: float, optional
+        Prior on wids. When input wid exceeds widtobaseline*baseline, a
+        logarithmic prior will be applied.
+    widlimit: list of tuples, optional
+        hard boundaries for the wid searching.
+    set_threading: bool, optional
+        True if you want threading in filling matrix. It conflicts with the
+        'threads' option in Pmap_Model.run_mcmc (default: False).
+    blocksize: int, optional
+        Maximum matrix block size in threading (default: 10000).
+    set_retq: bool, optional
+        Return the value(s) of q along with each component of the
+        log-likelihood if True (default: False).
+    set_verbose: bool, optional
+        True if you want verbosity (default: False).
     """
     sigma, tau, lag, wid, scale = unpacksbphotopar(p, zydata.nlc)
     if set_retq :
@@ -2182,12 +2188,11 @@ class SPmap_Model(object) :
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, scalehpd=None, lagtobaseline=0.3, laglimit="baseline", widtobaseline=0.2, widlimit="nyquist", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
-        """  It seems that emcee doesn't support **kargs
-
-        scalehpd should be in log-space
-
-        The arguments `set_threading` and `threads` are very confusing. should deprecate `set_threading`, which is rarely used?
-
+        """ See `lnpostfn_sbphoto_p` for doc, except for `laglimit` and `widlimit`,
+        both of which have different default values ('baseline' / 'nyquist').
+        'baseline' means the boundaries are naturally determined by the
+        duration of the light curves, and 'nyquist' means the transfer function
+        width has to be within two times the typical cadence of light curves.
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
@@ -2252,7 +2257,9 @@ class SPmap_Model(object) :
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"% (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_sbphoto_p,
-                    args=(self.zydata, conthpd, scalehpd, lagtobaseline, laglimit, widtobaseline, widlimit, set_threading, blocksize, False, False), 
+                    args=(self.zydata, conthpd, scalehpd, 
+                        lagtobaseline, laglimit, widtobaseline, widlimit, 
+                        set_threading, blocksize, False, False), 
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -2445,3 +2452,5 @@ class SPmap_Model(object) :
         if fpred is not None :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
+
+###########################################################

@@ -1,4 +1,4 @@
-#Last-modified: 08 Dec 2013 15:48:26
+#Last-modified: 08 Dec 2013 15:54:47
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
@@ -10,8 +10,8 @@ from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
 """
 
 #************** PLEASE DO NOT EDIT THIS PART*****
-figext = "png"
-# figext = None
+# show figures interactively
+figext = None
 # names of the true light curves
 names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
 # dense sampling of the underlying signal

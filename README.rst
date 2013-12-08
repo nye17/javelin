@@ -18,10 +18,7 @@ and measure emission line lags using either spectroscopic light cruves
 or photometric light curves 
 (`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_). 
 
-*The new release featuring photometric capabilities hasn't come out yet in
-the download tab, but only available in the bleeding-edge mercurial version.
-Please send an email to ``yingzu AT astronomy.ohio-state.edu`` for a tar
-ball of the new version.*
+*The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
 
 Install JAVELIN 
 ===============
@@ -91,7 +88,7 @@ you can try::
 
     $ python demo.py test
 
-to make sure the code works. Also, to test whether the graphics work, you can
+to make sure the code works (i.e., no error's reported). Also, to test whether the graphics work, you can
 try::
 
     $ python plotcov.py
@@ -110,8 +107,7 @@ which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/120
 Demonstration 
 =============
 
-Here we briefly explain how to use JAVELIN to caculate the spectroscopic
-line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
+Here we briefly explain how to use JAVELIN to caculate the spectroscopic and photometric line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
 <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
 observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing. If you are
 already familiar with the `Zu et al. (2011) <http://arxiv.org/abs/1008.0641>`_
@@ -128,28 +124,25 @@ show the figures below locally by running::
 
 on the command line. 
 
-In our RM models, we assume the quasar variability on scales longer than
-a few days can be well described by a Damped Random Walk (DRW) model, and
-the emission line light curves are simply the lagged, smoothed, and scaled
-versions of the continuum light curve. Fig. 1 shows the true light curves
-for the continuum, the Ylem, and the Zing lines. In particular, the Ylem
-(Zing) light curve is lagged by 120 (250) days, scaled by a factor of 3 (9),
-and smoothed by a top hat of width 3 (9) days, from the continuum light
-curve. The continuum light curve is generated from the DRW model with a
-time scale 100 days and variability amplitude of sigma=2.  Thus, we have two
-parameters for the continuum DRW model, sigma and tau, and three parameters
-for each emission line model --- the lag t, the width of the tophat smoothing
-function w, and the flux scaling factor s.
+In our RM models, we assume the quasar variability on scales longer than a few
+days can be well described by a Damped Random Walk (DRW) model, and the
+emission line light curves are simply the lagged, smoothed, and scaled versions
+of the continuum light curve. Fig. 1 shows the true light curves for the
+continuum, the Ylem, the Zing, and the broadband Yelm lines. In particular, the
+Ylem (Zing) light curve is lagged by 100 (250) days, scaled by a factor of 0.5
+(0.25), and smoothed by a top hat of width 2 (4) days, from the continuum light
+curve. The continuum light curve is generated from the DRW model with a time
+scale 400 days, a variability amplitude of sigma=3, and a mean of 10.0
+(arbitratry flux units)  Thus, for spectroscopic RM we have two parameters for the continuum DRW model, sigma and tau, and three parameters for each emission line model --- the lag t, the width of the tophat smoothing function w, and the flux scaling
+factor s; for photometric RM we have an additional parameter `alpha` describing the ratio between the two continua, one off and one on the line flux.
 
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png 
    :scale: 80%
 
-   Fig. 2: True light curves of loopdeeloop (from top to bottom: the Zing
-   emission line, the Ylem emission line, and the continuum).
+   Fig. 2: True light curves of loopdeeloop (from top to bottom: the Yelm band flux, the Zing emission line, the Ylem emission line, and the continuum).
 
-In practice, what we could observe are down-sampled and noisy versions of the true light
-curves, sometimes with seasonal gaps because of the conflict with our Sun's
+In practice, what we could observe are down-sampled and noisy versions of the true light curves, sometimes with seasonal gaps because of the conflict with our Sun's
 schedule, as shown by Fig. 3.
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png 
@@ -197,20 +190,18 @@ it is much easier to shift the continuum by 180 days to compare to the line
 light curve - there is no overlap between the two, therefore no objection from
 the data!
 
-
 Fortunately, we also have observations of the Zing light curve. Although equally
 sparsely sampled and having the same gaps, the mere existence of the Zing light curve
 makes it impossible for JAVELIN to shift the continuum by 180 days TWICE to
-compare to the two line light curves! Note, however, that in this example the true solution
-still has the highest probability. After another MCMC run, JAVELIN is able to
+compare to the two line light curves! After another MCMC run, JAVELIN is able to
 eliminate the second peak at 180 days and solve the lags for both emission lines
 simultaneously, as shown in Fig. 6.
 
 .. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png 
    :scale: 150%
 
-   Fig. 6: As in Fig. 5, but after running JAVELIN for all three light
-   curves simultaneously.
+   Fig. 6: As in Fig. 5, but after running JAVELIN for both two line light
+   curves plus the continuum simultaneously.
 
 Finally, we want to know what the best--fit parameters from the last MCMC run
 look like. It is generally very hard to visualize the fit for the traditional
@@ -228,6 +219,14 @@ single light curve.
 
    Fig. 7: Comparison between the simulated light curves as computed from the
    best-fit parameters, and the observed light curves.
+
+For the photometric line light curve, just to demonstrate the photometric RM function of JAVELIN, we place a hard limit on range of lags during MCMC searching, so that the 180 ambiguity won't happen. Fig. 8 shows the posterior probability disgtribution of parameters in the photometric RM model
+
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc3.png 
+   :scale: 150%
+
+   Fig. 8: As in Fig. 5, but after running JAVELIN for the Yelm band light
+   curves plus the continuum using the photometric RM model.
 
 
 
@@ -262,7 +261,7 @@ Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommen
 and do ::
 
     >>>from javelin.zylc import get_data
-    >>>from javelin.lcmodel import Cont_Model, Rmap_Model
+    >>>from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
 
 to load the necessary modules, then::
 
@@ -283,6 +282,15 @@ reverberation mapping~(RM) model. The results can be shown by::
 
 as the 1D posterior distributions of model parameters, including the lag t.
 
+And finally, to do photometric RM using the continuum+line-band data, do::
+
+    >>>cyb = get_data(["con.dat", "yelmband.dat"]) 
+    >>>cybmod = Pmap_Model(cyb)
+    >>>cybmod.do_mcmc(conthpd=cmod.hpd)
+
+where ``Pmap_Model`` is the two-band photometric RM model (there is also a one-band photometric RM model ``SPmap_Model`` available). Again, the results can be shown by::
+
+    >>>cybmod.show_hist()
 
 For the more patient users, now I will go through each step in detail, starting
 from the supported data files.
@@ -292,22 +300,21 @@ Reading Light Curves
 
 
 JAVELIN can work on two types of light curve files, the first one is the
-typical 3-column file like ``con.dat``, ``yelm.dat``, and ``zing.dat`` in the
-current directory. If you do::
+typical 3-column file like ``con.dat``, ``yelm.dat``, ``zing.dat``, and ``yelmband.dat`` in the current directory. If you do::
 
     $ head -n 3 con.dat
 
 to show the first 3 rows of the continuum light curve file ``con.dat``::
     
-    250.06252   10.93763    0.50000 
-    260.06502   10.33037    0.50000
-    270.06752   10.70079    0.50000
+    0.00000    6.75749    0.06846
+    8.00400    6.37599    0.06364
+    16.00800    5.74500    0.05907
 
-where the 1st, 2nd, and 3rd columns are *the observing epoch*, *the light curve value*,
-and *the measurement uncertainty*, respectively. Since the basic data unit in
-JAVELIN  is a ``LightCurve`` object, you need to read the data files through a
-function into the ``LightCurve`` object. Open a Python terminal in the ``dat``
-directory and then do::
+where the 1st, 2nd, and 3rd columns are *the observing epoch*, *the light curve
+value*, and *the measurement uncertainty*, respectively. Since the basic data
+unit in JAVELIN  is a ``LightCurve`` object, you need to read the data files
+through a function into the ``LightCurve`` object. Open a Python terminal in
+the ``dat`` directory and then do::
 
     >>>from javelin.zylc import get_data 
     >>>javdata1 = get_data(["con.dat", "yelm.dat"], names=["Continuum", "Yelm"])
@@ -325,11 +332,12 @@ needed.
 
 
 The second type of file JAVELIN uses is a slight variant of the 3-column
-format, like ``loopdeloop_con.dat``, ``loopdeloop_con_y.dat``, and
-``loopdeloop_con_y_z.dat`` in the current directory. As suggested by the names
-of these files, since JAVELIN usually works on several light curves
-simultaneously, it is useful (at least to me) to keep different set of data
-files separated (similar to the brackets used in the reading of 3-column files). 
+format, like ``loopdeloop_con.dat``, ``loopdeloop_con_y.dat``,
+``loopdeloop_con_y_z.dat``, and ``loopdeloop_con_yb.dat`` in the current
+directory. As suggested by the names of these files, since JAVELIN usually
+works on several light curves simultaneously, it is useful (at least to me) to
+keep different set of data files separated (similar to the brackets used in the
+reading of 3-column files). 
 
 Imagine you want to fit two light curves, the first one should always be the
 continuum light curves and the second one the line light curve. If the
@@ -600,15 +608,26 @@ problem. Therefore, try to increase the values of these parameters whenever you 
 does not converge well.
 
 
-Two-Band Photometric RM: A Continuum Band and A Line Band
+Photometric RM: Two-Band or One-Band
 ---------------------------------------------------------
 
-TBD
+The Photometric RM module is as easy to use as the Spectroscopic one::
 
-One-Band Photometric RM: Single Line Band Light Curve
------------------------------------------------------
+    >>>javdata5 = get_data("loopdeloop_con_yb.dat", names=["Continuum", "YelmBand"])
+    >>>pmap = Pmap_Model(javdata5)
 
-TBD
+for loading the Two-Band Photometric RM model, and::
+
+    >>>javdata6 = get_data("yelmband.dat", names=["YelmBand"])
+    >>>spmap = SPmap_Model(javdata6)
+
+For the Two-Band method, the procedure is similar to the Spectroscopic RM,
+where we constrain the continuum variability first and use that as prior
+information for the second step of calling ``Pmap_Model``. However, for the
+One-Band method, since we do not have independent continuum information, we
+directly fit the single broad band light curve without using ``conthpd``. You
+can either look into the ``demo.py`` code under ``example`` dir, or check the
+source code ``lcmodel.py`` under ``javelin`` dir for details.
 
 Additional Information
 ----------------------
@@ -630,7 +649,7 @@ for quasar optical variability studies,
 
 for spectroscopic reverberation mapping, and to
 
-`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, ApJ, XXX, XX <http://adsabs.harvard.edu/abs/TBD>`_
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, astro-ph/1310.6774 <http://arxiv.org/abs/1310.6774>`_ 
 
 for photometric reverberation mapping.
 

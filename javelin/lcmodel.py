@@ -1,4 +1,4 @@
-#Last-modified: 28 Apr 2014 03:10:32
+#Last-modified: 28 Apr 2014 03:11:23
 
 # generic packages
 import numpy as np
@@ -38,7 +38,7 @@ nu_ceiling    = 1.e+3
 lognu_ceiling = np.log(nu_ceiling)
 
 
-__all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model']
+__all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model', 'SCmap_Model']
 
 """ Generic functions """
 
@@ -2983,4 +2983,6 @@ class SCmap_Model(object) :
         if fpred is not None :
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
+
+###########################################################
 

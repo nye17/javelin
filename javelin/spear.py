@@ -1,11 +1,11 @@
-#Last-modified: 08 Mar 2013 04:26:31 PM
+#Last-modified: 28 Apr 2014 02:31:22
 
 #from javelin.spear_covfunc import spear_covfunc as SCF
 from spear_covfunc import spear_covfunc as SCF
 import numpy as np
 
 from javelin.threadpool import get_threadpool_size, map_noreturn
-from javelin.gp import isotropic_cov_funs 
+from javelin.gp import isotropic_cov_funs
 from javelin.gp.GPutils import regularize_array
 
 import unittest
@@ -16,7 +16,7 @@ import unittest
 
 def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False,blocksize=10000) :
     """
-    threaded version, divide matrix into subblocks with *blocksize* 
+    threaded version, divide matrix into subblocks with *blocksize*
     elements each. Do not use it when multiprocessing is on (e.g., in emcee MCMC
     sampling).
 
@@ -62,9 +62,8 @@ def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=Fa
 
 
 def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False) :
-    """
-    Clean version without multithreading. Used when multiprocessing is on (e.g., 
-    in emcee MCMC sampling).
+    """ Clean version without multithreading. Used when multiprocessing is on
+    (e.g., in emcee MCMC sampling).
 
     set_pmap needs to be turned on for the Pmap_Model.
     """
@@ -107,7 +106,7 @@ class PmapCovTest(unittest.TestCase):
         C_true[0, 0] = 1.0
         C_true[1, 1] = 1.0
         C_true[2, 2] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2
-        C_true[3, 3] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2 
+        C_true[3, 3] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2
         # off
         C_true[0, 1] = C_true[1, 0] = np.exp(-1/tau)
         C_true[0, 2] = C_true[2, 0] = scales[2] + scales[1]*np.exp(-lags[1]/tau)
@@ -130,6 +129,6 @@ class PmapCovTest(unittest.TestCase):
         self.assertTrue(np.allclose(C_true, C_bare,   rtol=1e-05, atol=1e-08))
 
 if __name__ == "__main__":
-    unittest.main()   
+    unittest.main()
 
 

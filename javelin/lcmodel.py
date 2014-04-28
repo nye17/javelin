@@ -1,4 +1,4 @@
-#Last-modified: 08 Dec 2013 01:13:36
+#Last-modified: 28 Apr 2014 05:06:35
 
 # generic packages
 import numpy as np
@@ -8,11 +8,13 @@ from scipy.optimize import fmin
 import matplotlib.pyplot as plt
 
 # internal packages
-from cholesky_utils import cholesky, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
+from cholesky_utils import cholesky, trisolve, chosolve, chodet, \
+        chosolve_from_tri, chodet_from_tri
 from zylc import LightCurve, get_data
 from cov import get_covfunc_dict
 from spear import spear, spear_threading
-from predict import PredictSignal, PredictRmap, PredictPmap, PredictSPmap
+from predict import PredictSignal, PredictRmap, PredictPmap, PredictSPmap, \
+        PredictSCmap
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import *
 from emcee import EnsembleSampler
@@ -25,18 +27,18 @@ tau_floor     = 1.e-6
 tau_ceiling   = 1.e+5
 sigma_floor   = 1.e-6
 sigma_ceiling = 1.e+2
-logtau_floor     = np.log(tau_floor) 
-logtau_ceiling   = np.log(tau_ceiling)   
-logsigma_floor   = np.log(sigma_floor)  
-logsigma_ceiling = np.log(sigma_ceiling) 
+logtau_floor     = np.log(tau_floor)
+logtau_ceiling   = np.log(tau_ceiling)
+logsigma_floor   = np.log(sigma_floor)
+logsigma_ceiling = np.log(sigma_ceiling)
 
 nu_floor      = 1.e-6
-lognu_floor   = np.log(nu_floor)   
+lognu_floor   = np.log(nu_floor)
 nu_ceiling    = 1.e+3
-lognu_ceiling = np.log(nu_ceiling)   
+lognu_ceiling = np.log(nu_ceiling)
 
 
-__all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model']
+__all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model', 'SCmap_Model']
 
 """ Generic functions """
 
@@ -46,7 +48,7 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
     """
     # log determinant of C^-1
     detC_log = chodet_from_tri(U, retlog=True)
-    # solve for C a = y so that a = C^-1 y 
+    # solve for C a = y so that a = C^-1 y
     a = chosolve_from_tri(U, zydata.marr)
     # solve for C b = L so that b = C^-1 L
     b = chosolve_from_tri(U, zydata.larr)
@@ -63,13 +65,13 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
         # cholesky decompose C_p so that W^T W = C_p
         W, info = cholesky(C_p, raiseinfo=False)
         if info > 0 :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                errmsg="Warning: non positive-definite covariance W", 
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                errmsg="Warning: non positive-definite covariance W",
                 set_verbose=set_verbose))
         detCp_log = chodet_from_tri(W, retlog=True)
         # solve for C_p d = L^T so that d = C_p^-1 L^T = C_q L^T
         d = chosolve_from_tri(W, zydata.larrTr)
-    # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y 
+    # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y
     e = np.dot(b, np.dot(d, a))
     # a minus e so that f = a - e = C^-1 y - C^-1 L C_p^-1 L^T C^-1 y
     #              thus f = C_v^-1 y
@@ -78,7 +80,7 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
     h = np.dot(zydata.marr, f)
     # chi2_PRH = -0.5*h
     _chi2 = -0.5*h
-    # following Carl Rasmussen's term, a penalty on the complexity of 
+    # following Carl Rasmussen's term, a penalty on the complexity of
     # the model
     _compl_pen = -0.5*detC_log
     # penalty on blatant linear drift
@@ -94,14 +96,14 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
 def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
     """ Return failure elegantly.
 
-    When you are desperate and just want to leave the calculation with 
+    When you are desperate and just want to leave the calculation with
     appropriate return values that quietly speak out your angst.
     """
     if errmsg is not None:
         if set_verbose:
             print("Exit: %s"%errmsg)
     if set_retq :
-        return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf, 
+        return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf,
               [my_neg_inf]*nlc)
     else:
         return(my_neg_inf)
@@ -129,9 +131,9 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
         nu = None
     elif uselognu :
         if p[2] < lognu_floor :
-            nu = nu_floor 
+            nu = nu_floor
         elif p[2] > lognu_ceiling :
-            nu = nu_ceiling 
+            nu = nu_ceiling
         else :
             nu = np.exp(p[2])
     else :
@@ -153,12 +155,12 @@ def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu
     set_prior: bool, optional
         Turn on/off priors that are predefined in `lnpostfn_single_p` (default: True).
     conthpd: ndarray, optional
-        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        Priors on sigma and tau as an ndarray with shape (3, 2),
         np.array([[log(sigma_low), log(tau_low)],
                   [log(sigma_med), log(tau_med)],
                   [log(sigma_hig), log(tau_hig)]])
         where 'low', 'med', and 'hig' are defined as the 68% confidence
-        limits around the median. Here it is only used if the `covfunc` is 'kepler2_exp'. 
+        limits around the median. Here it is only used if the `covfunc` is 'kepler2_exp'.
     uselognu: bool, optional
         Whether to use lognu instead of nu (default: False).
     rank: str, optional
@@ -171,7 +173,7 @@ def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu
     Returns
     -------
     retval: float (set_retq is False) or list (set_retq is True)
-        if `retval` returns a list, then it contains the full posterior info 
+        if `retval` returns a list, then it contains the full posterior info
         as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
     """
@@ -226,30 +228,30 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False, set_verb
     nu    = covparams.pop("nu", None)
     # set up covariance function
     if (sigma<=0.0 or tau<=0.0) :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: illegal input of parameters", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: illegal input of parameters",
               set_verbose=set_verbose))
     if covfunc == "pow_exp" :
         if nu <= 0.0 or nu >= 2.0 :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                   errmsg="Warning: illegal input of parameters in nu", 
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                   errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
     elif covfunc == "matern" :
         if nu <= 0.0 :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                   errmsg="Warning: illegal input of parameters in nu", 
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                   errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
     elif covfunc == "kepler_exp" :
         # here nu is the ratio
         if nu < 0.0 or nu >= 1.0 :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                   errmsg="Warning: illegal input of parameters in nu", 
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                   errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
     elif covfunc == "kepler2_exp" :
         # here nu is the cutoff time scale
         if nu < 0.0 or nu >= tau :
-            return(_exit_with_retval(zydata.nlc, set_retq, 
-                   errmsg="Warning: illegal input of parameters in nu", 
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                   errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
 
     # choice of ranks
@@ -318,7 +320,7 @@ class Cont_Model(object) :
             self.vars.append("nu")
             self.texs.append(r"$\nu$")
 
-    def __call__(self, p, **lnpostparams): 
+    def __call__(self, p, **lnpostparams):
         """ Calculate the posterior value given one parameter set `p`. See `lnpostfn_single_p` for doc.
         """
         return(lnpostfn_single_p(p, self.zydata, covfunc=self.covfunc, uselognu=self.uselognu, **lnpostparams))
@@ -347,21 +349,21 @@ class Cont_Model(object) :
         if fixed is not None :
             fixed = np.asarray(fixed)
             func = lambda _p : -lnpostfn_single_p(
-                    _p*fixed+p_ini*(1.-fixed), self.zydata, self.covfunc, 
-                    set_prior=set_prior, 
+                    _p*fixed+p_ini*(1.-fixed), self.zydata, self.covfunc,
+                    set_prior=set_prior,
                     conthpd=conthpd,
-                    uselognu=self.uselognu, 
-                    rank=rank, 
+                    uselognu=self.uselognu,
+                    rank=rank,
                     set_retq=False,
                     set_verbose=set_verbose
                     )
         else :
             func = lambda _p : -lnpostfn_single_p(
-                    _p, self.zydata, self.covfunc, 
-                    set_prior=set_prior, 
+                    _p, self.zydata, self.covfunc,
+                    set_prior=set_prior,
                     conthpd=conthpd,
-                    uselognu=self.uselognu, 
-                    rank=rank, 
+                    uselognu=self.uselognu,
+                    rank=rank,
                     set_retq=False,
                     set_verbose=set_verbose
                     )
@@ -382,7 +384,7 @@ class Cont_Model(object) :
 
         Parameters
         ----------
-        p_ini : list 
+        p_ini : list
             Initial guess for the parameters.
         fixed : list
             Bit list indicating which parameters are to be fixed during minimization, `1` means varying, while `0` means fixed, so [1, 1, 0] means fixing only the third parameter, and `len(fixed)` equals the number of parameters (default: None, i.e., varying all the parameters simultaneously).
@@ -404,7 +406,7 @@ class Cont_Model(object) :
             raise InputError("wrong number of fixed pars ")
         f = open(fgrid1d, "w")
         for x in xs :
-            _p_ini = p_ini*fixed + x*(1.-fixed) 
+            _p_ini = p_ini*fixed + x*(1.-fixed)
             _p, _l = self.do_map(_p_ini, fixed=fixed, **lnpostparams)
             _line = "".join([format(_l, "20.10g"), " ".join([format(r, "10.5f") for r in _p]), "\n"])
             f.write(_line)
@@ -418,7 +420,7 @@ class Cont_Model(object) :
 
         Parameters
         ----------
-        p_ini : list 
+        p_ini : list
             Initial guess for the parameters.
         fixed : list
             Bit list indicating which parameters are to be fixed during minimization, `1` means varying, while `0` means fixed, so [1, 1, 0] means fixing only the third parameter, and `len(fixed)` equals the number of parameters (default: None, i.e., varying all the parameters simultaneously).
@@ -524,7 +526,7 @@ class Cont_Model(object) :
             Output figure name (default: None, i.e., using sequencial integers).
         figext: str, optional
             Output figure extension (default: None, i.e., using `show`).
-            
+
         """
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(8,8))
@@ -545,7 +547,7 @@ class Cont_Model(object) :
         if vmax is None:
             vmax = z.max()
         im = ax.imshow(z, origin='lower', vmin=vmin, vmax=vmax,
-                          cmap='jet', interpolation="nearest", aspect="auto", 
+                          cmap='jet', interpolation="nearest", aspect="auto",
                           extent=extent)
         if set_contour:
             if clevels is None:
@@ -587,9 +589,9 @@ class Cont_Model(object) :
             Number of threads (default: 1).
         set_verbose: bool, optional
             Turn on/off verbose mode (default: True).
-            
+
         """
-        # initialize a multi-dim random number array 
+        # initialize a multi-dim random number array
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initial values of sigma to be scattering around cont_std
         p0[:,0] = p0[:,0] - 0.5 + np.log(self.cont_std)
@@ -606,13 +608,13 @@ class Cont_Model(object) :
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                     (nburn, nwalkers, nburn*nwalkers))
-        sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p, 
-                    args=(self.zydata, self.covfunc, set_prior, 
-                        conthpd, 
-                        self.uselognu, 
-                        rank, 
-                        False, 
-                        False), 
+        sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p,
+                    args=(self.zydata, self.covfunc, set_prior,
+                        conthpd,
+                        self.uselognu,
+                        rank,
+                        False,
+                        False),
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -653,7 +655,7 @@ class Cont_Model(object) :
         ----------
         set_verbose: bool, optional
             Turn on/off verbose mode (default: True).
-            
+
         """
         hpd = np.zeros((3, self.ndim))
         chain_len = self.flatchain.shape[0]
@@ -740,7 +742,7 @@ class Cont_Model(object) :
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
-        for i, covpar_seq in enumerate(covpar_segments) : 
+        for i, covpar_seq in enumerate(covpar_segments) :
             if covpar_seq is None:
                 continue
             indx = np.argsort(self.flatchain[:, i])
@@ -782,7 +784,7 @@ class Cont_Model(object) :
             Type of covariance matrix rank, "Full" or "NearlyFull" (default: "Full").
         set_overwrite: bool, optional
             Whether to overwrite, if a `fpred` file already exists.
-        
+
         Returns
         -------
         zypred : LightCurve data.
@@ -824,7 +826,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False) :
         lags    = np.zeros(nlc)
         wids    = np.zeros(nlc)
         scales  =  np.ones(nlc)
-        for i in xrange(1, nlc) : 
+        for i in xrange(1, nlc) :
             lags[i]   = p[2+(i-1)*3]
             wids[i]   = p[3+(i-1)*3]
             scales[i] = p[4+(i-1)*3]
@@ -833,7 +835,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False) :
         llags   = np.zeros(nlc-1)
         lwids   = np.zeros(nlc-1)
         lscales =  np.ones(nlc-1)
-        for i in xrange(nlc-1) : 
+        for i in xrange(nlc-1) :
             llags[i]   = p[2+i*3]
             lwids[i]   = p[3+i*3]
             lscales[i] = p[4+i*3]
@@ -850,7 +852,7 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
     zydata: LightCurve object
         Input LightCurve data.
     conthpd: ndarray, optional
-        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        Priors on sigma and tau as an ndarray with shape (3, 2),
         np.array([[log(sigma_low), log(tau_low)],
                   [log(sigma_med), log(tau_med)],
                   [log(sigma_hig), log(tau_hig)]])
@@ -865,7 +867,7 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
         'baseline' means the boundaries are naturally determined by the
         duration of the light curves, or you can set them as a list with
         `nline` of tuples, with each tuple containing the (min, max) pair
-        for each single line. 
+        for each single line.
     set_threading: bool, optional
         True if you want threading in filling matrix. It conflicts with the
         'threads' option in Rmap_Model.run_mcmc (default: False).
@@ -880,7 +882,7 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
     Returns
     -------
     retval: float (set_retq is False) or list (set_retq is True)
-        if `retval` returns a list, then it contains the full posterior info 
+        if `retval` returns a list, then it contains the full posterior info
         as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
     """
@@ -888,15 +890,15 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None, 
     sigma, tau, llags, lwids, lscales = unpackspearpar(p, zydata.nlc,
             hascontlag=False)
     if set_retq :
-        vals = list(lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
+        vals = list(lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales,
                 set_retq=True, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize))
     else :
-        logl = lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, 
+        logl = lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales,
                 set_retq=False, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize)
     # conthpd is in natural log
-    if conthpd is not None : 
+    if conthpd is not None :
         # for sigma
         if p[0] < conthpd[1,0] :
             prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
@@ -942,8 +944,8 @@ def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     # impossible scenarios
     if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<=0.0
                    or np.max(np.abs(llags))>zydata.rj) :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: illegal input of parameters", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: illegal input of parameters",
               set_verbose=set_verbose))
     # fill in lags/wids/scales
     lags  = np.zeros(zydata.nlc)
@@ -955,7 +957,7 @@ def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     # calculate covariance matrix
     if set_threading :
         C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales, 
+              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales,
               blocksize=blocksize)
     else :
         C = spear(zydata.jarr,zydata.jarr,
@@ -964,8 +966,8 @@ def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
     # handle exceptions here
     if info > 0 :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: non positive-definite covariance C", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: non positive-definite covariance C",
               set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
     return(retval)
@@ -1019,7 +1021,7 @@ class Rmap_Model(object) :
         Returns
         -------
         retval: float (set_retq is False) or list (set_retq is True)
-            if `retval` returns a list, then it contains the full posterior info 
+            if `retval` returns a list, then it contains the full posterior info
             as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
         """
@@ -1060,7 +1062,7 @@ class Rmap_Model(object) :
             func = lambda _p : -lnpostfn_spear_p(_p*fixed+p_ini*(1.-fixed),
                     self.zydata, **lnpostparams)
         else :
-            func = lambda _p : -lnpostfn_spear_p(_p, 
+            func = lambda _p : -lnpostfn_spear_p(_p,
                     self.zydata, **lnpostparams)
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
@@ -1087,7 +1089,7 @@ class Rmap_Model(object) :
         Parameters
         ----------
         conthpd: ndarray, optional
-            Priors on sigma and tau as an ndarray with shape (3, 2), 
+            Priors on sigma and tau as an ndarray with shape (3, 2),
             np.array([[log(sigma_low), log(tau_low)],
                       [log(sigma_med), log(tau_med)],
                       [log(sigma_hig), log(tau_hig)]])
@@ -1098,7 +1100,7 @@ class Rmap_Model(object) :
             Prior on lags. When input lag exceeds lagtobaseline*baseline, a
             logarithmic prior will be applied.
         laglimit: str or list of tuples.
-            Hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line. 
+            Hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line.
         nwalker : integer, optional
             Number of walkers for `emcee` (default: 100).
         nburn : integer, optional
@@ -1165,7 +1167,7 @@ class Rmap_Model(object) :
         sampler = EnsembleSampler(nwalkers, self.ndim,
                     lnpostfn_spear_p,
                     args=(self.zydata, conthpd, lagtobaseline, laglimit,
-                          set_threading, blocksize, False, False), 
+                          set_threading, blocksize, False, False),
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -1254,10 +1256,10 @@ class Rmap_Model(object) :
             ax.set_ylabel("N")
         for k in xrange(self.nlc-1):
             for i in xrange(2+k*3, 5+k*3) :
-                ax = fig.add_subplot(self.nlc,3,i+1+1) 
-                if np.mod(i, 3) == 2 : 
+                ax = fig.add_subplot(self.nlc,3,i+1+1)
+                if np.mod(i, 3) == 2 :
                     # lag plots
-                    lagbins = np.arange(int(np.min(self.flatchain[:,i])), 
+                    lagbins = np.arange(int(np.min(self.flatchain[:,i])),
                             int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
                     ax.hist(self.flatchain[:,i], bins=lagbins)
                 else :
@@ -1273,9 +1275,9 @@ class Rmap_Model(object) :
         ----------
         llag_segments: list of lists
             list of length self.nlc-1, wich each element a two-element array
-            bracketing the range of lags (usually the single most probable peak) 
+            bracketing the range of lags (usually the single most probable peak)
             you want to consider for each line.
-        
+
         """
         if (len(llag_segments) != self.nlc-1) :
             print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
@@ -1283,7 +1285,7 @@ class Rmap_Model(object) :
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
-        for i, llag_seq in enumerate(llag_segments) : 
+        for i, llag_seq in enumerate(llag_segments) :
             if llag_seq is None:
                 continue
             indx = np.argsort(self.flatchain[:, 2+i*3])
@@ -1357,7 +1359,7 @@ class Rmap_Model(object) :
         # update qlist
         self.zydata.update_qlist(self.qlist)
         # initialize PredictRmap object
-        P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau, 
+        P = PredictRmap(zydata=self.zydata, sigma=sigma, tau=tau,
                 lags=lags, wids=wids, scales=scales)
         nwant = dense*self.cont_npt
         jwant0 = self.jstart - 0.1*self.rj
@@ -1420,14 +1422,14 @@ def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False, lagtobaselin
     zydata: LightCurve object
         Light curve data.
     conthpd: ndarray, optional
-        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        Priors on sigma and tau as an ndarray with shape (3, 2),
         np.array([[log(sigma_low), log(tau_low)],
                   [log(sigma_med), log(tau_med)],
                   [log(sigma_hig), log(tau_hig)]])
         where 'low', 'med', and 'hig' are defined as the 68% confidence
         limits around the median. conthpd usually comes in as an attribute
         of the DRW_Model object DRW_Model.hpd (default: None).
-    set_extraprior: bool, optional 
+    set_extraprior: bool, optional
         DEPRECATED, keep it for backward compatibilit and debugging purposes.
     lagtobaseline: float, optional
         Prior on lags. When input lag exceeds lagtobaseline*baseline, a
@@ -1454,15 +1456,15 @@ def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False, lagtobaselin
     # unpack the parameters from p
     sigma, tau, llags, lwids, lscales = unpackphotopar(p, zydata.nlc, hascontlag=False)
     if set_retq :
-        vals = list(lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, 
+        vals = list(lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales,
                 set_retq=True, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize))
     else :
-        logl = lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, 
+        logl = lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales,
                 set_retq=False, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize)
     # conthpd is in natural log
-    if conthpd is not None : 
+    if conthpd is not None :
         # for sigma
         if p[0] < conthpd[1,0] :
             prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
@@ -1528,8 +1530,8 @@ def lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     # impossible scenarios
     if (sigma<=0.0 or tau<=0.0 or np.min(lwids)<0.0 or np.min(lscales)<0.0
                    or np.max(np.abs(llags))>zydata.rj) :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: illegal input of parameters", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: illegal input of parameters",
               set_verbose=set_verbose))
     # set_pmap = True
     # fill in lags/wids/scales
@@ -1541,7 +1543,7 @@ def lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     scales[1 :] = lscales[:]
     if set_threading :
         C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales, 
+              zydata.iarr,zydata.iarr,sigma,tau,lags,wids,scales,
               set_pmap=True, blocksize=blocksize)
     else :
         C = spear(zydata.jarr,zydata.jarr,
@@ -1551,8 +1553,8 @@ def lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, set_retq=False, se
     U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
     # handle exceptions here
     if info > 0 :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: non positive-definite covariance C", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: non positive-definite covariance C",
               set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
     return(retval)
@@ -1612,7 +1614,7 @@ class Pmap_Model(object) :
         Returns
         -------
         retval: float (set_retq is False) or list (set_retq is True)
-            if `retval` returns a list, then it contains the full posterior info 
+            if `retval` returns a list, then it contains the full posterior info
             as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
 
         """
@@ -1652,7 +1654,7 @@ class Pmap_Model(object) :
             func = lambda _p : -lnpostfn_photo_p(_p*fixed+p_ini*(1.-fixed),
                     self.zydata, **lnpostparams)
         else :
-            func = lambda _p : -lnpostfn_photo_p(_p, 
+            func = lambda _p : -lnpostfn_photo_p(_p,
                     self.zydata, **lnpostparams)
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
@@ -1729,9 +1731,9 @@ class Pmap_Model(object) :
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim,
                     lnpostfn_photo_p,
-                    args=(self.zydata, conthpd, set_extraprior, 
-                        lagtobaseline, laglimit, widtobaseline, widlimit, 
-                        set_threading, blocksize, False, False), 
+                    args=(self.zydata, conthpd, set_extraprior,
+                        lagtobaseline, laglimit, widtobaseline, widlimit,
+                        set_threading, blocksize, False, False),
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -1825,10 +1827,10 @@ class Pmap_Model(object) :
         ax.set_ylabel("N")
         # line
         for i in xrange(2, 5) :
-            ax = fig.add_subplot(self.nlc,3,i+1+1) 
-            if np.mod(i, 3) == 2 : 
+            ax = fig.add_subplot(self.nlc,3,i+1+1)
+            if np.mod(i, 3) == 2 :
                 # lag plots
-                lagbins = np.arange(int(np.min(self.flatchain[:,i])), 
+                lagbins = np.arange(int(np.min(self.flatchain[:,i])),
                         int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
                 ax.hist(self.flatchain[:,i], bins=lagbins)
             else :
@@ -1845,9 +1847,9 @@ class Pmap_Model(object) :
         ----------
         llag_segments: list of lists
             list of length 1, wich the single element a two-element array
-            bracketing the range of lags (usually the single most probable peak) 
+            bracketing the range of lags (usually the single most probable peak)
             you want to consider for each line.
-        
+
         """
         if (len(llag_segments) != self.nlc-1) :
             print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
@@ -1920,7 +1922,7 @@ class Pmap_Model(object) :
         # update qlist
         self.zydata.update_qlist(qlist)
         # initialize PredictRmap object
-        P = PredictPmap(zydata=self.zydata, sigma=sigma, tau=tau, 
+        P = PredictPmap(zydata=self.zydata, sigma=sigma, tau=tau,
                 lags=lags, wids=wids, scales=scales)
         nwant = dense*self.cont_npt
         jwant0 = self.jstart - 0.1*self.rj
@@ -1933,7 +1935,7 @@ class Pmap_Model(object) :
             sig = np.sqrt(var)
             zylclist_pred.append([jwant, mve, sig])
         if set_decompose :
-            mve_band = ( zylclist_pred[0][1] - self.zydata.blist[0] ) *scales[-1] 
+            mve_band = ( zylclist_pred[0][1] - self.zydata.blist[0] ) *scales[-1]
             mve_line = ( zylclist_pred[1][1] - self.zydata.blist[1] ) - mve_band
             mve_nonv = jwant * 0.0 + self.zydata.blist[1]
         zydata_pred   = LightCurve(zylclist_pred)
@@ -1970,7 +1972,7 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
     zydata: LightCurve object
         Light curve data.
     conthpd: ndarray, optional
-        Priors on sigma and tau as an ndarray with shape (3, 2), 
+        Priors on sigma and tau as an ndarray with shape (3, 2),
         np.array([[log(sigma_low), log(tau_low)],
                   [log(sigma_med), log(tau_med)],
                   [log(sigma_hig), log(tau_hig)]])
@@ -1978,10 +1980,10 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
         limits around the median. conthpd usually comes in as an attribute
         of the `Cont_Model` object `hpd` (default: None).
     scalehpd: ndarray, optional
-        Prior on ln(scale) as an 1D ndarray with size 3. 
+        Prior on ln(scale) as an 1D ndarray with size 3.
         np.array([lnscale_low, lnscale_med, lnscale_hig])
         where 'low', 'med', and 'hig' are defined as the 68% confidence
-        limits around the median. Use scalehpd if you have a rough idea of 
+        limits around the median. Use scalehpd if you have a rough idea of
         how large the ratio of line variation over the underlying continuum is.
     lagtobaseline: float, optional
         Prior on lags. When input lag exceeds lagtobaseline*baseline, a
@@ -2006,15 +2008,15 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
     """
     sigma, tau, lag, wid, scale = unpacksbphotopar(p, zydata.nlc)
     if set_retq :
-        vals = list(lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, 
+        vals = list(lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale,
                 set_retq=True, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize))
     else :
-        logl = lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, 
+        logl = lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale,
                 set_retq=False, set_verbose=set_verbose,
                 set_threading=set_threading, blocksize=blocksize)
     # both conthpd and p[1-2] are in natural log
-    if conthpd is not None : 
+    if conthpd is not None :
         # for sigma
         if p[0] < conthpd[1,0] :
             prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
@@ -2028,7 +2030,7 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
     else :
         prior0 = 0.0
         prior1 = 0.0
-    # for scale 
+    # for scale
     if scalehpd is not None :
         lnscale = np.log(scale)
         if lnscale < scalehpd[1] :
@@ -2079,10 +2081,10 @@ def lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, set_retq=False, set_ve
     lags[1]   = lag
     wids[1]   = wid
     scales[1] = scale
-    # we know all elements in zydata.iarr are 1, so we want them to be 2 here. 
+    # we know all elements in zydata.iarr are 1, so we want them to be 2 here.
     if set_threading :
         C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales, 
+              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales,
               set_pmap=True, blocksize=blocksize)
     else :
         C = spear(zydata.jarr,zydata.jarr,
@@ -2092,8 +2094,8 @@ def lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, set_retq=False, set_ve
     U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
     # handle exceptions here
     if info > 0 :
-       return(_exit_with_retval(zydata.nlc, set_retq, 
-              errmsg="Warning: non positive-definite covariance C", 
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: non positive-definite covariance C",
               set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
     return(retval)
@@ -2257,9 +2259,9 @@ class SPmap_Model(object) :
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"% (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_sbphoto_p,
-                    args=(self.zydata, conthpd, scalehpd, 
-                        lagtobaseline, laglimit, widtobaseline, widlimit, 
-                        set_threading, blocksize, False, False), 
+                    args=(self.zydata, conthpd, scalehpd,
+                        lagtobaseline, laglimit, widtobaseline, widlimit,
+                        set_threading, blocksize, False, False),
                     threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose :
@@ -2348,10 +2350,10 @@ class SPmap_Model(object) :
             ax.set_ylabel("N")
         # line
         for i in xrange(2, 5) :
-            ax = fig.add_subplot(2,3,i+1+1) 
-            if np.mod(i, 3) == 2 : 
+            ax = fig.add_subplot(2,3,i+1+1)
+            if np.mod(i, 3) == 2 :
                 # lag plots
-                lagbins = np.arange(int(np.min(self.flatchain[:,i])), 
+                lagbins = np.arange(int(np.min(self.flatchain[:,i])),
                         int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
                 ax.hist(self.flatchain[:,i], bins=lagbins)
             else :
@@ -2368,7 +2370,7 @@ class SPmap_Model(object) :
         llag_segments: list of lists
             list of a single list, which is a two-element array
             bracketing the range of lags (usually the single most probable peak).
-        
+
         """
         if (len(llag_segments) != 1) :
             print("Error: llag_segments has to be a list of length 1")
@@ -2454,3 +2456,534 @@ class SPmap_Model(object) :
         return(zydata_pred)
 
 ###########################################################
+
+""" SCmap_Model: Smoothed Continuum Spectroscopic RM"""
+
+def unpackscspearpar(p, nlc=None) :
+    """ Unpack the physical parameters from input 1-d array for smoothed
+    continuum spec mode.  """
+    if nlc is None:
+        # possible to figure out nlc from the size of p, only one extra
+        # parameter compared to the regular Rmap model.
+        nlc = (len(p) - 3)//3 + 1
+    sigma   = np.exp(p[0])
+    tau     = np.exp(p[1])
+    # XXX have an imaginary unsmoothed light curve, for easily calling spear.
+    lags    = np.zeros(nlc+1)
+    wids    = np.zeros(nlc+1)
+    scales  =  np.ones(nlc+1)
+    # for the smoothed continuum
+    wids[1] = p[2]
+    for i in xrange(1, nlc) :
+        lags[i+1]   = p[3+(i-1)*3]
+        wids[i+1]   = p[4+(i-1)*3]
+        scales[i+1] = p[5+(i-1)*3]
+    return(sigma, tau, lags, wids, scales)
+
+def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
+        set_threading=False, blocksize=10000, set_retq=False,
+        set_verbose=False):
+    # TODO docstring to be fixed
+    """ log-posterior function of p.
+
+    Parameters
+    ----------
+    p : array_like
+        SCmap_Model parameters, [log(sigma), log(tau), wid0, lag1, wid1, scale1,
+        ...]
+    zydata: LightCurve object
+        Input LightCurve data.
+    lagtobaseline: float, optional
+        Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+        logarithmic prior will be applied.
+    laglimit: str or list of tuples.
+        hard boundaries for the lag searching during MCMC sampling.
+        'baseline' means the boundaries are naturally determined by the
+        duration of the light curves, or you can set them as a list with
+        `nline` of tuples, with each tuple containing the (min, max) pair
+        for each single line.
+    set_threading: bool, optional
+        True if you want threading in filling matrix. It conflicts with the
+        'threads' option in Rmap_Model.run_mcmc (default: False).
+    blocksize: int, optional
+        Maximum matrix block size in threading (default: 10000).
+    set_retq: bool, optional
+        Return the value(s) of q along with each component of the
+        log-likelihood if True (default: False).
+    set_verbose: bool, optional
+        True if you want verbosity (default: False).
+
+    Returns
+    -------
+    retval: float (set_retq is False) or list (set_retq is True)
+        if `retval` returns a list, then it contains the full posterior info
+        as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+
+    """
+    # unpack the parameters from p
+    sigma, tau, lags, wids, scales = unpackscspearpar(p, zydata.nlc)
+    if set_retq :
+        vals = list(lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales,
+                set_retq=True, set_verbose=set_verbose,
+                set_threading=set_threading, blocksize=blocksize))
+    else :
+        logl = lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales,
+                set_retq=False, set_verbose=set_verbose,
+                set_threading=set_threading, blocksize=blocksize)
+    # XXX deprecated by left here for conformity.
+    prior0 = 0.0
+    prior1 = 0.0
+    # for each lag
+    prior2 = 0.0
+    for _i in xrange(zydata.nlc-1) :
+        i = _i + 2
+        if lagtobaseline < 1.0 :
+            if np.abs(lags[i]) > lagtobaseline*zydata.rj :
+                # penalize long lags when they are larger than 0.3 times the baseline,
+                # as it is too easy to fit the model with non-overlapping
+                # signals in the light curves.
+                prior2 += np.log(np.abs(lags[i])/(lagtobaseline*zydata.rj))
+        # penalize long lags to be impossible
+        if laglimit is not None :
+            # laglimit starts with the 1st line lightcurve.
+            if lags[i] > laglimit[_i][1] or lags[i] < laglimit[_i][0] :
+                # try not stack priors
+                prior2 = my_pos_inf
+    # add logp of all the priors
+    prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
+    if set_retq :
+        vals[0] = vals[0] + prior
+        vals.extend([prior0, prior1, prior2])
+        return(vals)
+    else :
+        logp = logl + prior
+        return(logp)
+
+def lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales, set_retq=False,
+        set_verbose=False, set_threading=False, blocksize=10000):
+    """ Internal function to calculate the log likelihood.
+    """
+    # if zydata.issingle:
+        # raise UsageError("lnlikefn_scspear does not work for single mode")
+    # impossible scenarios
+    if (sigma<=0.0 or tau<=0.0 or np.min(wids)<0.0 or np.min(scales)<=0.0
+                   or np.max(np.abs(lags))>zydata.rj) :
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: illegal input of parameters",
+              set_verbose=set_verbose))
+    # calculate covariance matrix
+    # here we have to trick the program to think that we have line lightcurves
+    # with zero lag rather than having a unsmoothed continuum by increasing
+    # iarr by one.
+    if set_threading :
+        C = spear_threading(zydata.jarr,zydata.jarr,
+              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales,
+              blocksize=blocksize)
+    else :
+        C = spear(zydata.jarr,zydata.jarr,
+              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales)
+    # decompose C inplace
+    U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
+    # handle exceptions here
+    if info > 0 :
+       return(_exit_with_retval(zydata.nlc, set_retq,
+              errmsg="Warning: non positive-definite covariance C",
+              set_verbose=set_verbose))
+    retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
+    return(retval)
+
+class SCmap_Model(object) :
+    def __init__(self, zydata=None) :
+        """ SCmap Model object.
+
+        Parameters
+        ----------
+        zydata: LightCurve object, optional
+            Light curve data.
+
+        """
+        self.zydata = zydata
+        if zydata is None :
+            pass
+        else :
+            self.nlc      = zydata.nlc
+            self.npt      = zydata.npt
+            self.cont_npt = zydata.nptlist[0]
+            self.cont_cad = zydata.cont_cad
+            self.cont_std = zydata.cont_std
+            self.rj       = zydata.rj
+            self.jstart   = zydata.jstart
+            self.jend     = zydata.jend
+            self.names    = zydata.names
+            # number of parameters
+            self.ndim  = 2 + (self.nlc-1)*3 + 1
+            self.vars  = [ "sigma",           "tau"         ,  "smoothing"]
+            self.texs  = [r"$\log\,\sigma$", r"$\log\,\tau$", r"$t_c$"]
+            for i in xrange(1, self.nlc) :
+                self.vars.append("_".join(["lag",   self.names[i]]))
+                self.vars.append("_".join(["wid",   self.names[i]]))
+                self.vars.append("_".join(["scale", self.names[i]]))
+                self.texs.append( "".join([r"$t_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+                self.texs.append( "".join([r"$w_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+                self.texs.append( "".join([r"$s_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+
+    def __call__(self, p, **lnpostparams) :
+        """ Calculate the posterior value given one parameter set `p`. See `lnpostfn_spear_p` for doc.
+
+        Parameters
+        ----------
+        p : array_like
+            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1, ...]
+
+        lnpostparams: kwargs
+            Keyword arguments for `lnpostfn_scspear_p`.
+
+        Returns
+        -------
+        retval: float (set_retq is False) or list (set_retq is True)
+            if `retval` returns a list, then it contains the full posterior info
+            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+
+        """
+        return(lnpostfn_scspear_p(p, self.zydata, **lnpostparams))
+
+    def do_map(self, p_ini, fixed=None, **lnpostparams) :
+        """ Do an optimization to find the Maximum a Posterior estimates. See `lnpostfn_scspear_p` for doc.
+
+        Parameters
+        ----------
+        p_ini: array_like
+            SCmap_Model parameters, [log(sigma), log(tau), wid0, lag1, wid1, scale1, ...]
+
+        fixed: array_like, optional
+            Same dimension as p_ini, but with 0 for parameters that is fixed in
+            the optimization, and with 1 for parameters that is varying, e.g.,
+            fixed = [0, 1, 1, 1, 1, 1, ...] means sigma is fixed while others are varying. fixed=[1, 1, 1, 1, 1, 1, ...] is equivalent to fixed=None (default: None).
+
+        lnpostparams : kwargs
+            Kewword arguments for `lnpostfn_scspear_p`.
+
+        Returns
+        -------
+        p_bst : array_like
+            Best-fit parameters.
+
+        l: float
+            The maximum log-posterior.
+
+        """
+        set_verbose = lnpostparams.pop("set_verbose", True)
+        set_retq    = lnpostparams.pop("set_retq",    False)
+        if set_retq is True :
+            raise InputError("set_retq has to be False")
+        p_ini = np.asarray(p_ini)
+        if fixed is not None :
+            fixed = np.asarray(fixed)
+            func = lambda _p : -lnpostfn_scspear_p(_p*fixed+p_ini*(1.-fixed),
+                    self.zydata, **lnpostparams)
+        else :
+            func = lambda _p : -lnpostfn_scspear_p(_p,
+                    self.zydata, **lnpostparams)
+
+        p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
+        if fixed is not None :
+            p_bst = p_bst*fixed+p_ini*(1.-fixed)
+        sigma, tau, lags, wids, scales = unpackscspearpar(p_bst,
+                self.zydata.nlc)
+        if set_verbose :
+            print("Best-fit parameters are")
+            print("sigma %8.3f tau %8.3f wid0 %8.3f "%(sigma, tau, wids[0]))
+            for i in xrange(self.nlc-1) :
+                ip = 2+i*3 + 1
+                print("%s %8.3f %s %8.3f %s %8.3f"%(
+                    self.vars[ip+0], lags[i+1],
+                    self.vars[ip+1], wids[i+1],
+                    self.vars[ip+2], scales[i+1],
+                    ))
+            print("with logp  %10.5g "%-v_bst)
+        return(p_bst, -v_bst)
+
+    def do_mcmc(self, lagtobaseline=0.3, laglimit="baseline", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
+        """ Run MCMC sampling over the parameter space.
+
+        Parameters
+        ----------
+        lagtobaseline: float, optional
+            Prior on lags. When input lag exceeds lagtobaseline*baseline, a
+            logarithmic prior will be applied.
+        laglimit: str or list of tuples.
+            Hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line.
+        nwalker : integer, optional
+            Number of walkers for `emcee` (default: 100).
+        nburn : integer, optional
+            Number of burn-in steps for `emcee` (default: 50).
+        nchain : integer, optional
+            Number of chains for `emcee` (default: 50).
+        thread : integer
+            Number of threads (default: 1).
+        fburn : str, optional
+            filename for burn-in output (default: None).
+        fchain : str, optional
+            filename for MCMC chain output (default: None).
+        flogp : str, optional
+            filename for logp output (default: None).
+        set_threading: bool, optional
+            True if you want threading in filling matrix. It conflicts with the
+            'threads' option in Rmap_Model.run_mcmc (default: False).
+        blocksize: int, optional
+            Maximum matrix block size in threading (default: 10000).
+        set_verbose: bool, optional
+            Turn on/off verbose mode (default: True).
+        """
+        if (threads > 1 and (not set_threading)):
+            if set_verbose:
+                print("run parallel chains of number %2d "%threads)
+        elif (threads == 1) :
+            if set_verbose:
+                if set_threading :
+                    print("run single chain in submatrix blocksize %10d "%blocksize)
+                else :
+                    print("run single chain without subdividing matrix ")
+        else :
+            raise InputError("conflicting set_threading and threads setup")
+        if laglimit == "baseline" :
+            laglimit = [[-self.rj, self.rj],]*(self.nlc-1)
+        elif len(laglimit) != (self.nlc - 1) :
+            raise InputError("laglimit should be a list of lists matching number of lines")
+        # generate array of random numbers
+        p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
+        # initialize array
+        # sigma and tau without prior
+        p0[:, 0] += np.log(self.cont_std)-0.5
+        p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
+        p0[:, 2] *= 10. * self.cont_cad # make the initial wid0 to be [0, 10*cadence]
+        for i in xrange(self.nlc-1) :
+            p0[:, 3+i*3] = p0[:,3+i*3]*(laglimit[i][1]-laglimit[i][0]) + laglimit[i][0]
+        if set_verbose :
+            print("start burn-in")
+            if lagtobaseline < 1.0 :
+                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+            else :
+                print("no penalizing long lags, but only restrict to within the baseline")
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
+                (nburn, nwalkers, nburn*nwalkers))
+        # initialize the ensemble sampler
+        sampler = EnsembleSampler(nwalkers, self.ndim,
+                    lnpostfn_scspear_p,
+                    args=(self.zydata, lagtobaseline, laglimit,
+                          set_threading, blocksize, False, False),
+                    threads=threads)
+        pos, prob, state = sampler.run_mcmc(p0, nburn)
+        if set_verbose :
+            print("burn-in finished")
+        if fburn is not None :
+            if set_verbose :
+                print("save burn-in chains to %s"%fburn)
+            np.savetxt(fburn, sampler.flatchain)
+        # reset the sampler
+        sampler.reset()
+        if set_verbose :
+            print("start sampling")
+        sampler.run_mcmc(pos, nchain, rstate0=state)
+        if set_verbose :
+            print("sampling finished")
+        af = sampler.acceptance_fraction
+        if set_verbose :
+            print("acceptance fractions are")
+            print(" ".join([format(r, "3.2f") for r in af]))
+        if fchain is not None :
+            if set_verbose :
+                print("save MCMC chains to %s"%fchain)
+            np.savetxt(fchain, sampler.flatchain)
+        if flogp is not None :
+            if set_verbose :
+                print("save logp of MCMC chains to %s"%flogp)
+            np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
+        # make chain an attritue
+        self.flatchain = sampler.flatchain
+        self.flatchain_whole = np.copy(self.flatchain)
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def get_hpd(self, set_verbose=True):
+        """ Get the 68% percentile range of each parameter to self.hpd.
+
+        Parameters
+        ----------
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+
+        """
+        hpd = np.zeros((3, self.ndim))
+        chain_len = self.flatchain.shape[0]
+        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+        medlowhig = pct1sig.astype(np.int32)
+        for i in xrange(self.ndim):
+            vsort = np.sort(self.flatchain[:,i])
+            hpd[:,i] = vsort[medlowhig]
+            if set_verbose :
+                print("HPD of %s"%self.vars[i])
+                if i < 2 :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                else :
+                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+        # register hpd to attr
+        self.hpd = hpd
+
+    def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
+        """ Display histograms of the posterior distributions.
+
+        Parameters
+        ----------
+        bins: integer, optional
+            Number of bins for parameters except for 'lag' (default:100).
+
+        lagbinsize: integer, optional
+            bin width for 'lag' (default:100).
+
+        figout: str, optional
+            Output figure name (default: None, i.e., using sequencial integers).
+
+        figext: str, optional
+            Output figure extension (default: None, i.e., using `show`).
+
+        """
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        ln10 = np.log(10.0)
+        fig  = plt.figure(figsize=(14, 2.8*self.nlc))
+        for i in xrange(2) :
+            ax = fig.add_subplot(self.nlc,3,i+1)
+            ax.hist(self.flatchain[:,i]/ln10, bins)
+            ax.set_xlabel(self.texs[i])
+            ax.set_ylabel("N")
+        # for wid0
+        ax = fig.add_subplot(self.nlc,3,3)
+        ax.hist(self.flatchain[:,2], bins)
+        ax.set_xlabel(self.texs[2])
+        ax.set_ylabel("N")
+        # go to lines
+        for k in xrange(self.nlc-1):
+            for i in xrange(3+k*3, 6+k*3) :
+                ax = fig.add_subplot(self.nlc,3,i+1)
+                if np.mod(i, 3) == 0 :
+                    # lag plots
+                    lagbins = np.arange(int(np.min(self.flatchain[:,i])),
+                            int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
+                    ax.hist(self.flatchain[:,i], bins=lagbins)
+                else :
+                    ax.hist(self.flatchain[:,i], bins)
+                ax.set_xlabel(self.texs[i])
+                ax.set_ylabel("N")
+        return(figure_handler(fig=fig, figout=figout, figext=figext))
+
+    def break_chain(self, llag_segments):
+        """ Break the chain.
+
+        Parameters
+        ----------
+        llag_segments: list of lists
+            list of length self.nlc-1, wich each element a two-element array
+            bracketing the range of lags (usually the single most probable peak)
+            you want to consider for each line.
+
+        """
+        if (len(llag_segments) != self.nlc-1) :
+            print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
+            return(1)
+        if not hasattr(self, "flatchain"):
+            print("Warning: need to run do_mcmc or load_chain first")
+            return(1)
+        for i, llag_seq in enumerate(llag_segments) :
+            if llag_seq is None:
+                continue
+            indx = np.argsort(self.flatchain[:, 3+i*3])
+            imin, imax = np.searchsorted(self.flatchain[indx, 3+i*3], llag_seq)
+            indx_cut = indx[imin : imax]
+            self.flatchain = self.flatchain[indx_cut, :]
+
+    def restore_chain(self) :
+        """ Restore chain after `break_chain`.
+        """
+        self.flatchain = np.copy(self.flatchain_whole)
+
+    def load_chain(self, fchain, set_verbose=True):
+        """ Load stored MCMC chain.
+
+        Parameters
+        ----------
+        fchain: string
+            Name for the chain file.
+
+        set_verbose: bool, optional
+            True if you want verbosity (default: True).
+        """
+        if set_verbose :
+            print("load MCMC chain from %s"%fchain)
+        self.flatchain = np.genfromtxt(fchain)
+        self.flatchain_whole = np.copy(self.flatchain)
+        self.ndim = self.flatchain.shape[1]
+        # get HPD
+        self.get_hpd(set_verbose=set_verbose)
+
+    def get_qlist(self, p_bst):
+        """ get the best-fit linear responses.
+
+        Parameters
+        ----------
+        p_bst: list
+            best-fit parameters.
+        """
+        self.qlist = lnpostfn_scspear_p(p_bst, self.zydata, set_retq=True, set_verbose=False)[4]
+
+    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True) :
+        """ Calculate the predicted mean and variance of each light curve on a
+        densely sampled time axis.
+
+        Parameters
+        ----------
+        p_bst: array_like
+            Input paraemeters.
+
+        fpred: string, optional
+            Name of the output file for the predicted light curves, set it to
+            None if you do not want output (default: None).
+
+        dense: int, optional
+            The factor by which the predicted light curves should be more
+            densely sampled than the original data (default: 10).
+
+        set_overwrite: bool, optional
+            True if you want to overwrite existing fpred (default: True).
+
+        Returns
+        -------
+        zydata_pred: LightCurve object
+            Predicted light curves packaged as a LightCurve object.
+
+        """
+        self.get_qlist(p_bst)
+        sigma, tau, lags, wids, scales = unpackscspearpar(p_bst, self.zydata.nlc)
+        # update qlist
+        self.zydata.update_qlist(self.qlist)
+        # initialize PredictRmap object
+        P = PredictSCmap(zydata=self.zydata, sigma=sigma, tau=tau,
+                lags=lags, wids=wids, scales=scales)
+        nwant = dense*self.cont_npt
+        jwant0 = self.jstart - 0.1*self.rj
+        jwant1 = self.jend   + 0.1*self.rj
+        jwant = np.linspace(jwant0, jwant1, nwant)
+        zylclist_pred = []
+        for i in xrange(self.nlc) :
+            iwant = np.ones(nwant)*(i+1)
+            mve, var = P.mve_var(jwant, iwant)
+            sig = np.sqrt(var)
+            zylclist_pred.append([jwant, mve, sig])
+        zydata_pred   = LightCurve(zylclist_pred)
+        if fpred is not None :
+            zydata_pred.save(fpred, set_overwrite=set_overwrite)
+        return(zydata_pred)
+
+###########################################################
+

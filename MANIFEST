@@ -47,6 +47,7 @@ examples/plotcov.py
 examples/dat/chain0.dat
 examples/dat/chain1.dat
 examples/dat/chain2.dat
+examples/dat/chain3.dat
 examples/dat/con.dat
 examples/dat/loopdeloop_con.dat
 examples/dat/loopdeloop_con_y.dat
@@ -55,11 +56,13 @@ examples/dat/loopdeloop_con_yb.dat
 examples/dat/rename.py
 examples/dat/trulc.dat
 examples/dat/yelm.dat
+examples/dat/yelmband.dat
 examples/dat/zing.dat
 examples/figs/covdemo.png
 examples/figs/mcmc0.png
 examples/figs/mcmc1.png
 examples/figs/mcmc2.png
+examples/figs/mcmc3.png
 examples/figs/mocklc.png
 examples/figs/prediction.png
 examples/figs/signal.png

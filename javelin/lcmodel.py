@@ -1,4 +1,4 @@
-#Last-modified: 28 Apr 2014 03:11:23
+#Last-modified: 28 Apr 2014 05:06:35
 
 # generic packages
 import numpy as np
@@ -2468,15 +2468,16 @@ def unpackscspearpar(p, nlc=None) :
         nlc = (len(p) - 3)//3 + 1
     sigma   = np.exp(p[0])
     tau     = np.exp(p[1])
-    lags    = np.zeros(nlc)
-    wids    = np.zeros(nlc)
-    scales  =  np.ones(nlc)
+    # XXX have an imaginary unsmoothed light curve, for easily calling spear.
+    lags    = np.zeros(nlc+1)
+    wids    = np.zeros(nlc+1)
+    scales  =  np.ones(nlc+1)
     # for the smoothed continuum
-    wids[0] = p[2]
+    wids[1] = p[2]
     for i in xrange(1, nlc) :
-        lags[i]   = p[3+(i-1)*3]
-        wids[i]   = p[4+(i-1)*3]
-        scales[i] = p[5+(i-1)*3]
+        lags[i+1]   = p[3+(i-1)*3]
+        wids[i+1]   = p[4+(i-1)*3]
+        scales[i+1] = p[5+(i-1)*3]
     return(sigma, tau, lags, wids, scales)
 
 def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
@@ -2535,7 +2536,7 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
     # for each lag
     prior2 = 0.0
     for _i in xrange(zydata.nlc-1) :
-        i = _i + 1
+        i = _i + 2
         if lagtobaseline < 1.0 :
             if np.abs(lags[i]) > lagtobaseline*zydata.rj :
                 # penalize long lags when they are larger than 0.3 times the baseline,
@@ -2695,9 +2696,9 @@ class SCmap_Model(object) :
             for i in xrange(self.nlc-1) :
                 ip = 2+i*3 + 1
                 print("%s %8.3f %s %8.3f %s %8.3f"%(
-                    self.vars[ip+0], llags[i+1],
-                    self.vars[ip+1], lwids[i+1],
-                    self.vars[ip+2], lscales[i+1],
+                    self.vars[ip+0], lags[i+1],
+                    self.vars[ip+1], wids[i+1],
+                    self.vars[ip+2], scales[i+1],
                     ))
             print("with logp  %10.5g "%-v_bst)
         return(p_bst, -v_bst)
@@ -2755,7 +2756,7 @@ class SCmap_Model(object) :
         # sigma and tau without prior
         p0[:, 0] += np.log(self.cont_std)-0.5
         p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
-        p0[:, 2] *= 4. * self.cont_cad # make the initial wid0 to be [0, 4*cadence]
+        p0[:, 2] *= 10. * self.cont_cad # make the initial wid0 to be [0, 10*cadence]
         for i in xrange(self.nlc-1) :
             p0[:, 3+i*3] = p0[:,3+i*3]*(laglimit[i][1]-laglimit[i][0]) + laglimit[i][0]
         if set_verbose :

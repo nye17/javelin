@@ -9,7 +9,8 @@ from zylc import LightCurve
 
 np.set_printoptions(precision=3)
 
-__all__ = ["PredictSignal", ]
+__all__ = ["PredictSignal", "PredictRmap", "PredictSpear", "PredictPmap",
+"PredictSPmap", "PredictSCmap"]
 
 """ Generate random realizations based on the covariance function.
 """

@@ -78,7 +78,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
 
     ml: array_like
         Line light curve.
-        
+
     """
     djc = jc[1:] - jc[:-1]
     if (np.abs(np.min(djc) - np.max(djc))>0.01) :
@@ -87,7 +87,7 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     junit = djc[0]
     window_len = np.floor(0.5*wid/junit)
     print(window_len)
-    # continuum signal 
+    # continuum signal
     sc = mc - mc_mean
     if wid < 0.0 :
         print("WARNING: negative wid? set to abs(wid) %10.4f"%wid)
@@ -191,7 +191,7 @@ class PredictSignal(object):
 
         num: scalar, optional
             Number of simulated light curves to be generated.
-        
+
         Returns
         -------
         mwant: array_like (num=1) or list of arrays (num>1)
@@ -298,7 +298,7 @@ class PredictRmap(object):
 
         Parameters
         ----------
-        zylclist: list of 3-list light curves 
+        zylclist: list of 3-list light curves
             Pre-simulated light curves in zylclist, with the values in m-column as
             the light curve mean, and those in e-column as the designated errorbar.
 
@@ -316,7 +316,7 @@ class PredictRmap(object):
         for ilc, lclist in enumerate(zylclist):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
-                if (np.min(msubarr) != np.max(msubarr)) : 
+                if (np.min(msubarr) != np.max(msubarr)) :
                     print("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
@@ -338,7 +338,7 @@ class PredictRmap(object):
                 raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
             elif np.alltrue(elist[ilc]==0.0):
                 set_error_on_mocklc = False
-                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat)
             else:
                 set_error_on_mocklc = True
                 ecovmat = np.diag(elist[ilc]*elist[ilc])
@@ -423,7 +423,7 @@ class PredictSpear(object):
 
         Parameters
         ----------
-        zylclist: list of 3-list light curves 
+        zylclist: list of 3-list light curves
             Pre-simulated light curves in zylclist, with the values in m-column as
             the light curve mean, and those in e-column as the designated errorbar.
 
@@ -445,7 +445,7 @@ class PredictSpear(object):
         for ilc, lclist in enumerate(zylclist):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
-                if (np.min(msubarr) != np.max(msubarr)) : 
+                if (np.min(msubarr) != np.max(msubarr)) :
                     print("WARNING: input zylclist has inequal m elements in light curve %d," +
                            "please make sure the m elements are filled with the desired mean" +
                            "of the mock light curves, now reset to zero"%ilc)
@@ -468,27 +468,27 @@ class PredictSpear(object):
             elif self.spearmode == "Pmap" :
                 cmatrix = spear_threading(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
             elif self.spearmode == "SPmap" :
-                cmatrix = spear_threading(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True) 
+                cmatrix = spear_threading(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
         else :
             if self.spearmode == "Rmap" :
                 cmatrix = spear(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=False)
             elif self.spearmode == "Pmap" :
                 cmatrix = spear(jarr, jarr, iarr  , iarr  , self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
             elif self.spearmode == "SPmap" :
-                cmatrix = spear(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True) 
+                cmatrix = spear(jarr, jarr, iarr+1, iarr+1, self.sigma, self.tau, self.lags, self.wids, self.scales, set_pmap=True)
         # cholesky decomposed cmatrix to L, for which a C array is desired.
         L = np.empty(cmatrix.shape, order='C')
         L[:] = cholesky2(cmatrix) # XXX without the error report.
         # generate gaussian deviates y
-        y = multivariate_normal(np.zeros(npt), np.identity(npt)) 
+        y = multivariate_normal(np.zeros(npt), np.identity(npt))
         # get x = L * y + u, where u is the mean of the light curve(s)
         x = np.dot(L, y) + marr
-        # generate errors 
+        # generate errors
         # the way to get around peppering zeros is to generate deviates with unity std and multiply to earr.
         # XXX no covariance implemented here.
-        e = earr * multivariate_normal(np.zeros(npt), np.identity(npt))  
-        # add e 
-        m = x + e 
+        e = earr * multivariate_normal(np.zeros(npt), np.identity(npt))
+        # add e
+        m = x + e
         # unpack the data
         _jlist, _mlist, _elist = self._unpackdataarr(npt, nptlist, jarr, m, earr, iarr)
         zylclist_new = []
@@ -590,7 +590,7 @@ class PredictPmap(object):
 
         Parameters
         ----------
-        zylclist: list of 3-list light curves 
+        zylclist: list of 3-list light curves
             Pre-simulated light curves in zylclist, with the values in m-column as
             the light curve mean, and those in e-column as the designated errorbar.
 
@@ -608,7 +608,7 @@ class PredictPmap(object):
         for ilc, lclist in enumerate(zylclist):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
-                if (np.min(msubarr) != np.max(msubarr)) : 
+                if (np.min(msubarr) != np.max(msubarr)) :
                     print("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
@@ -630,7 +630,7 @@ class PredictPmap(object):
                 raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
             elif np.alltrue(elist[ilc]==0.0):
                 set_error_on_mocklc = False
-                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat)
             else:
                 set_error_on_mocklc = True
                 ecovmat = np.diag(elist[ilc]*elist[ilc])
@@ -693,7 +693,7 @@ class PredictSPmap(object):
         lags  = np.zeros(3)
         wids  = np.zeros(3)
         scales = np.ones(3)
-        # XXX try following the format of arguments in pmap_model 
+        # XXX try following the format of arguments in pmap_model
         lags[1]   = covparams["lag"]
         wids[1]   = covparams["wid"]
         scales[1] = covparams["scale"]
@@ -743,7 +743,7 @@ class PredictSPmap(object):
 
         Parameters
         ----------
-        zylclist: list of 3-list light curves 
+        zylclist: list of 3-list light curves
             Pre-simulated light curves in zylclist, with the values in m-column as
             the light curve mean, and those in e-column as the designated errorbar.
 
@@ -764,7 +764,7 @@ class PredictSPmap(object):
         for ilc, lclist in enumerate(zylclist):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
-                if (np.min(msubarr) != np.max(msubarr)) : 
+                if (np.min(msubarr) != np.max(msubarr)) :
                     print("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
@@ -786,7 +786,7 @@ class PredictSPmap(object):
                 raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
             elif np.alltrue(elist[ilc]==0.0):
                 set_error_on_mocklc = False
-                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) 
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat)
             else:
                 set_error_on_mocklc = True
                 ecovmat = np.diag(elist[ilc]*elist[ilc])
@@ -830,39 +830,183 @@ class PredictSPmap(object):
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)
 
+class PredictSCmap(object):
+    """ Predict light curves for SCmap, with data constraints.
+    """
+    def __init__(self, zydata, set_threading=False,  **covparams):
+        """ PredictSCmap object.
+
+        Parameters
+        ----------
+        zydata: LightCurve object
+            Observed light curve in LightCurve format.
+
+        covparams: kwargs
+            Parameters for the spear covariance function.
+
+        """
+        self.zydata = zydata
+        self.covparams = covparams
+        self.jd = self.zydata.jarr
+        # has to be the true mean instead of the sample mean
+        self.md = self.zydata.marr
+        self.id = self.zydata.iarr
+        self.blist = self.zydata.blist
+        # variance
+        self.vd = np.power(self.zydata.earr, 2.)
+        # preparation
+        self.set_threading = set_threading
+        self._get_covmat(set_threading=set_threading)
+        self._get_cholesky()
+        self._get_cplusninvdoty()
+
+    def mve_var(self, jwant, iwant):
+        """ Generate the minimum variance estimate and its associated variance.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        iwant: array_like
+            Desired ids for simulated light curve.
+
+        Returns
+        -------
+        m: array_like
+            Minimum variance estimate of the underlying signal.
+
+        v: array_like
+            Variance at simulated point.
+        """
+        m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
+        for i in xrange(len(jwant)) :
+            m[i] += self.blist[int(iwant[i])-1]
+        return(m, v)
+
+    def generate(self, zylclist) :
+        """ Presumably zylclist has our input j, e, and i, and the values in m
+        should be the mean.
+
+        Parameters
+        ----------
+        zylclist: list of 3-list light curves
+            Pre-simulated light curves in zylclist, with the values in m-column as
+            the light curve mean, and those in e-column as the designated errorbar.
+
+        Returns
+        -------
+        zylclist_new: list of 3-list light curves
+            Simulated light curves in zylclist.
+
+        """
+        nlc = len(zylclist)
+        jlist = []
+        mlist = []
+        elist = []
+        ilist = []
+        for ilc, lclist in enumerate(zylclist):
+            if (len(lclist) == 3):
+                jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
+                if (np.min(msubarr) != np.max(msubarr)) :
+                    print("WARNING: input zylclist has inequal m elements in "+
+                          "light curve %d, please make sure the m elements "+
+                          "are filled with the desired mean of the mock "+
+                          "light curves, now reset to zero"%ilc)
+                    msubarr = msubarr * 0.0
+                nptlc = len(jsubarr)
+                # sort the date, safety
+                p = jsubarr.argsort()
+                jlist.append(jsubarr[p])
+                mlist.append(msubarr[p])
+                elist.append(esubarr[p])
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+        zylclist_new = []
+        for ilc in xrange(nlc) :
+            m, v = self.mve_var(jlist[ilc], ilist[ilc])
+            # no covariance considered here
+            vcovmat = np.diag(v)
+            if (np.min(elist[ilc]) < 0.0):
+                raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
+            elif np.alltrue(elist[ilc]==0.0):
+                set_error_on_mocklc = False
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat)
+            else:
+                set_error_on_mocklc = True
+                ecovmat = np.diag(elist[ilc]*elist[ilc])
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) + multivariate_normal(np.zeros_like(m), ecovmat)
+            zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
+        return(zylclist_new)
+
+    def _get_covmat(self, set_threading=False) :
+        if set_threading :
+            self.cmatrix = spear_threading(self.jd,self.jd,self.id+1,self.id+1, **self.covparams)
+        else :
+            self.cmatrix = spear(self.jd,self.jd,self.id+1,self.id+1, **self.covparams)
+        print("covariance matrix calculated")
+
+    def _get_cholesky(self) :
+        self.U = cholesky(self.cmatrix, nugget=self.vd, inplace=True, raiseinfo=True)
+        print("covariance matrix decomposed and updated by U")
+
+    def _get_cplusninvdoty(self) :
+        # now we want cpnmatrix^(-1)*mag = x, which is the same as
+        #    mag = cpnmatrix*x, so we solve this equation for x
+        self.cplusninvdoty = chosolve_from_tri(self.U, self.md, nugget=None, inplace=False)
+
+    def _fastpredict(self, jw, iw, set_threading=False) :
+        """ jw : jwant
+            iw : iwant
+        """
+        mw = np.zeros_like(jw)
+        vw = np.zeros_like(jw)
+        for i, (jwant, iwant) in enumerate(zip(jw, iw)):
+            if set_threading :
+                covar = spear_threading(jwant,self.jd,iwant+1,self.id+1, **self.covparams)
+            else :
+                covar = spear(jwant,self.jd,iwant+1,self.id+1, **self.covparams)
+            cplusninvdotcovar = chosolve_from_tri(self.U, covar.T, nugget=None, inplace=False)
+            if set_threading :
+                vw[i] = spear_threading(jwant, jwant, iwant+1, iwant+1, **self.covparams)
+            else :
+                vw[i] = spear(jwant, jwant, iwant+1, iwant+1, **self.covparams)
+            mw[i] = np.dot(covar, self.cplusninvdoty)
+            vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
+        return(mw, vw)
+
 def smooth(x,window_len=11,window='flat'):
     """smooth the data using a window with requested size.
 
     from: http://www.scipy.org/Cookbook/SignalSmooth
     with some minor modifications.
-    
+
     This method is based on the convolution of a scaled window with the signal.
-    The signal is prepared by introducing reflected copies of the signal 
+    The signal is prepared by introducing reflected copies of the signal
     (with the window size) in both ends so that transient parts are minimized
     in the begining and end part of the output signal.
-    
+
     input:
-        x: the input signal 
+        x: the input signal
         window_len: the dimension of the smoothing window; should be an odd integer
         window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
             flat window will produce a moving average smoothing.
 
     output:
         the smoothed signal
-        
+
     example:
 
     t=linspace(-2,2,0.1)
     x=sin(t)+randn(len(t))*0.1
     y=smooth(x)
-    
-    see also: 
-    
+
+    see also:
+
     numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
     scipy.signal.lfilter
- 
-    TODO: the window parameter could be the window itself if an array instead of a string   
-    """ 
+
+    TODO: the window parameter could be the window itself if an array instead of a string
+    """
     if x.ndim != 1:
         raise ValueError, "smooth only accepts 1 dimension arrays."
     if x.size < window_len:
@@ -871,7 +1015,7 @@ def smooth(x,window_len=11,window='flat'):
         return x
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
-    # increment the original array 
+    # increment the original array
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
     if window == 'flat': #moving average
         w=np.ones(window_len,'d')

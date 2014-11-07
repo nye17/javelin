@@ -141,7 +141,7 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False) :
     return(sigma, tau, nu)
 
 # try fix the order of arguments as they will be fed by sequence rather than keyword to methods under Cont_Model.
-def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu=False, rank="Full", set_retq=False, set_verbose=False) :
+def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True, conthpd=None, uselognu=False, rank="Full", set_retq=False, set_verbose=False) :
     """ Calculate the log posterior for parameter set `p`.
 
     Parameters
@@ -210,6 +210,9 @@ def lnpostfn_single_p(p, zydata, covfunc, set_prior=True, conthpd=None, uselognu
                 prior += my_neg_inf
             else :
                 prior += - np.log(zydata.cont_cad/tau)
+    if taulimit is not None:
+        if tau < taulimit[0] or tau > taulimit[1]:
+            prior += my_neg_inf
     # combine prior and log-likelihood
     if set_retq :
         vals[0] = vals[0] + prior
@@ -340,6 +343,7 @@ class Cont_Model(object) :
         """
         set_verbose = lnpostparams.pop("set_verbose", True)
         set_retq    = lnpostparams.pop("set_retq",    False)
+        taulimit    = lnpostparams.pop("taulimit",  None)
         set_prior   = lnpostparams.pop("set_prior",   True)
         rank        = lnpostparams.pop("rank",       "Full")
         conthpd     = lnpostparams.pop("conthpd",     None)
@@ -350,6 +354,7 @@ class Cont_Model(object) :
             fixed = np.asarray(fixed)
             func = lambda _p : -lnpostfn_single_p(
                     _p*fixed+p_ini*(1.-fixed), self.zydata, self.covfunc,
+                    taulimit=taulimit,
                     set_prior=set_prior,
                     conthpd=conthpd,
                     uselognu=self.uselognu,
@@ -360,6 +365,7 @@ class Cont_Model(object) :
         else :
             func = lambda _p : -lnpostfn_single_p(
                     _p, self.zydata, self.covfunc,
+                    taulimit=taulimit,
                     set_prior=set_prior,
                     conthpd=conthpd,
                     uselognu=self.uselognu,
@@ -562,7 +568,7 @@ class Cont_Model(object) :
         ax.set_ylabel(self.texs[retdict['posy']])
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-    def do_mcmc(self, conthpd=None, set_prior=True, rank="Full", nwalkers=100, nburn=50, nchain=50, fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
+    def do_mcmc(self, conthpd=None, set_prior=True, taulimit="baseline", rank="Full", nwalkers=100, nburn=50, nchain=50, fburn=None, fchain=None, flogp=None, threads=1, set_verbose=True):
         """ Run MCMC sampling over the parameter space.
 
         Parameters
@@ -608,8 +614,10 @@ class Cont_Model(object) :
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
                     (nburn, nwalkers, nburn*nwalkers))
+        if taulimit == "baseline" :
+            taulimit = [self.cont_cad, self.rj]
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_single_p,
-                    args=(self.zydata, self.covfunc, set_prior,
+                    args=(self.zydata, self.covfunc, taulimit, set_prior,
                         conthpd,
                         self.uselognu,
                         rank,
@@ -2483,7 +2491,6 @@ def unpackscspearpar(p, nlc=None) :
 def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
         set_threading=False, blocksize=10000, set_retq=False,
         set_verbose=False):
-    # TODO docstring to be fixed
     """ log-posterior function of p.
 
     Parameters

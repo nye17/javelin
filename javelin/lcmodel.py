@@ -42,7 +42,6 @@ __all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model',
 def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
     """ Calculate the log-likelihoods from the upper triangle of cholesky
     decomposition.
-
     """
     # log determinant of C^-1
     detC_log = chodet_from_tri(U, retlog=True)
@@ -109,8 +108,7 @@ def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
         return(my_neg_inf)
 
 
-###########################################################
-
+# ---------------------------------
 # Cont_Model: Continuum Variability
 
 def unpacksinglepar(p, covfunc="drw", uselognu=False):
@@ -156,8 +154,10 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
         Input LightCurve data.
     covfunc: str
         name of the covariance function.
+    taulimit: tuple
+        lower and upper boundary for tau.
     set_prior: bool, optional
-        Turn on/off priors that are predefined in `lnpostfn_single_p`
+        Turn on/off priors that are pre-defined in `lnpostfn_single_p`
         (default: True).
     conthpd: ndarray, optional
         Priors on sigma and tau as an ndarray with shape (3, 2),
@@ -625,6 +625,8 @@ class Cont_Model(object):
         set_prior: bool, optional
             Turn on/off priors that are predefined in `lnpostfn_single_p` (
             default: True).
+        taulimit: tuple
+            lower and upper boundary for tau.
         rank: str, optional
             Type of covariance matrix rank, "Full" or "NearlyFull" (
             default: "Full").
@@ -870,10 +872,9 @@ class Cont_Model(object):
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
-###########################################################
 
+# ---------------------------------
 # Rmap_Model: Spectroscopic RM
-
 
 def unpackspearpar(p, nlc=None, hascontlag=False):
     """ Internal Function: unpack the physical parameters from input 1-d
@@ -1471,10 +1472,9 @@ class Rmap_Model(object):
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
-###########################################################
 
+# ---------------------------------
 # Pmap_Model: Two-Band Spectroscopic RM
-
 
 def unpackphotopar(p, nlc=2, hascontlag=False):
     """ Unpack the physical parameters from input 1-d array for photo mode.
@@ -1773,17 +1773,19 @@ class Pmap_Model(object):
             p_bst, self.zydata.nlc, hascontlag=False)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f"%(sigma, tau))
-            print("%s %8.3f %s %8.3f %s %8.3f"%(
-                self.vars[2], llags[0],
-                self.vars[3], lwids[0],
-                self.vars[4], lscales[0],
-                ))
-            print("alpha %8.3f"%(lscales[1]))
-            print("with logp  %10.5g "%-v_bst)
+            print("sigma %8.3f tau %8.3f" % (sigma, tau))
+            print("%s %8.3f %s %8.3f %s %8.3f" % (
+                self.vars[2], llags[0], self.vars[3], lwids[0],
+                self.vars[4], lscales[0]))
+            print("alpha %8.3f" % (lscales[1]))
+            print("with logp  %10.5g " % -v_bst)
         return(p_bst, -v_bst)
 
-    def do_mcmc(self, conthpd=None, set_extraprior=False, lagtobaseline=0.3, laglimit="baseline", widtobaseline=0.2, widlimit="nyquist", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
+    def do_mcmc(self, conthpd=None, set_extraprior=False, lagtobaseline=0.3,
+                laglimit="baseline", widtobaseline=0.2, widlimit="nyquist",
+                nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
+                fchain=None, flogp=None, set_threading=False, blocksize=10000,
+                set_verbose=True):
         """ See `lnpostfn_photo_p` for doc, except for `laglimit` and `widlimit`,
         both of which have different default values ('baseline' / 'nyquist').
         'baseline' means the boundaries are naturally determined by the
@@ -1792,11 +1794,12 @@ class Pmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d "%threads)
+                print("run parallel chains of number %2d " % threads)
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d "%blocksize)
+                    print("run single chain in submatrix blocksize %10d " %
+                          blocksize)
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -1830,27 +1833,27 @@ class Pmap_Model(object):
             if conthpd is None:
                 print("no priors on sigma and tau")
             else:
-                print("using priors on sigma and tau from the continuum fitting")
+                print("using priors on sigma and tau from continuum fitting")
                 print(np.exp(conthpd))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+                print("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline)
             else:
-                print("no penalizing long lags, but only restrict to within the baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
-                (nburn, nwalkers, nburn*nwalkers))
+                print("no penalizing long lags, restrict to < baseline")
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
-        sampler = EnsembleSampler(nwalkers, self.ndim,
-                    lnpostfn_photo_p,
-                    args=(self.zydata, conthpd, set_extraprior,
-                        lagtobaseline, laglimit, widtobaseline, widlimit,
-                        set_threading, blocksize, False, False),
-                    threads=threads)
+        sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_photo_p,
+                                  args=(self.zydata, conthpd, set_extraprior,
+                                        lagtobaseline, laglimit, widtobaseline,
+                                        widlimit, set_threading, blocksize,
+                                        False, False), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s"%fburn)
+                print("save burn-in chains to %s" % fburn)
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -1865,11 +1868,11 @@ class Pmap_Model(object):
             print(" ".join([format(r, "3.2f") for r in af]))
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s"%fchain)
+                print("save MCMC chains to %s" % fchain)
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s"%flogp)
+                print("save logp of MCMC chains to %s" % flogp)
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -1894,11 +1897,13 @@ class Pmap_Model(object):
             vsort = np.sort(self.flatchain[:,i])
             hpd[:,i] = vsort[medlowhig]
             if set_verbose:
-                print("HPD of %s"%self.vars[i])
+                print("HPD of %s" % self.vars[i])
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i])))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
 
@@ -1924,7 +1929,7 @@ class Pmap_Model(object):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(14, 2.8*self.nlc))
+        fig = plt.figure(figsize=(14, 2.8*self.nlc))
         for i in xrange(2):
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
@@ -1995,14 +2000,15 @@ class Pmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s"%fchain)
+            print("load MCMC chain from %s" % fchain)
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True, set_decompose=False):
+    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True,
+                set_decompose=False):
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
 
@@ -2028,17 +2034,18 @@ class Pmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
-        qlist = lnpostfn_photo_p(p_bst, self.zydata, set_retq=True, set_verbose=False)[4]
-        sigma, tau, lags, wids, scales = unpackphotopar(p_bst,
-                self.zydata.nlc, hascontlag=True)
+        qlist = lnpostfn_photo_p(p_bst, self.zydata, set_retq=True,
+                                 set_verbose=False)[4]
+        sigma, tau, lags, wids, scales = unpackphotopar(p_bst, self.zydata.nlc,
+                                                        hascontlag=True)
         # update qlist
         self.zydata.update_qlist(qlist)
         # initialize PredictRmap object
-        P = PredictPmap(zydata=self.zydata, sigma=sigma, tau=tau,
-                lags=lags, wids=wids, scales=scales)
+        P = PredictPmap(zydata=self.zydata, sigma=sigma, tau=tau, lags=lags,
+                        wids=wids, scales=scales)
         nwant = dense*self.cont_npt
         jwant0 = self.jstart - 0.1*self.rj
-        jwant1 = self.jend   + 0.1*self.rj
+        jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
         for i in xrange(self.nlc):
@@ -2047,10 +2054,10 @@ class Pmap_Model(object):
             sig = np.sqrt(var)
             zylclist_pred.append([jwant, mve, sig])
         if set_decompose:
-            mve_band = ( zylclist_pred[0][1] - self.zydata.blist[0] ) *scales[-1]
-            mve_line = ( zylclist_pred[1][1] - self.zydata.blist[1] ) - mve_band
+            mve_band = (zylclist_pred[0][1] - self.zydata.blist[0])*scales[-1]
+            mve_line = (zylclist_pred[1][1] - self.zydata.blist[1])-mve_band
             mve_nonv = jwant * 0.0 + self.zydata.blist[1]
-        zydata_pred   = LightCurve(zylclist_pred)
+        zydata_pred = LightCurve(zylclist_pred)
         if fpred is not None:
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         if set_decompose:
@@ -2058,23 +2065,28 @@ class Pmap_Model(object):
         else:
             return(zydata_pred)
 
-###########################################################
 
-""" SPmap_Model: One-Band Photometric RM """
+# ---------------------------------
+# SPmap_Model: One-Band Photometric RM
 
 def unpacksbphotopar(p, nlc=1):
-    """ Unpack the physical parameters from input 1-d array for single band photo mode.
+    """ Unpack the physical parameters from input 1-d array for single band
+    photo mode.
     """
-    if nlc !=  1:
+    if nlc != 1:
         raise InputError("SPmap_Model cannot cope with more than one band.")
-    sigma   = np.exp(p[0])
-    tau     = np.exp(p[1])
-    lag     = p[2]
-    wid     = p[3]
-    scale   = p[4]
+    sigma = np.exp(p[0])
+    tau = np.exp(p[1])
+    lag = p[2]
+    wid = p[3]
+    scale = p[4]
     return(sigma, tau, lag, wid, scale)
 
-def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3, laglimit=None, widtobaseline=0.2, widlimit=None, set_threading=False, blocksize=10000, set_retq=False, set_verbose=False):
+
+def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None,
+                       lagtobaseline=0.3, laglimit=None, widtobaseline=0.2,
+                       widlimit=None, set_threading=False, blocksize=10000,
+                       set_retq=False, set_verbose=False):
     """ log-posterior function of p.
 
     Parameters
@@ -2121,12 +2133,14 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
     sigma, tau, lag, wid, scale = unpacksbphotopar(p, zydata.nlc)
     if set_retq:
         vals = list(lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale,
-                set_retq=True, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize))
+                                     set_retq=True, set_verbose=set_verbose,
+                                     set_threading=set_threading,
+                                     blocksize=blocksize))
     else:
         logl = lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale,
-                set_retq=False, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize)
+                                set_retq=False, set_verbose=set_verbose,
+                                set_threading=set_threading,
+                                blocksize=blocksize)
     # both conthpd and p[1-2] are in natural log
     if conthpd is not None:
         # for sigma
@@ -2178,39 +2192,46 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None, lagtobaseline=0.3
         logp = logl + prior
         return(logp)
 
-def lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, set_retq=False, set_verbose=False, set_threading=False, blocksize=10000):
+
+def lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, set_retq=False,
+                     set_verbose=False, set_threading=False, blocksize=10000):
     """ Log-likelihood function for the SBmap model.
     """
     if not zydata.issingle:
         raise UsageError("lnlikefn_sbphoto expects a single input light curve.")
     # impossible scenarios
-    if (sigma<=0.0 or tau<=0.0 or wid<0.0 or scale<0.0 or lag>zydata.rj):
-       return(_exit_with_retval(zydata.nlc, set_retq, errmsg="Warning: illegal input of parameters", set_verbose=set_verbose))
+    if (sigma <= 0.0 or tau <= 0.0 or wid < 0.0 or scale < 0.0 or
+            lag > zydata.rj):
+        return(_exit_with_retval(zydata.nlc, set_retq,
+                                 errmsg="Warning: illegal input of parameters",
+                                 set_verbose=set_verbose))
     # fill in lags/wids/scales so that we can use spear.py with set_pmap=True.
-    lags   = np.zeros(3)
-    wids   = np.zeros(3)
-    scales =  np.ones(3)
-    lags[1]   = lag
-    wids[1]   = wid
+    lags = np.zeros(3)
+    wids = np.zeros(3)
+    scales = np.ones(3)
+    lags[1] = lag
+    wids[1] = wid
     scales[1] = scale
     # we know all elements in zydata.iarr are 1, so we want them to be 2 here.
     if set_threading:
-        C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales,
-              set_pmap=True, blocksize=blocksize)
+        C = spear_threading(zydata.jarr,zydata.jarr, zydata.iarr+1,
+                            zydata.iarr+1,sigma,tau,lags,wids,scales,
+                            set_pmap=True, blocksize=blocksize)
     else:
-        C = spear(zydata.jarr,zydata.jarr,
-              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales,
-              set_pmap=True)
+        C = spear(zydata.jarr,zydata.jarr, zydata.iarr+1,zydata.iarr+1,
+                  sigma,tau,lags,wids,scales, set_pmap=True)
     # decompose C inplace
     U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
     # handle exceptions here
     if info > 0:
-       return(_exit_with_retval(zydata.nlc, set_retq,
-              errmsg="Warning: non positive-definite covariance C",
-              set_verbose=set_verbose))
-    retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
+        return(_exit_with_retval(
+            zydata.nlc, set_retq,
+            errmsg="Warning: non positive-definite covariance C",
+            set_verbose=set_verbose))
+    retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
+                            set_verbose=set_verbose)
     return(retval)
+
 
 class SPmap_Model(object):
     def __init__(self, zydata=None, linename="line"):
@@ -2226,29 +2247,29 @@ class SPmap_Model(object):
         if zydata is None:
             pass
         else:
-            self.nlc      = zydata.nlc
-            self.npt      = zydata.npt
+            self.nlc = zydata.nlc
+            self.npt = zydata.npt
             self.cont_npt = zydata.nptlist[0]
             self.cont_cad = zydata.cont_cad
             self.cont_std = zydata.cont_std
-            self.rj       = zydata.rj
-            self.jstart   = zydata.jstart
-            self.jend     = zydata.jend
-            self.names    = zydata.names
+            self.rj = zydata.rj
+            self.jstart = zydata.jstart
+            self.jend = zydata.jend
+            self.names = zydata.names
             # test if all elements in zydata.iarr are one.
             if not np.all(zydata.iarr == 1):
                 raise UsageError("Element ids in zydata should all be ones.")
             # number of parameters
-            self.ndim  = 5
-            self.vars  = [ "sigma",           "tau"         ]
-            self.texs  = [r"$\log\,\sigma$", r"$\log\,\tau$"]
+            self.ndim = 5
+            self.vars = ["sigma", "tau"]
+            self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
             #
             self.vars.append("_".join(["lag",   linename]))
             self.vars.append("_".join(["wid",   linename]))
             self.vars.append("_".join(["scale", linename]))
-            self.texs.append( "".join([r"$t_{", linename ,r"}$"]))
-            self.texs.append( "".join([r"$w_{", linename ,r"}$"]))
-            self.texs.append( "".join([r"$s_{", linename ,r"}$"]))
+            self.texs.append("".join([r"$t_{", linename, r"}$"]))
+            self.texs.append("".join([r"$w_{", linename, r"}$"]))
+            self.texs.append("".join([r"$s_{", linename, r"}$"]))
 
     def __call__(self, p, **lnpostparams):
         return(lnpostfn_sbphoto_p(p, self.zydata, **lnpostparams))
@@ -2264,8 +2285,9 @@ class SPmap_Model(object):
         fixed: array_like, optional
             Same dimension as p_ini, but with 0 for parameters that is fixed in
             the optimization, and with 1 for parameters that is varying, e.g.,
-            fixed = [0, 1, 1, 1, 1] means sigma is fixed while others are varying. fixed=[1,
-            1, 1, 1,] is equivalent to fixed=None (default: None).
+            fixed = [0, 1, 1, 1, 1] means sigma is fixed while others are
+            varying. fixed=[1, 1, 1, 1,] is equivalent to fixed=None
+            (default: None).
 
         Returns
         -------
@@ -2276,49 +2298,59 @@ class SPmap_Model(object):
             The maximum log-posterior.
 
         """
-        set_verbose = lnpostparams.pop("set_verbose", True) # either given or set to True
-        set_retq    = lnpostparams.pop("set_retq",    False)
+        set_verbose = lnpostparams.pop("set_verbose", True)
+        set_retq = lnpostparams.pop("set_retq", False)
         if set_retq is True:
             raise InputError("set_retq has to be False")
         p_ini = np.asarray(p_ini)
         if fixed is not None:
             fixed = np.asarray(fixed)
-            func = lambda _p: -lnpostfn_sbphoto_p(_p*fixed+p_ini*(1.-fixed), self.zydata, **lnpostparams)
+            func = lambda _p: -lnpostfn_sbphoto_p(_p*fixed+p_ini*(1.-fixed),
+                                                  self.zydata, **lnpostparams)
         else:
-            func = lambda _p: -lnpostfn_sbphoto_p(_p, self.zydata, **lnpostparams)
+            func = lambda _p: -lnpostfn_sbphoto_p(_p, self.zydata,
+                                                  **lnpostparams)
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
         if fixed is not None:
             p_bst = p_bst*fixed+p_ini*(1.-fixed)
-        sigma, tau, lag, wid, scale = unpacksbphotopar(p_bst, nlc=self.zydata.nlc)
+        sigma, tau, lag, wid, scale = unpacksbphotopar(p_bst,
+                                                       nlc=self.zydata.nlc)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f"%(sigma, tau))
-            print("%s %8.3f %s %8.3f %s %8.3f"%(
+            print("sigma %8.3f tau %8.3f" % (sigma, tau))
+            print("%s %8.3f %s %8.3f %s %8.3f" % (
                 self.vars[2], lag,
                 self.vars[3], wid,
                 self.vars[3], scale,
                 ))
-            print("with logp  %10.5g "%-v_bst)
+            print("with logp  %10.5g " % -v_bst)
         return(p_bst, -v_bst)
 
-    def do_mcmc(self, conthpd=None, scalehpd=None, lagtobaseline=0.3, laglimit="baseline", widtobaseline=0.2, widlimit="nyquist", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
-        """ See `lnpostfn_sbphoto_p` for doc, except for `laglimit` and `widlimit`,
-        both of which have different default values ('baseline' / 'nyquist').
-        'baseline' means the boundaries are naturally determined by the
-        duration of the light curves, and 'nyquist' means the transfer function
-        width has to be within two times the typical cadence of light curves.
+    def do_mcmc(self, conthpd=None, scalehpd=None, lagtobaseline=0.3,
+                laglimit="baseline", widtobaseline=0.2, widlimit="nyquist",
+                nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
+                fchain=None, flogp=None, set_threading=False, blocksize=10000,
+                set_verbose=True):
+        """ See `lnpostfn_sbphoto_p` for doc, except for `laglimit` and
+        `widlimit`, both of which have different default values
+        ('baseline' / 'nyquist').  'baseline' means the boundaries are
+        naturally determined by the duration of the light curves,
+        and 'nyquist' means the transfer function width has to be within two
+        times the typical cadence of light curves.
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d "%threads)
+                print("run parallel chains of number %2d " % threads)
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d "%blocksize)
+                    print("run single chain in submatrix blocksize %10d " %
+                          blocksize)
                 else:
                     print("run single chain without subdividing matrix ")
         else:
-            raise InputError("conflicting set_threading and threads setup: set_threading should be false when threads > 1")
+            raise InputError("conflicting set_threading and threads setup:" +
+                             "set_threading should be false when threads > 1")
         if laglimit == "baseline":
             laglimit = [[-self.rj, self.rj],]
         elif len(laglimit) != 1:
@@ -2344,43 +2376,47 @@ class SPmap_Model(object):
         p0[:, 2] = p0[:, 2] * (laglimit[0][1] - laglimit[0][0]) + laglimit[0][0]
         p0[:, 3] = p0[:, 3] * (widlimit[0][1] - widlimit[0][0]) + widlimit[0][0]
         if scalehpd is None:
-            pass # (0, 1) is adequate.
+            pass  # (0, 1) is adequate.
         else:
             # XXX scalehpd is in natural log-space
-            p0[:, 4] = np.exp(p0[:, 4] * (scalehpd[2] - scalehpd[0]) + scalehpd[0])
+            p0[:, 4] = np.exp(p0[:, 4] * (scalehpd[2] - scalehpd[0]) +
+                              scalehpd[0])
         if set_verbose:
             print("start burn-in")
             if conthpd is None:
                 print("no priors on sigma and tau")
             else:
-                print("using log-priors on sigma and tau from the continuum fitting")
+                print("use log-priors on sigma and tau from continuum fitting")
                 print(np.exp(conthpd))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+                print("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline)
             else:
-                print("no penalizing long lags, but only restrict to within laglimit")
+                print("no penalizing long lags, restrict to < laglimit")
             if widtobaseline < 1.0:
-                print("penalize wids longer than %3.2f of the baseline"%widtobaseline)
+                print("penalize wids longer than %3.2f of the baseline" %
+                      widtobaseline)
             else:
-                print("no penalizing long wids, but only restrict to within widlimit")
+                print("no penalizing long wids, restrict to < widlimit")
             if scalehpd is None:
                 print("no priors on scale")
             else:
                 print("using log-priors on scale")
                 print(np.exp(scalehpd))
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"% (nburn, nwalkers, nburn*nwalkers))
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_sbphoto_p,
-                    args=(self.zydata, conthpd, scalehpd,
-                        lagtobaseline, laglimit, widtobaseline, widlimit,
-                        set_threading, blocksize, False, False),
-                    threads=threads)
+                                  args=(self.zydata, conthpd, scalehpd,
+                                        lagtobaseline, laglimit, widtobaseline,
+                                        widlimit, set_threading, blocksize,
+                                        False, False), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s"%fburn)
+                print("save burn-in chains to %s" % fburn)
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -2395,11 +2431,11 @@ class SPmap_Model(object):
             print(" ".join([format(r, "3.2f") for r in af]))
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s"%fchain)
+                print("save MCMC chains to %s" % fchain)
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s"%flogp)
+                print("save logp of MCMC chains to %s" % flogp)
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -2424,11 +2460,13 @@ class SPmap_Model(object):
             vsort = np.sort(self.flatchain[:,i])
             hpd[:,i] = vsort[medlowhig]
             if set_verbose:
-                print("HPD of %s"%self.vars[i])
+                print("HPD of %s" % self.vars[i])
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i])))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
 
@@ -2454,7 +2492,7 @@ class SPmap_Model(object):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(14, 2.8*2))
+        fig = plt.figure(figsize=(14, 2.8*2))
         for i in xrange(2):
             ax = fig.add_subplot(2,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
@@ -2466,7 +2504,8 @@ class SPmap_Model(object):
             if np.mod(i, 3) == 2:
                 # lag plots
                 lagbins = np.arange(int(np.min(self.flatchain[:,i])),
-                        int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
+                                    int(np.max(self.flatchain[:,i]))+lagbinsize,
+                                    lagbinsize)
                 ax.hist(self.flatchain[:,i], bins=lagbins)
             else:
                 ax.hist(self.flatchain[:,i], bins)
@@ -2481,7 +2520,8 @@ class SPmap_Model(object):
         ----------
         llag_segments: list of lists
             list of a single list, which is a two-element array
-            bracketing the range of lags (usually the single most probable peak).
+            bracketing the range of lags (usually the single most probable
+            peak).
 
         """
         if (len(llag_segments) != 1):
@@ -2514,7 +2554,7 @@ class SPmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s"%fchain)
+            print("load MCMC chain from %s" % fchain)
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -2547,29 +2587,31 @@ class SPmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
-        qlist = lnpostfn_sbphoto_p(p_bst, self.zydata, set_retq=True, set_verbose=False)[4]
+        qlist = lnpostfn_sbphoto_p(p_bst, self.zydata, set_retq=True,
+                                   set_verbose=False)[4]
         sigma, tau, lag, wid, scale = unpacksbphotopar(p_bst, self.zydata.nlc)
         # update qlist
         self.zydata.update_qlist(qlist)
         # initialize PredictRmap object
-        P = PredictSPmap(zydata=self.zydata, sigma=sigma, tau=tau, lag=lag, wid=wid, scale=scale)
+        P = PredictSPmap(zydata=self.zydata, sigma=sigma, tau=tau, lag=lag,
+                         wid=wid, scale=scale)
         nwant = dense*self.cont_npt
         jwant0 = self.jstart - 0.1*self.rj
-        jwant1 = self.jend   + 0.1*self.rj
+        jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
         iwant = np.ones(nwant)
         mve, var = P.mve_var(jwant, iwant)
         sig = np.sqrt(var)
         zylclist_pred.append([jwant, mve, sig])
-        zydata_pred   = LightCurve(zylclist_pred)
+        zydata_pred = LightCurve(zylclist_pred)
         if fpred is not None:
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
 
-###########################################################
 
-""" SCmap_Model: Smoothed Continuum Spectroscopic RM"""
+# ---------------------------------
+# SCmap_Model: Smoothed Continuum Spectroscopic RM
 
 def unpackscspearpar(p, nlc=None):
     """ Unpack the physical parameters from input 1-d array for smoothed
@@ -2578,23 +2620,24 @@ def unpackscspearpar(p, nlc=None):
         # possible to figure out nlc from the size of p, only one extra
         # parameter compared to the regular Rmap model.
         nlc = (len(p) - 3)//3 + 1
-    sigma   = np.exp(p[0])
-    tau     = np.exp(p[1])
+    sigma = np.exp(p[0])
+    tau = np.exp(p[1])
     # XXX have an imaginary unsmoothed light curve, for easily calling spear.
-    lags    = np.zeros(nlc+1)
-    wids    = np.zeros(nlc+1)
-    scales  =  np.ones(nlc+1)
+    lags = np.zeros(nlc+1)
+    wids = np.zeros(nlc+1)
+    scales = np.ones(nlc+1)
     # for the smoothed continuum
     wids[1] = p[2]
     for i in xrange(1, nlc):
-        lags[i+1]   = p[3+(i-1)*3]
-        wids[i+1]   = p[4+(i-1)*3]
+        lags[i+1] = p[3+(i-1)*3]
+        wids[i+1] = p[4+(i-1)*3]
         scales[i+1] = p[5+(i-1)*3]
     return(sigma, tau, lags, wids, scales)
 
+
 def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
-        set_threading=False, blocksize=10000, set_retq=False,
-        set_verbose=False):
+                       set_threading=False, blocksize=10000, set_retq=False,
+                       set_verbose=False):
     """ log-posterior function of p.
 
     Parameters
@@ -2628,19 +2671,22 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
     -------
     retval: float (set_retq is False) or list (set_retq is True)
         if `retval` returns a list, then it contains the full posterior info
-        as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+        as a list of [log_posterior, chi2_component, det_component,
+        DC_penalty, correction_to_the_mean].
 
     """
     # unpack the parameters from p
     sigma, tau, lags, wids, scales = unpackscspearpar(p, zydata.nlc)
     if set_retq:
         vals = list(lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales,
-                set_retq=True, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize))
+                                     set_retq=True, set_verbose=set_verbose,
+                                     set_threading=set_threading,
+                                     blocksize=blocksize))
     else:
         logl = lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales,
-                set_retq=False, set_verbose=set_verbose,
-                set_threading=set_threading, blocksize=blocksize)
+                                set_retq=False, set_verbose=set_verbose,
+                                set_threading=set_threading,
+                                blocksize=blocksize)
     # XXX deprecated by left here for conformity.
     prior0 = 0.0
     prior1 = 0.0
@@ -2650,7 +2696,8 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
         i = _i + 2
         if lagtobaseline < 1.0:
             if np.abs(lags[i]) > lagtobaseline*zydata.rj:
-                # penalize long lags when they are larger than 0.3 times the baseline,
+                # penalize long lags when they are larger than 0.3 times the
+                # baseline,
                 # as it is too easy to fit the model with non-overlapping
                 # signals in the light curves.
                 prior2 += np.log(np.abs(lags[i])/(lagtobaseline*zydata.rj))
@@ -2670,38 +2717,40 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
         logp = logl + prior
         return(logp)
 
+
 def lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales, set_retq=False,
-        set_verbose=False, set_threading=False, blocksize=10000):
+                     set_verbose=False, set_threading=False, blocksize=10000):
     """ Internal function to calculate the log likelihood.
     """
-    # if zydata.issingle:
-        # raise UsageError("lnlikefn_scspear does not work for single mode")
     # impossible scenarios
-    if (sigma<=0.0 or tau<=0.0 or np.min(wids)<0.0 or np.min(scales)<=0.0
-                   or np.max(np.abs(lags))>zydata.rj):
-       return(_exit_with_retval(zydata.nlc, set_retq,
-              errmsg="Warning: illegal input of parameters",
-              set_verbose=set_verbose))
+    if (sigma <= 0.0 or tau <= 0.0 or np.min(wids) < 0.0 or
+            np.min(scales) <= 0.0 or np.max(np.abs(lags)) > zydata.rj):
+        return(_exit_with_retval(zydata.nlc, set_retq,
+                                 errmsg="Warning: illegal input of parameters",
+                                 set_verbose=set_verbose))
     # calculate covariance matrix
     # here we have to trick the program to think that we have line lightcurves
     # with zero lag rather than having a unsmoothed continuum by increasing
     # iarr by one.
     if set_threading:
-        C = spear_threading(zydata.jarr,zydata.jarr,
-              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales,
-              blocksize=blocksize)
+        C = spear_threading(zydata.jarr, zydata.jarr, zydata.iarr+1,
+                            zydata.iarr+1, sigma, tau, lags, wids, scales,
+                            blocksize=blocksize)
     else:
-        C = spear(zydata.jarr,zydata.jarr,
-              zydata.iarr+1,zydata.iarr+1,sigma,tau,lags,wids,scales)
+        C = spear(zydata.jarr, zydata.jarr, zydata.iarr+1, zydata.iarr+1,
+                  sigma, tau, lags, wids, scales)
     # decompose C inplace
     U, info = cholesky(C, nugget=zydata.varr, inplace=True, raiseinfo=False)
     # handle exceptions here
     if info > 0:
-       return(_exit_with_retval(zydata.nlc, set_retq,
-              errmsg="Warning: non positive-definite covariance C",
-              set_verbose=set_verbose))
-    retval = _lnlike_from_U(U, zydata, set_retq=set_retq, set_verbose=set_verbose)
+        return(_exit_with_retval(
+            zydata.nlc, set_retq,
+            errmsg="Warning: non positive-definite covariance C",
+            set_verbose=set_verbose))
+    retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
+                            set_verbose=set_verbose)
     return(retval)
+
 
 class SCmap_Model(object):
     def __init__(self, zydata=None):
@@ -2717,34 +2766,39 @@ class SCmap_Model(object):
         if zydata is None:
             pass
         else:
-            self.nlc      = zydata.nlc
-            self.npt      = zydata.npt
+            self.nlc = zydata.nlc
+            self.npt = zydata.npt
             self.cont_npt = zydata.nptlist[0]
             self.cont_cad = zydata.cont_cad
             self.cont_std = zydata.cont_std
-            self.rj       = zydata.rj
-            self.jstart   = zydata.jstart
-            self.jend     = zydata.jend
-            self.names    = zydata.names
+            self.rj = zydata.rj
+            self.jstart = zydata.jstart
+            self.jend = zydata.jend
+            self.names = zydata.names
             # number of parameters
-            self.ndim  = 2 + (self.nlc-1)*3 + 1
-            self.vars  = [ "sigma",           "tau"         ,  "smoothing"]
-            self.texs  = [r"$\log\,\sigma$", r"$\log\,\tau$", r"$t_c$"]
+            self.ndim = 2 + (self.nlc-1)*3 + 1
+            self.vars = ["sigma", "tau", "smoothing"]
+            self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$", r"$t_c$"]
             for i in xrange(1, self.nlc):
-                self.vars.append("_".join(["lag",   self.names[i]]))
-                self.vars.append("_".join(["wid",   self.names[i]]))
+                self.vars.append("_".join(["lag", self.names[i]]))
+                self.vars.append("_".join(["wid", self.names[i]]))
                 self.vars.append("_".join(["scale", self.names[i]]))
-                self.texs.append( "".join([r"$t_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
-                self.texs.append( "".join([r"$w_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
-                self.texs.append( "".join([r"$s_{", self.names[i].lstrip(r"$").rstrip(r"$") ,r"}$"]))
+                self.texs.append("".join([
+                    r"$t_{", self.names[i].lstrip(r"$").rstrip(r"$"), r"}$"]))
+                self.texs.append("".join([
+                    r"$w_{", self.names[i].lstrip(r"$").rstrip(r"$"), r"}$"]))
+                self.texs.append("".join([
+                    r"$s_{", self.names[i].lstrip(r"$").rstrip(r"$"), r"}$"]))
 
     def __call__(self, p, **lnpostparams):
-        """ Calculate the posterior value given one parameter set `p`. See `lnpostfn_spear_p` for doc.
+        """ Calculate the posterior value given one parameter set `p`.
+        See `lnpostfn_spear_p` for doc.
 
         Parameters
         ----------
         p: array_like
-            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1, scale1, ...]
+            Rmap_Model parameters, [log(sigma), log(tau), lag1, wid1,
+            scale1, ...]
 
         lnpostparams: kwargs
             Keyword arguments for `lnpostfn_scspear_p`.
@@ -2753,23 +2807,28 @@ class SCmap_Model(object):
         -------
         retval: float (set_retq is False) or list (set_retq is True)
             if `retval` returns a list, then it contains the full posterior info
-            as a list of [log_posterior, chi2_component, det_component, DC_penalty, correction_to_the_mean].
+            as a list of [log_posterior, chi2_component, det_component,
+            DC_penalty, correction_to_the_mean].
 
         """
         return(lnpostfn_scspear_p(p, self.zydata, **lnpostparams))
 
     def do_map(self, p_ini, fixed=None, **lnpostparams):
-        """ Do an optimization to find the Maximum a Posterior estimates. See `lnpostfn_scspear_p` for doc.
+        """ Do an optimization to find the Maximum a Posterior estimates.
+        See `lnpostfn_scspear_p` for doc.
 
         Parameters
         ----------
         p_ini: array_like
-            SCmap_Model parameters, [log(sigma), log(tau), wid0, lag1, wid1, scale1, ...]
+            SCmap_Model parameters, [log(sigma), log(tau), wid0, lag1,
+            wid1, scale1, ...]
 
         fixed: array_like, optional
             Same dimension as p_ini, but with 0 for parameters that is fixed in
             the optimization, and with 1 for parameters that is varying, e.g.,
-            fixed = [0, 1, 1, 1, 1, 1, ...] means sigma is fixed while others are varying. fixed=[1, 1, 1, 1, 1, 1, ...] is equivalent to fixed=None (default: None).
+            fixed = [0, 1, 1, 1, 1, 1, ...] means sigma is fixed while
+            others are varying. fixed=[1, 1, 1, 1, 1, 1, ...] is
+            equivalent to fixed=None (default: None).
 
         lnpostparams: kwargs
             Kewword arguments for `lnpostfn_scspear_p`.
@@ -2784,37 +2843,40 @@ class SCmap_Model(object):
 
         """
         set_verbose = lnpostparams.pop("set_verbose", True)
-        set_retq    = lnpostparams.pop("set_retq",    False)
+        set_retq = lnpostparams.pop("set_retq",    False)
         if set_retq is True:
             raise InputError("set_retq has to be False")
         p_ini = np.asarray(p_ini)
         if fixed is not None:
             fixed = np.asarray(fixed)
             func = lambda _p: -lnpostfn_scspear_p(_p*fixed+p_ini*(1.-fixed),
-                    self.zydata, **lnpostparams)
+                                                  self.zydata, **lnpostparams)
         else:
-            func = lambda _p: -lnpostfn_scspear_p(_p,
-                    self.zydata, **lnpostparams)
+            func = lambda _p: -lnpostfn_scspear_p(
+                _p, self.zydata, **lnpostparams)
 
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
         if fixed is not None:
             p_bst = p_bst*fixed+p_ini*(1.-fixed)
         sigma, tau, lags, wids, scales = unpackscspearpar(p_bst,
-                self.zydata.nlc)
+                                                          self.zydata.nlc)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f wid0 %8.3f "%(sigma, tau, wids[0]))
+            print("sigma %8.3f tau %8.3f wid0 %8.3f " % (sigma, tau, wids[0]))
             for i in xrange(self.nlc-1):
                 ip = 2+i*3 + 1
-                print("%s %8.3f %s %8.3f %s %8.3f"%(
+                print("%s %8.3f %s %8.3f %s %8.3f" % (
                     self.vars[ip+0], lags[i+1],
                     self.vars[ip+1], wids[i+1],
                     self.vars[ip+2], scales[i+1],
                     ))
-            print("with logp  %10.5g "%-v_bst)
+            print("with logp  %10.5g " % -v_bst)
         return(p_bst, -v_bst)
 
-    def do_mcmc(self, lagtobaseline=0.3, laglimit="baseline", nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None, fchain=None, flogp=None, set_threading=False, blocksize=10000, set_verbose=True):
+    def do_mcmc(self, lagtobaseline=0.3, laglimit="baseline", nwalkers=100,
+                nburn=100, nchain=100, threads=1, fburn=None, fchain=None,
+                flogp=None, set_threading=False, blocksize=10000,
+                set_verbose=True):
         """ Run MCMC sampling over the parameter space.
 
         Parameters
@@ -2823,7 +2885,11 @@ class SCmap_Model(object):
             Prior on lags. When input lag exceeds lagtobaseline*baseline, a
             logarithmic prior will be applied.
         laglimit: str or list of tuples.
-            Hard boundaries for the lag searching during MCMC sampling. 'baseline' means the boundaries are naturally determined by the duration of the light curves, or you can set them as a list with `nline` of tuples, with each tuple containing the (min, max) pair for each single line.
+            Hard boundaries for the lag searching during MCMC sampling.
+            'baseline' means the boundaries are naturally determined by
+            the duration of the light curves, or you can set them as a list
+            with `nline` of tuples, with each tuple containing the (min, max)
+            pair for each single line.
         nwalker: integer, optional
             Number of walkers for `emcee` (default: 100).
         nburn: integer, optional
@@ -2848,11 +2914,12 @@ class SCmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d "%threads)
+                print("run parallel chains of number %2d " % threads)
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d "%blocksize)
+                    print("run single chain in submatrix blocksize %10d " %
+                          blocksize)
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -2860,36 +2927,38 @@ class SCmap_Model(object):
         if laglimit == "baseline":
             laglimit = [[-self.rj, self.rj],]*(self.nlc-1)
         elif len(laglimit) != (self.nlc - 1):
-            raise InputError("laglimit should be a list of lists matching number of lines")
+            raise InputError("laglimit should be a list of nline lists")
         # generate array of random numbers
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initialize array
         # sigma and tau without prior
         p0[:, 0] += np.log(self.cont_std)-0.5
         p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
-        p0[:, 2] *= 10. * self.cont_cad # make the initial wid0 to be [0, 10*cadence]
+        # make the initial wid0 to be [0, 10*cadence]
+        p0[:, 2] *= 10. * self.cont_cad
         for i in xrange(self.nlc-1):
-            p0[:, 3+i*3] = p0[:,3+i*3]*(laglimit[i][1]-laglimit[i][0]) + laglimit[i][0]
+            p0[:, 3+i*3] = p0[:,3+i*3] * (laglimit[i][1] -
+                                          laglimit[i][0]) + laglimit[i][0]
         if set_verbose:
             print("start burn-in")
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline"%lagtobaseline)
+                print("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline)
             else:
-                print("no penalizing long lags, but only restrict to within the baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"%
-                (nburn, nwalkers, nburn*nwalkers))
+                print("no penalizing long lags, restrict to < baseline")
+            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
-        sampler = EnsembleSampler(nwalkers, self.ndim,
-                    lnpostfn_scspear_p,
-                    args=(self.zydata, lagtobaseline, laglimit,
-                          set_threading, blocksize, False, False),
-                    threads=threads)
+        sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_scspear_p,
+                                  args=(self.zydata, lagtobaseline, laglimit,
+                                        set_threading, blocksize, False, False),
+                                  threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s"%fburn)
+                print("save burn-in chains to %s" % fburn)
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -2904,11 +2973,11 @@ class SCmap_Model(object):
             print(" ".join([format(r, "3.2f") for r in af]))
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s"%fchain)
+                print("save MCMC chains to %s" % fchain)
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s"%flogp)
+                print("save logp of MCMC chains to %s" % flogp)
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -2933,11 +3002,13 @@ class SCmap_Model(object):
             vsort = np.sort(self.flatchain[:,i])
             hpd[:,i] = vsort[medlowhig]
             if set_verbose:
-                print("HPD of %s"%self.vars[i])
+                print("HPD of %s" % self.vars[i])
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(np.exp(hpd[:,i])))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i])))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f"%tuple(hpd[:,i]))
+                    print("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
 
@@ -2963,7 +3034,7 @@ class SCmap_Model(object):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
         ln10 = np.log(10.0)
-        fig  = plt.figure(figsize=(14, 2.8*self.nlc))
+        fig = plt.figure(figsize=(14, 2.8*self.nlc))
         for i in xrange(2):
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
@@ -2981,7 +3052,8 @@ class SCmap_Model(object):
                 if np.mod(i, 3) == 0:
                     # lag plots
                     lagbins = np.arange(int(np.min(self.flatchain[:,i])),
-                            int(np.max(self.flatchain[:,i]))+lagbinsize, lagbinsize)
+                                        int(np.max(self.flatchain[:,i])) +
+                                        lagbinsize, lagbinsize)
                     ax.hist(self.flatchain[:,i], bins=lagbins)
                 else:
                     ax.hist(self.flatchain[:,i], bins)
@@ -3001,7 +3073,8 @@ class SCmap_Model(object):
 
         """
         if (len(llag_segments) != self.nlc-1):
-            print("Error: llag_segments has to be a list of length %d"%(self.nlc-1))
+            print("Error: llag_segments has to be a list of length %d" %
+                  (self.nlc-1))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
@@ -3031,7 +3104,7 @@ class SCmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s"%fchain)
+            print("load MCMC chain from %s" % fchain)
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -3046,7 +3119,8 @@ class SCmap_Model(object):
         p_bst: list
             best-fit parameters.
         """
-        self.qlist = lnpostfn_scspear_p(p_bst, self.zydata, set_retq=True, set_verbose=False)[4]
+        self.qlist = lnpostfn_scspear_p(p_bst, self.zydata, set_retq=True,
+                                        set_verbose=False)[4]
 
     def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True):
         """ Calculate the predicted mean and variance of each light curve on a
@@ -3075,15 +3149,16 @@ class SCmap_Model(object):
 
         """
         self.get_qlist(p_bst)
-        sigma, tau, lags, wids, scales = unpackscspearpar(p_bst, self.zydata.nlc)
+        sigma, tau, lags, wids, scales = unpackscspearpar(p_bst,
+                                                          self.zydata.nlc)
         # update qlist
         self.zydata.update_qlist(self.qlist)
         # initialize PredictRmap object
         P = PredictSCmap(zydata=self.zydata, sigma=sigma, tau=tau,
-                lags=lags, wids=wids, scales=scales)
+                         lags=lags, wids=wids, scales=scales)
         nwant = dense*self.cont_npt
         jwant0 = self.jstart - 0.1*self.rj
-        jwant1 = self.jend   + 0.1*self.rj
+        jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
         for i in xrange(self.nlc):
@@ -3091,10 +3166,7 @@ class SCmap_Model(object):
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
             zylclist_pred.append([jwant, mve, sig])
-        zydata_pred   = LightCurve(zylclist_pred)
+        zydata_pred = LightCurve(zylclist_pred)
         if fpred is not None:
             zydata_pred.save(fpred, set_overwrite=set_overwrite)
         return(zydata_pred)
-
-###########################################################
-

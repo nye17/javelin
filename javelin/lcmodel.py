@@ -122,8 +122,8 @@ def _get_hpd(ndim, flatchain):
 
 
 def _get_bfp(flatchain, logp):
-    i = np.argmax(logp)
-    bfp = flatchain[:,i]
+    j = np.argmax(logp)
+    bfp = flatchain[j, :]
     return(bfp)
 
 

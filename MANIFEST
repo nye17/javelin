@@ -82,8 +82,11 @@ javelin/spear_covfunc.f90
 javelin/threadpool.py
 javelin/zylc.py
 javelin/emcee/__init__.py
+javelin/emcee/autocorr.py
 javelin/emcee/ensemble.py
+javelin/emcee/interruptible_pool.py
 javelin/emcee/mh.py
+javelin/emcee/mpi_pool.py
 javelin/emcee/ptsampler.py
 javelin/emcee/sampler.py
 javelin/emcee/tests.py

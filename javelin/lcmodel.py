@@ -108,6 +108,25 @@ def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
         return(my_neg_inf)
 
 
+def _get_hpd(ndim, flatchain):
+    """ Get the 68% percentile range of each parameter.
+    """
+    hpd = np.zeros((3, ndim))
+    chain_len = flatchain.shape[0]
+    pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
+    medlowhig = pct1sig.astype(np.int32)
+    for i in xrange(ndim):
+        vsort = np.sort(flatchain[:,i])
+        hpd[:,i] = vsort[medlowhig]
+    return(hpd)
+
+
+def _get_bfp(flatchain, logp):
+    i = np.argmax(logp)
+    bfp = flatchain[:,i]
+    return(bfp)
+
+
 # ---------------------------------
 # Cont_Model: Continuum Variability
 
@@ -660,7 +679,6 @@ class Cont_Model(object):
             p0[:,2] = np.log(p0[:,2] * 5)
         elif self.covfunc == "kepler2_exp":
             p0[:,2] = np.log(self.rj*0.1*p0[:,2])
-
         if set_verbose:
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
@@ -702,6 +720,9 @@ class Cont_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        self.logp = np.ravel(sampler.lnprobability)
+        self.logp_whole = np.copy(self.logp)
+        self.get_bfp()
 
     def get_hpd(self, set_verbose=True):
         """ Get the 68% percentile range of each parameter to self.hpd.
@@ -712,13 +733,8 @@ class Cont_Model(object):
             Turn on/off verbose mode (default: True).
 
         """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
+        hpd = _get_hpd(self.ndim, self.flatchain)
         for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
             if set_verbose:
                 print("HPD of %s" % self.vars[i])
                 if (self.vars[i] == "nu" and (not self.uselognu)):
@@ -728,6 +744,9 @@ class Cont_Model(object):
                         np.exp(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
+
+    def get_bfp(self):
+        self.bfp = _get_bfp(self.flatchain, self.logp)
 
     def show_hist(self, bins=100, figout=None, figext=None):
         """ Display histograms of the posterior distributions.
@@ -765,7 +784,7 @@ class Cont_Model(object):
         # plt.get_current_fig_manager().toolbar.zoom()
         return(figure_handler(fig=fig, figout=figout, figext=figext))
 
-    def load_chain(self, fchain, set_verbose=True):
+    def load_chain(self, fchain, flogp=None, set_verbose=True):
         """ Load an existing chain file.
 
         Parameters
@@ -783,6 +802,10 @@ class Cont_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        if flogp is not None:
+            self.logp = np.genfromtxt(flogp)
+            self.logp_whole = np.copy(self.logp)
+            self.get_bfp()
 
     def break_chain(self, covpar_segments):
         """ Break the chain into different segments.
@@ -810,11 +833,15 @@ class Cont_Model(object):
                 print("Warning: cut too aggressive!")
                 return(1)
             self.flatchain = self.flatchain[indx_cut,:]
+            if hasattr(self, "logp"):
+                self.logp = self.logp[indx_cut]
 
     def restore_chain(self):
         """ Restore chain after `break_chain`.
         """
         self.flatchain = np.copy(self.flatchain_whole)
+        if hasattr(self, "logp"):
+            self.logp = np.copy(self.logp_whole)
 
     def get_qlist(self, p_bst):
         """ get the best-fit linear responses.
@@ -828,7 +855,7 @@ class Cont_Model(object):
                                        uselognu=self.uselognu, rank="Full",
                                        set_retq=True)[4]
 
-    def do_pred(self, p_bst, fpred=None, dense=10, rank="Full",
+    def do_pred(self, p_bst=None, fpred=None, dense=10, rank="Full",
                 set_overwrite=True):
         """ Predict light curves using the best-fit parameters.
 
@@ -853,6 +880,8 @@ class Cont_Model(object):
             Predicted LightCurve.
 
         """
+        if p_bst is None and hasattr(self, "bfp"):
+            p_bst = self.bfp
         self.get_qlist(p_bst)
         self.zydata.update_qlist(self.qlist)
         sigma, tau, nu = unpacksinglepar(p_bst, self.covfunc,
@@ -1292,6 +1321,9 @@ class Rmap_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        self.logp = np.ravel(sampler.lnprobability)
+        self.logp_whole = np.copy(self.logp)
+        self.get_bfp()
 
     def get_hpd(self, set_verbose=True):
         """ Get the 68% percentile range of each parameter to self.hpd.
@@ -1302,13 +1334,8 @@ class Rmap_Model(object):
             True if you want verbosity (default: True).
 
         """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
+        hpd = _get_hpd(self.ndim, self.flatchain)
         for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
             if set_verbose:
                 print("HPD of %s" % self.vars[i])
                 if i < 2:
@@ -1318,6 +1345,9 @@ class Rmap_Model(object):
                     print("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
+
+    def get_bfp(self):
+        self.bfp = _get_bfp(self.flatchain, self.logp)
 
     def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
         """ Display histograms of the posterior distributions.
@@ -1387,13 +1417,17 @@ class Rmap_Model(object):
             imin, imax = np.searchsorted(self.flatchain[indx, 2+i*3], llag_seq)
             indx_cut = indx[imin: imax]
             self.flatchain = self.flatchain[indx_cut,:]
+            if hasattr(self, "logp"):
+                self.logp = self.logp[indx_cut]
 
     def restore_chain(self):
         """ Restore chain after `break_chain`.
         """
         self.flatchain = np.copy(self.flatchain_whole)
+        if hasattr(self, "logp"):
+            self.logp = np.copy(self.logp_whole)
 
-    def load_chain(self, fchain, set_verbose=True):
+    def load_chain(self, fchain, flogp=None, set_verbose=True):
         """ Load stored MCMC chain.
 
         Parameters
@@ -1411,6 +1445,10 @@ class Rmap_Model(object):
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        if flogp is not None:
+            self.logp = np.genfromtxt(flogp)
+            self.logp_whole = np.copy(self.logp)
+            self.get_bfp()
 
     def get_qlist(self, p_bst):
         """ get the best-fit linear responses.
@@ -1423,7 +1461,7 @@ class Rmap_Model(object):
         self.qlist = lnpostfn_spear_p(p_bst, self.zydata, set_retq=True,
                                       set_verbose=False)[4]
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True):
+    def do_pred(self, p_bst=None, fpred=None, dense=10, set_overwrite=True):
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
 
@@ -1449,6 +1487,8 @@ class Rmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
+        if p_bst is None and hasattr(self, "bfp"):
+            p_bst = self.bfp
         self.get_qlist(p_bst)
         sigma, tau, lags, wids, scales = unpackspearpar(
             p_bst, self.zydata.nlc, hascontlag=True)
@@ -1879,6 +1919,9 @@ class Pmap_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        self.logp = np.ravel(sampler.lnprobability)
+        self.logp_whole = np.copy(self.logp)
+        self.get_bfp()
 
     def get_hpd(self, set_verbose=True):
         """ Get the 68% percentile range of each parameter to self.hpd.
@@ -1889,13 +1932,8 @@ class Pmap_Model(object):
             True if you want verbosity (default: True).
 
         """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
+        hpd = _get_hpd(self.ndim, self.flatchain)
         for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
             if set_verbose:
                 print("HPD of %s" % self.vars[i])
                 if i < 2:
@@ -1906,6 +1944,9 @@ class Pmap_Model(object):
                           tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
+
+    def get_bfp(self):
+        self.bfp = _get_bfp(self.flatchain, self.logp)
 
     def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
         """ Display histograms of the posterior distributions.
@@ -1982,13 +2023,17 @@ class Pmap_Model(object):
             imin, imax = np.searchsorted(self.flatchain[indx, 2], llag_seq)
             indx_cut = indx[imin: imax]
             self.flatchain = self.flatchain[indx_cut,:]
+            if hasattr(self, "logp"):
+                self.logp = self.logp[indx_cut]
 
     def restore_chain(self):
         """ Restore chain after `break_chain`.
         """
         self.flatchain = np.copy(self.flatchain_whole)
+        if hasattr(self, "logp"):
+            self.logp = np.copy(self.logp_whole)
 
-    def load_chain(self, fchain, set_verbose=True):
+    def load_chain(self, fchain, flogp=None, set_verbose=True):
         """ Load stored MCMC chain.
 
         Parameters
@@ -2006,8 +2051,12 @@ class Pmap_Model(object):
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        if flogp is not None:
+            self.logp = np.genfromtxt(flogp)
+            self.logp_whole = np.copy(self.logp)
+            self.get_bfp()
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True,
+    def do_pred(self, p_bst=None, fpred=None, dense=10, set_overwrite=True,
                 set_decompose=False):
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
@@ -2034,6 +2083,8 @@ class Pmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
+        if p_bst is None and hasattr(self, "bfp"):
+            p_bst = self.bfp
         qlist = lnpostfn_photo_p(p_bst, self.zydata, set_retq=True,
                                  set_verbose=False)[4]
         sigma, tau, lags, wids, scales = unpackphotopar(p_bst, self.zydata.nlc,
@@ -2442,6 +2493,9 @@ class SPmap_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        self.logp = np.ravel(sampler.lnprobability)
+        self.logp_whole = np.copy(self.logp)
+        self.get_bfp()
 
     def get_hpd(self, set_verbose=True):
         """ Get the 68% percentile range of each parameter to self.hpd.
@@ -2452,13 +2506,8 @@ class SPmap_Model(object):
             True if you want verbosity (default: True).
 
         """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
+        hpd = _get_hpd(self.ndim, self.flatchain)
         for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
             if set_verbose:
                 print("HPD of %s" % self.vars[i])
                 if i < 2:
@@ -2469,6 +2518,9 @@ class SPmap_Model(object):
                           tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
+
+    def get_bfp(self):
+        self.bfp = _get_bfp(self.flatchain, self.logp)
 
     def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
         """ Display histograms of the posterior distributions.
@@ -2538,11 +2590,15 @@ class SPmap_Model(object):
             imin, imax = np.searchsorted(self.flatchain[indx, 2], llag_seq)
             indx_cut = indx[imin: imax]
             self.flatchain = self.flatchain[indx_cut,:]
+            if hasattr(self, "logp"):
+                self.logp = self.logp[indx_cut]
 
     def restore_chain(self):
         self.flatchain = np.copy(self.flatchain_whole)
+        if hasattr(self, "logp"):
+            self.logp = np.copy(self.logp_whole)
 
-    def load_chain(self, fchain, set_verbose=True):
+    def load_chain(self, fchain, flogp=None, set_verbose=True):
         """ Load stored MCMC chain.
 
         Parameters
@@ -2560,8 +2616,12 @@ class SPmap_Model(object):
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        if flogp is not None:
+            self.logp = np.genfromtxt(flogp)
+            self.logp_whole = np.copy(self.logp)
+            self.get_bfp()
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True):
+    def do_pred(self, p_bst=None, fpred=None, dense=10, set_overwrite=True):
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
 
@@ -2587,6 +2647,8 @@ class SPmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
+        if p_bst is None and hasattr(self, "bfp"):
+            p_bst = self.bfp
         qlist = lnpostfn_sbphoto_p(p_bst, self.zydata, set_retq=True,
                                    set_verbose=False)[4]
         sigma, tau, lag, wid, scale = unpacksbphotopar(p_bst, self.zydata.nlc)
@@ -2984,6 +3046,9 @@ class SCmap_Model(object):
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        self.logp = np.ravel(sampler.lnprobability)
+        self.logp_whole = np.copy(self.logp)
+        self.get_bfp()
 
     def get_hpd(self, set_verbose=True):
         """ Get the 68% percentile range of each parameter to self.hpd.
@@ -2994,13 +3059,8 @@ class SCmap_Model(object):
             True if you want verbosity (default: True).
 
         """
-        hpd = np.zeros((3, self.ndim))
-        chain_len = self.flatchain.shape[0]
-        pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
-        medlowhig = pct1sig.astype(np.int32)
+        hpd = _get_hpd(self.ndim, self.flatchain)
         for i in xrange(self.ndim):
-            vsort = np.sort(self.flatchain[:,i])
-            hpd[:,i] = vsort[medlowhig]
             if set_verbose:
                 print("HPD of %s" % self.vars[i])
                 if i < 2:
@@ -3011,6 +3071,9 @@ class SCmap_Model(object):
                           tuple(hpd[:,i]))
         # register hpd to attr
         self.hpd = hpd
+
+    def get_bfp(self):
+        self.bfp = _get_bfp(self.flatchain, self.logp)
 
     def show_hist(self, bins=100, lagbinsize=1.0, figout=None, figext=None):
         """ Display histograms of the posterior distributions.
@@ -3086,13 +3149,17 @@ class SCmap_Model(object):
             imin, imax = np.searchsorted(self.flatchain[indx, 3+i*3], llag_seq)
             indx_cut = indx[imin: imax]
             self.flatchain = self.flatchain[indx_cut,:]
+            if hasattr(self, "logp"):
+                self.logp = self.logp[indx_cut]
 
     def restore_chain(self):
         """ Restore chain after `break_chain`.
         """
         self.flatchain = np.copy(self.flatchain_whole)
+        if hasattr(self, "logp"):
+            self.logp = np.copy(self.logp_whole)
 
-    def load_chain(self, fchain, set_verbose=True):
+    def load_chain(self, fchain, flogp=None, set_verbose=True):
         """ Load stored MCMC chain.
 
         Parameters
@@ -3110,6 +3177,10 @@ class SCmap_Model(object):
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
+        if flogp is not None:
+            self.logp = np.genfromtxt(flogp)
+            self.logp_whole = np.copy(self.logp)
+            self.get_bfp()
 
     def get_qlist(self, p_bst):
         """ get the best-fit linear responses.
@@ -3122,7 +3193,7 @@ class SCmap_Model(object):
         self.qlist = lnpostfn_scspear_p(p_bst, self.zydata, set_retq=True,
                                         set_verbose=False)[4]
 
-    def do_pred(self, p_bst, fpred=None, dense=10, set_overwrite=True):
+    def do_pred(self, p_bst=None, fpred=None, dense=10, set_overwrite=True):
         """ Calculate the predicted mean and variance of each light curve on a
         densely sampled time axis.
 
@@ -3148,6 +3219,8 @@ class SCmap_Model(object):
             Predicted light curves packaged as a LightCurve object.
 
         """
+        if p_bst is None and hasattr(self, "bfp"):
+            p_bst = self.bfp
         self.get_qlist(p_bst)
         sigma, tau, lags, wids, scales = unpackscspearpar(p_bst,
                                                           self.zydata.nlc)

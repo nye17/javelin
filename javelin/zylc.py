@@ -218,7 +218,7 @@ class LightCurve(object):
         height = 0.85/self.nlc
         for i in xrange(self.nlc) :
             ax = fig.add_axes([0.10, 0.1+i*height, 0.85, height])
-            mfc = cm.jet(i/(self.nlc-1.))
+            mfc = cm.jet(i/(self.nlc-1.) if self.nlc > 1 else 0)
             if set_pred :
                 ax.plot(self.jlist[i], self.mlist[i]+self.blist[i],
                     color=mfc, ls="-", lw=2,

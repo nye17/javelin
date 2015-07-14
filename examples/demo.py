@@ -18,6 +18,8 @@ names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
 jdense = np.linspace(0.0, 2000.0, 2000)
 # DRW parameters
 sigma, tau = (3.00, 400.0)
+# tau_cut
+tau_cut = 7.0
 # line parameters
 lagy, widy, scaley = (100.0,   2.0, 0.5)
 lagz, widz, scalez = (250.0,   4.0, 0.25)
@@ -38,8 +40,25 @@ def file_exists(fname) :
     except IOError:
         return(False)
 
-def getTrue(trufile, set_plot=False, mode="test"):
+def getTrue(trufile, set_plot=False, mode="test", covfunc="drw"):
     """ Generating dense, error-free light curves as the input signal.
+
+    Parameters
+    ---
+    trufile: str
+        filename for reading/storing the light curve file.
+    set_plot: bool
+        Draw the light curves if True.
+    mode: str
+        mode of this example script: "test" is for doing nothing but to show the
+        modules are correctly loaded; "run" is to run a full test by
+        regenerating all the data files and results of this demo; and "show" is
+        to load all the precalculated results and plot them.
+    covfunc: str
+        the covariance function for the underlying variability model. For this
+        demo we have either the default "drw" model or the "kepler2_exp" model
+        which mimics the short time scale cutoff seen in Kepler.
+
     """
     if mode == "test" :
         return(None)
@@ -48,9 +67,14 @@ def getTrue(trufile, set_plot=False, mode="test"):
         zydata = get_data(trufile, names=names)
     elif mode == "run" :
         print("generate true light curve signal")
-        # zydata = generateTrueLC(covfunc="drw")
-        # this is the fast way
-        zydata = generateTrueLC2(covfunc="drw")
+        if covfunc == "drw":
+            print("generating DRW light curves...")
+            # this is the fast way
+            zydata = generateTrueLC2(covfunc="drw")
+        else:
+            print("generating Kepler light curves...")
+            # slower
+            zydata = generateTrueLC(covfunc="kepler2_exp")
         print("save true light curve signal to %s"%trufile)
         trufile = ".".join([trufile, "myrun"])
         zydata.save(trufile)
@@ -59,11 +83,11 @@ def getTrue(trufile, set_plot=False, mode="test"):
         zydata.plot(marker="None", ms=1.0, ls="-", lw=2, figout="signal", figext=figext)
     return(zydata)
 
-def generateTrueLC(covfunc="drw"):
+def generateTrueLC(covfunc="kepler2_exp"):
     """generateTrueLC
 
     covfunc : str, optional
-        Name of the covariance funtion (default: drw).
+        Name of the covariance funtion, "drw" or "kepler2_exp" (default: kepler2_exp).
 
     """
     # create a `truth' mode light curve set with one continuum and two lines
@@ -77,7 +101,7 @@ def generateTrueLC(covfunc="drw"):
     if covfunc == "drw" :
         PS = PredictSignal(lcmean=0.0, covfunc=covfunc, sigma=sigma, tau=tau)
     elif covfunc == "kepler2_exp" :
-        PS = PredictSignal(lcmean=0.0, covfunc=covfunc, sigma=sigma, tau=tau, 
+        PS = PredictSignal(lcmean=0.0, covfunc=covfunc, sigma=sigma, tau=tau,
                 nu=tau_cut, rank="NearlyFull")
     else :
         raise RuntimeError("current no such covfunc implemented %s"%covfunc)
@@ -86,7 +110,7 @@ def generateTrueLC(covfunc="drw"):
     sdense = PS.generate(jdense, ewant=edense)
     imin = np.searchsorted(jdense, jmin)
     imax = np.searchsorted(jdense, jmax)
-    zylist.append([jdense[imin: imax], sdense[imin: imax], edense[imin: imax]])
+    zylist.append([jdense[imin: imax], sdense[imin: imax]+lcmeans[0], edense[imin: imax]])
     # this is for handling the prediction for Yelm, and Zing.
     for i in xrange(1, 3) :
         lag  = lags[i]
@@ -95,10 +119,17 @@ def generateTrueLC(covfunc="drw"):
         jl, sl = generateLine(jdense, sdense, lag, wid, scale, mc_mean=0.0, ml_mean=0.0)
         imin = np.searchsorted(jl, jmin)
         imax = np.searchsorted(jl, jmax)
-        zylist.append([jl[imin: imax], sl[imin: imax], edense[imin: imax]])
+        # print np.mean(sl)
+        zylist.append([jl[imin: imax], sl[imin: imax]+lcmeans[i], edense[imin: imax]])
+        if i == 1:
+            # special continuum prediction for YelmBand at the observed epochs of the YelmLine
+            jdense_yb = jl[imin: imax]
+            edense_yb = np.zeros_like(jdense_yb)
+            sdense_yb = PS.generate(jdense_yb, ewant=edense_yb)
+            phlc = [jdense_yb, sdense_yb + lcmeans[i] + zylist[1][1], edense_yb]
     # this is for handling the prediction for YelmBand.
-    # TODO
-
+    # combine into a single LightCurve
+    zylist.append(phlc)
     zydata = LightCurve(zylist, names=names)
     return(zydata)
 
@@ -110,7 +141,7 @@ def generateTrueLC2(covfunc="drw"):
 
     """
     if covfunc != "drw" :
-        raise RuntimeError("current no such covfunc implemented for generateTrueLC2 %s"%covfunc)
+        raise RuntimeError("current no such covfunc implemented for generateTrueLC2, see demo_covfunc.py for details on how to generate LCs using non-DRW models %s"%covfunc)
     ps = PredictSpear(sigma, tau, llags, lwids, lscales, spearmode="Rmap")
     mdense = np.zeros_like(jdense)
     edense = np.zeros_like(jdense)
@@ -178,7 +209,7 @@ def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="te
         zylclist_top = zydata_dou.zylclist[:2]
         zydata_top = LightCurve(zylclist_top, names=names[0:2])
         _zydata = _c + _yb
-        zydata_pho = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0) 
+        zydata_pho = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0)
         if mode == "run" :
             confile = ".".join([confile, "myrun"])
             doufile = ".".join([doufile, "myrun"])
@@ -194,7 +225,7 @@ def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="te
         zymock = zydata_dou + _yb
         zymock.plot(figout="mocklc", figext=figext)
 
-def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, mode="test") :
+def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100, mode="test") :
     """ fit the continuum model.
     """
     if mode == "run" :
@@ -213,7 +244,7 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
         cont.show_hist(bins=100, figout="mcmc0", figext=figext)
     return(cont.hpd)
 
-def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50, mode="test") :
+def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100, mode="test") :
     """ fit the Rmap model.
     """
     if mode == "run" :
@@ -233,7 +264,7 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
         print(laglimit)
 #        laglimit = "baseline"
         linfchain = ".".join([linfchain, "myrun"])
-        rmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit, 
+        rmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit,
                 nwalkers=nwalkers, nburn=nburn, nchain=nchain,
                 fburn=None, fchain=linfchain, threads=threads)
     if set_plot :
@@ -246,7 +277,7 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
         rmap.show_hist(bins=100, lagbinsize=lagbinsize, figout=figout, figext=figext)
     return(rmap.hpd)
 
-def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=50, nchain=50,mode="test") :
+def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100,mode="test") :
     """ fit the Pmap model.
     """
     if mode == "run" :
@@ -260,9 +291,10 @@ def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbins
         pmap.load_chain(phofchain, set_verbose=False)
     elif mode == "run" :
         laglimit = [[50.0, 130.0]] # XXX here we want to avoid 180 day limit.
+        widlimit = [[0, 7.0]] # XXX here we want to avoid long smoothing width
         phofchain = ".".join([phofchain, "myrun"])
-        pmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit, 
-                nwalkers=nwalkers, nburn=nburn, nchain=nchain,
+        pmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit,
+                widlimit=widlimit, nwalkers=nwalkers, nburn=nburn, nchain=nchain,
                 fburn=None, fchain=phofchain, threads=threads)
     if set_plot :
         pmap.break_chain([lagrange,])
@@ -284,7 +316,7 @@ def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
     if set_plot :
         zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
 
-def demo(mode) :
+def demo(mode, covfunc="drw") :
     """ Demonstrate the main functionalities of JAVELIN.
 
     Parameters
@@ -317,24 +349,28 @@ def demo(mode) :
             print("use multiprocessing on %d cpus"%threads)
         else :
             print("use single cpu")
+        if covfunc == "drw":
+            tag = ""
+        else:
+            tag = ".kepler"
         # source variability
-        trufile   = "dat/trulc.dat"
+        trufile   = "dat/trulc.dat" + tag
         # observed continuum light curve w/ seasonal gap
-        confile   = "dat/loopdeloop_con.dat"
+        confile   = "dat/loopdeloop_con.dat" + tag
         # observed continuum+y light curve w/ seasonal gap
-        topfile   = "dat/loopdeloop_con_y.dat"
+        topfile   = "dat/loopdeloop_con_y.dat" + tag
         # observed continuum+y+z light curve w/ seasonal gap
-        doufile   = "dat/loopdeloop_con_y_z.dat"
+        doufile   = "dat/loopdeloop_con_y_z.dat" + tag
         # observed continuum band+y band light curve w/out seasonal gap
-        phofile   = "dat/loopdeloop_con_yb.dat"
+        phofile   = "dat/loopdeloop_con_yb.dat" + tag
         # file for storing MCMC chains
-        confchain = "dat/chain0.dat"
-        topfchain = "dat/chain1.dat"
-        doufchain = "dat/chain2.dat"
-        phofchain = "dat/chain3.dat"
+        confchain = "dat/chain0.dat" + tag
+        topfchain = "dat/chain1.dat" + tag
+        doufchain = "dat/chain2.dat" + tag
+        phofchain = "dat/chain3.dat" + tag
 
     # generate truth drw signal
-    zydata  = getTrue(trufile, set_plot=set_plot, mode=mode)
+    zydata  = getTrue(trufile, set_plot=set_plot, mode=mode, covfunc=covfunc)
 
     # generate mock light curves
     getMock(zydata, confile, topfile, doufile, phofile, set_plot=set_plot, mode=mode)
@@ -346,15 +382,21 @@ def demo(mode) :
     tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
 
     # fit douhat
-    douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
+    douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads,
+            nwalkers=150, nburn=150, nchain=150,set_plot=set_plot, mode=mode)
 
     # show fit
     showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
 
     # fit pmap
-    phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[0, 150], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
+    phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[0, 150], lagbinsize=0.2, threads=threads,
+            nwalkers=200, nburn=200, nchain=200, set_plot=set_plot, mode=mode)
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
     import sys
     mode = sys.argv[1]
-    demo(mode)
+    try:
+        covfunc = sys.argv[2]
+    except IndexError:
+        covfunc = "drw"
+    demo(mode, covfunc=covfunc)

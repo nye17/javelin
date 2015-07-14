@@ -1,2 +1,2 @@
 include README.rst LICENSE
-recursive-include examples *.png *.dat *.txt *.py
+recursive-include examples *.png *.dat *.txt *.py *.kepler

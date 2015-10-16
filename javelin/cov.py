@@ -26,12 +26,14 @@ def get_covfunc_dict(covfunc, **covparams):
     Parameters
     ----------
     covfunc : str
-        Names of the covariance funcrtions available, i.e., keys in `covname_dict`, currently including `matern`, `pow_exp`, `drw`, `pareto_exp`, `pow_tail`, `kepler_exp`, and `kepler2_exp`.
+        Names of the covariance funcrtions available, i.e., keys in
+        `covname_dict`, currently including `matern`, `pow_exp`, `drw`,
+        `pareto_exp`, `pow_tail`, `kepler_exp`, and `kepler2_exp`.
 
-    **covparams: 
+    **covparams:
         keyword arguments for each `convfunc`.
 
-    Returns 
+    Returns
     -------
     _cov_dict : dict
         External namespaces for the name and parameters of `convfunc`.
@@ -45,17 +47,17 @@ def get_covfunc_dict(covfunc, **covparams):
         _cov_dict['pow']         = 1.0
     elif covfunc == "matern" :
         _cov_dict['diff_degree'] = covparams['nu']
-    elif covfunc == "pow_exp" : 
+    elif covfunc == "pow_exp" :
         _cov_dict['pow']         = covparams['nu']
-    elif covfunc == "pareto_exp" : 
+    elif covfunc == "pareto_exp" :
         _cov_dict['alpha']       = covparams['nu']
-    elif covfunc == "kepler_exp" : 
+    elif covfunc == "kepler_exp" :
         _cov_dict['tcut']        = covparams['nu']
-    elif covfunc == "kepler2_exp" : 
+    elif covfunc == "kepler2_exp" :
         # tcut is the ratio of the cutoff timescale to tau, so if you
         # want nu to be the cutoff timescale....
         _cov_dict['tcut']        = covparams['nu']/covparams['tau']
-    elif covfunc == "pow_tail" : 
+    elif covfunc == "pow_tail" :
         _cov_dict['beta']        = covparams['nu']
     else :
         raise RuntimeError("%s has not been implemented"%covfunc)
@@ -86,7 +88,7 @@ class MyCovariance(object):
 
         lenx = len(x)
         orig_shape = x.shape
-        
+
         if y is None:
             # Special fast-path for functions that have an 'amp' parameter
             if hasattr(self.eval_fun, 'diag_call'):

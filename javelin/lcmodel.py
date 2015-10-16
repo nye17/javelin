@@ -278,8 +278,6 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
             return(_exit_with_retval(zydata.nlc, set_retq,
                    errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
-    elif covfunc == "kepler_exp":
-        # here nu is the ratio
         if nu < 0.0 or nu >= 1.0:
             return(_exit_with_retval(zydata.nlc, set_retq,
                    errmsg="Warning: illegal input of parameters in nu",

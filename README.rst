@@ -1,37 +1,37 @@
 
-======= 
-JAVELIN 
+=======
+JAVELIN
 =======
 
 
-What is JAVELIN 
+What is JAVELIN
 ===============
 
 **JAVELIN** stands (reluctantly) for **J**\ust **A**\nother **V**\ehicle
 for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
 *SPEAR* algorithm written in Python to provide more flexibility in both
 functionality and visualization. You can use **JAVELIN** to model quasar
-variability using different covariance functions 
-(`Zu et al. 2013a <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_), 
-and measure emission line lags using either spectroscopic light cruves 
-(`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_) 
-or photometric light curves 
-(`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_). 
+variability using different covariance functions
+(`Zu et al. 2013a <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
+and measure emission line lags using either spectroscopic light cruves
+(`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_)
+or photometric light curves
+(`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_).
 
 *The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
 
-Install JAVELIN 
+Install JAVELIN
 ===============
 
-Prerequisites 
+Prerequisites
 -------------
 
 JAVELIN requires
 
-#. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90) 
-#. `Python <http://python.org>`_ (>2.5) 
-#. `Numpy <http://numpy.org>`_ (>1.4) 
-#. `Scipy <http://scipy.org>`_ (>0.1) 
+#. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90)
+#. `Python <http://python.org>`_ (>2.5)
+#. `Numpy <http://numpy.org>`_ (>1.4)
+#. `Scipy <http://scipy.org>`_ (>0.1)
 #. `Matplotlib <http://matplotlib.sourceforge.net/>`_ (>1.0)
 
 We strongly recommend that you have the ``Lapack`` and ``Atlas`` libraries installed
@@ -42,7 +42,7 @@ They provide native support for fast solving linear systems inside JAVELIN, othe
 JAVELIN will simply install a subset of the the ``Lapack`` source from scratch.
 
 
-Installation 
+Installation
 ------------
 
 To download the package, you can either go to the ``Downloads`` tab for stable
@@ -67,7 +67,7 @@ compilers that are available in your system, e.g.,::
 uses ``GFortran`` as its Fortran compiler.
 
 
-.. caution:: 
+.. caution::
 
     Note that the short names for Fortran compilers may vary from system to system,
     you can check the list of available Fortran compilers in your system using::
@@ -76,8 +76,15 @@ uses ``GFortran`` as its Fortran compiler.
 
     and you can find them in the ``Fortran compilers found:`` section of the output.
 
+.. caution::
 
-Test Installation 
+    If you installed Python from Conda that comes with the Accelerate framework, multithreading
+    may not work for you, the solution is to set the environmental variable ``VECLIB_MAXIMUM_THREADS``
+    to ``1`` in your terminal:
+
+        $ export VECLIB_MAXIMUM_THREADS=1
+
+Test Installation
 -----------------
 
 After installing JAVELIN, navigate into the ``examples`` directory::
@@ -96,7 +103,7 @@ try::
 which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/1202.3783>`_.
 
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
    :scale: 80%
 
    Fig. 1 : Illustration of four continuum models available in JAVELIN.
@@ -104,7 +111,7 @@ which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/120
 
 
 
-Demonstration 
+Demonstration
 =============
 
 Here we briefly explain how to use JAVELIN to caculate the spectroscopic and photometric line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
@@ -122,7 +129,7 @@ show the figures below locally by running::
 
     $ python demo.py show
 
-on the command line. 
+on the command line.
 
 In our RM models, we assume the quasar variability on scales longer than a few
 days can be well described by a Damped Random Walk (DRW) model, and the
@@ -137,7 +144,7 @@ scale 400 days, a variability amplitude of sigma=3, and a mean of 10.0
 factor s; for photometric RM we have an additional parameter `alpha` describing the ratio between the two continua, one off and one on the line flux.
 
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
    :scale: 80%
 
    Fig. 2: True light curves of loopdeeloop (from top to bottom: the Yelm band flux, the Zing emission line, the Ylem emission line, and the continuum).
@@ -145,7 +152,7 @@ factor s; for photometric RM we have an additional parameter `alpha` describing 
 In practice, what we could observe are down-sampled and noisy versions of the true light curves, sometimes with seasonal gaps because of the conflict with our Sun's
 schedule, as shown by Fig. 3.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
    :scale: 80%
 
    Fig. 3: Same as Fig. 2, but observed versions.
@@ -159,7 +166,7 @@ parameters of the continuum light curve. Fig. 4 shows the posterior distribution
 of the two DRW parameters of the continuum variability as calculated from
 JAVELIN using MCMC chains,
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
    :scale: 80%
 
    Fig. 4: Posterior distributions of the DRW parameters based on fits to the
@@ -177,7 +184,7 @@ derives the posterior distribution of the lag t, the tophat width w, and the
 scale factor s of the emission line, along with updated posteriors for the
 timescale tau and the amplitude sigma of the continuum, as shown in Fig. 5.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
    :scale: 150%
 
    Fig. 5: Posterior distributions of the emission line lag t, tophat width w,
@@ -197,7 +204,7 @@ compare to the two line light curves! After another MCMC run, JAVELIN is able to
 eliminate the second peak at 180 days and solve the lags for both emission lines
 simultaneously, as shown in Fig. 6.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
    :scale: 150%
 
    Fig. 6: As in Fig. 5, but after running JAVELIN for both two line light
@@ -222,7 +229,7 @@ single light curve.
 
 For the photometric line light curve, just to demonstrate the photometric RM function of JAVELIN, we place a hard limit on range of lags during MCMC searching, so that the 180 ambiguity won't happen. Fig. 8 shows the posterior probability disgtribution of parameters in the photometric RM model
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc3.png 
+.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc3.png
    :scale: 150%
 
    Fig. 8: As in Fig. 5, but after running JAVELIN for the Yelm band light
@@ -230,14 +237,14 @@ For the photometric line light curve, just to demonstrate the photometric RM fun
 
 
 
-Usage 
+Usage
 =====
 
 To use JAVELIN, it is useful to have some a priori knowledge of Python, but not
 necessary. Here we will walk you through the actual procedures outlined in the
 last section. In this section, we will manipulate the files in two different
 terminals, one is the usual Unix command line marked by "$" in the beginning,
-one is the Python terminal started with ">>>". 
+one is the Python terminal started with ">>>".
 
 
 Running JAVELIN is Easy
@@ -253,10 +260,10 @@ Starting from the data files in the ``examples/dat`` directly::
 Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommened!),::
 
     $ python
-    Python 2.7.2+ (default, Jan 20 2012, 23:05:38) 
+    Python 2.7.2+ (default, Jan 20 2012, 23:05:38)
     [GCC 4.6.2] on linux2
     Type "help", "copyright", "credits" or "license" for more information.
-    >>> 
+    >>>
 
 and do ::
 
@@ -265,13 +272,13 @@ and do ::
 
 to load the necessary modules, then::
 
-    >>>c = get_data(["con.dat"]) 
+    >>>c = get_data(["con.dat"])
     >>>cmod = Cont_Model(c)
     >>>cmod.do_mcmc()
 
 to fit the continuum data, then::
 
-    >>>cy = get_data(["con.dat", "yelm.dat"]) 
+    >>>cy = get_data(["con.dat", "yelm.dat"])
     >>>cymod = Rmap_Model(cy)
     >>>cymod.do_mcmc(conthpd=cmod.hpd)
 
@@ -284,7 +291,7 @@ as the 1D posterior distributions of model parameters, including the lag t.
 
 And finally, to do photometric RM using the continuum+line-band data, do::
 
-    >>>cyb = get_data(["con.dat", "yelmband.dat"]) 
+    >>>cyb = get_data(["con.dat", "yelmband.dat"])
     >>>cybmod = Pmap_Model(cyb)
     >>>cybmod.do_mcmc(conthpd=cmod.hpd)
 
@@ -295,7 +302,7 @@ where ``Pmap_Model`` is the two-band photometric RM model (there is also a one-b
 For the more patient users, now I will go through each step in detail, starting
 from the supported data files.
 
-Reading Light Curves 
+Reading Light Curves
 --------------------
 
 
@@ -305,7 +312,7 @@ typical 3-column file like ``con.dat``, ``yelm.dat``, ``zing.dat``, and ``yelmba
     $ head -n 3 con.dat
 
 to show the first 3 rows of the continuum light curve file ``con.dat``::
-    
+
     0.00000    6.75749    0.06846
     8.00400    6.37599    0.06364
     16.00800    5.74500    0.05907
@@ -316,7 +323,7 @@ unit in JAVELIN  is a ``LightCurve`` object, you need to read the data files
 through a function into the ``LightCurve`` object. Open a Python terminal in
 the ``dat`` directory and then do::
 
-    >>>from javelin.zylc import get_data 
+    >>>from javelin.zylc import get_data
     >>>javdata1 = get_data(["con.dat", "yelm.dat"], names=["Continuum", "Yelm"])
 
 to load the continuum light curve ``con.dat`` and the Yelm light curve
@@ -337,25 +344,25 @@ format, like ``loopdeloop_con.dat``, ``loopdeloop_con_y.dat``,
 directory. As suggested by the names of these files, since JAVELIN usually
 works on several light curves simultaneously, it is useful (at least to me) to
 keep different set of data files separated (similar to the brackets used in the
-reading of 3-column files). 
+reading of 3-column files).
 
 Imagine you want to fit two light curves, the first one should always be the
 continuum light curves and the second one the line light curve. If the
 continuum light curve has 5 data points while the line light curve has 4, the
 data file should be like (text after # are comments, not part of the file) ::
 
-    2                       # number of light curves, continuum first 
-    5                       # number of data points in the continuum light curve 
+    2                       # number of light curves, continuum first
+    5                       # number of data points in the continuum light curve
     461.5  22.48    0.36    # each light curve entry consists of "epoch", "value", and  "uncertainty"
-    490.6  20.30    0.30 
-    520.3  19.59    0.56 
-    545.8  20.11    0.15 
-    769.6  21.12    1.20 
-    4                       # number of data points in the first line light curve 
-    545.8   9.82    0.23 
-    890.4  11.86    0.58 
+    490.6  20.30    0.30
+    520.3  19.59    0.56
+    545.8  20.11    0.15
+    769.6  21.12    1.20
+    4                       # number of data points in the first line light curve
+    545.8   9.82    0.23
+    890.4  11.86    0.58
     949.4  10.55    0.87
-    988.6  11.06    0.27    
+    988.6  11.06    0.27
 
 To read the second type of file, simply do::
 
@@ -375,11 +382,11 @@ last section, for RM we need to fit the continuum light curve alone first to
 derive set priors on the DRW parameters for the second step of lag fitting. Since for now we only
 work on the continuum model, we can load the continuum light curve either by::
 
-    >>>javdata3 = get_data(["con.dat",], names=["Continuum",]) 
+    >>>javdata3 = get_data(["con.dat",], names=["Continuum",])
 
 or by::
 
-    >>>javdata3 = get_data("loopdeloop_con.dat", names=["Continuum"]) 
+    >>>javdata3 = get_data("loopdeloop_con.dat", names=["Continuum"])
 
 Note that the brakets are still needed even for loading a single light curve.
 
@@ -387,12 +394,12 @@ After loading the data, we need to set up a continuum model. In JAVELIN, the
 light curve models are described in the ``javelin.lcmodel`` module, for now we
 need to initiate the ``Cont_Model`` class::
 
-    >>>from javelin.lcmodel import Cont_Model 
+    >>>from javelin.lcmodel import Cont_Model
     >>>cont = Cont_Model(javdata3)
 
 By default, ``Cont_Model`` will model the light curve as a DRW process, but you
-are also specify models like `matern <http://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_, 
-`pow_exp`, `kepler_exp`, etc (see details in `Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_).  However, currently the spectroscopic and photometric RM models `Rmap_Model` and `(S)PMap_Model` 
+are also specify models like `matern <http://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_,
+`pow_exp`, `kepler_exp`, etc (see details in `Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_).  However, currently the spectroscopic and photometric RM models `Rmap_Model` and `(S)PMap_Model`
 do not yet support continuum covariance models other than DRW.
 
 Without exploring any further options, you can simply run::
@@ -419,7 +426,7 @@ The default values of ``nwalker``, ``nchain``, and ``nburn`` would usually be
 enough for fitting continuum or fitting continuum+one line, but the required
 values would rise quickly with the number of lines if you are doing fitting with
 muliple lines. So, whenever you find the MCMC chain does not converge well ---
-JAVELIN fail to find a unique combination of solutions but a broad lag distribution, 
+JAVELIN fail to find a unique combination of solutions but a broad lag distribution,
 try to increase these three parameters.
 
 After sampling, you can check the 1D posterior distributions of tau and sigma::
@@ -438,17 +445,17 @@ Older chains can be reloaded for analysis by::
 
 and the highest posterior density (HPD) intervals can be retrieved by::
 
-    >>>cont.get_hpd() 
-    >>>conthpd = cont.hpd 
-    >>>print(conthpd) 
+    >>>cont.get_hpd()
+    >>>conthpd = cont.hpd
+    >>>print(conthpd)
     [[ 0.363  3.923]
-     [ 0.518  4.29 ] 
+     [ 0.518  4.29 ]
      [ 0.737  4.743]]
 
 which is a 3x2 array with the three elements of the first (second) column being
 the 18%, 50%, and 84% values for log sigma (log tau). ``cont.hpd`` here is
 exactly what we are after in this subsection, as will become apparently below,
-to provide useful constraints on the DRW parameters to help determining lags, 
+to provide useful constraints on the DRW parameters to help determining lags,
 
 
 Spectroscopic RM: Fitting the Continuum and one line (Yelm)
@@ -460,7 +467,7 @@ simply the ``javdata1`` or the ``javdata2`` we created earlier. Also, we need to
 construct a model, this time a Continuum+Line model, which is called a
 ``Rmap_Model`` in JAVELIN::
 
-    >>>from javelin.lcmodel import Rmap_Model 
+    >>>from javelin.lcmodel import Rmap_Model
     >>>rmap1 = Rmap_Model(javdata1)
 
 Remember that we need the results from fitting the continuum as priors on the
@@ -493,7 +500,7 @@ boundaries to between 100 and 200 days and rerun a finer MCMC search::
 where ``laglimit`` is a list that is comprised of a single 2-element list
 because we have only one emission line here.
 
-The ``emcee`` sampler does multi-threading, so if your system has multiple cores, 
+The ``emcee`` sampler does multi-threading, so if your system has multiple cores,
 you should run the above command with ``threads`` set to the number of
 cores to speed
 things up::
@@ -511,9 +518,9 @@ which then looks like Fig. 5.
 
 The output ``fchain`` file is comprised of 2+3*n columns, where n is the number
 of emission lines. Thus here we have 5 columns, with each column as, from left
-to right:: 
+to right::
 
-    log(sigma), log(tau), lag, width, scale 
+    log(sigma), log(tau), lag, width, scale
 
 and the number of columns augments by 3 for every additional emission line. Again,
 you can also store the log likelihoods as a separate chain using ``flogp``. You
@@ -572,13 +579,13 @@ between 100 and 300 days)::
 Now you can retrieve and print out the HPD intervals for the double
 emission-line model fit::
 
-    >>>rmap2.get_hpd() 
+    >>>rmap2.get_hpd()
     >>>rmap2hpd = rmap2.hpd
-   
+
 and the medians can be obtained by::
 
-    >>>par_best = rmap2hpd[1,:] 
-    >>>print(par_best) 
+    >>>par_best = rmap2hpd[1,:]
+    >>>print(par_best)
     array([ 0.592, 4.262, 127.169, 0.525, 1.024, 254.262, 0.564, 0.498])
 
 which shows the median values for log(sigma), log(tau), lag_yelm, width_yelm,
@@ -586,7 +593,7 @@ scale_yelm, lag_zing, width_zing, and scale_zing, respectively.
 
 To make the story more completely, you can draw the best-fit light curves on top
 of the observed ones as shown in Fig. 7.::
-    
+
     >>>javdata_best =  rmap2.do_pred(par_best)
     >>>javdata_best.plot(set_pred=True, obs=javdata4)
 
@@ -649,7 +656,7 @@ for quasar optical variability studies,
 
 for spectroscopic reverberation mapping, and to
 
-`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, astro-ph/1310.6774 <http://arxiv.org/abs/1310.6774>`_ 
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, astro-ph/1310.6774 <http://arxiv.org/abs/1310.6774>`_
 
 for photometric reverberation mapping.
 

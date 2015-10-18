@@ -80,7 +80,7 @@ uses ``GFortran`` as its Fortran compiler.
 
     If you installed Python from Conda that comes with the Accelerate framework, multithreading
     may not work for you, the solution is to set the environmental variable ``VECLIB_MAXIMUM_THREADS``
-    to ``1`` in your terminal:
+    to ``1`` in your terminal::
 
         $ export VECLIB_MAXIMUM_THREADS=1
 

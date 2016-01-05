@@ -244,6 +244,12 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
     if taulimit is not None:
         if tau < taulimit[0] or tau > taulimit[1]:
             prior += my_neg_inf
+    if covfunc == "kepler2_exp":
+        # uselognu is True here
+        if nu > tau:
+            prior += my_neg_inf
+        elif nu < 0:
+            prior += my_neg_inf
     # combine prior and log-likelihood
     if set_retq:
         vals[0] = vals[0] + prior

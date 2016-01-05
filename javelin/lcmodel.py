@@ -244,12 +244,6 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
     if taulimit is not None:
         if tau < taulimit[0] or tau > taulimit[1]:
             prior += my_neg_inf
-    if covfunc == "kepler2_exp":
-        # uselognu is True here
-        if nu > tau:
-            prior += my_neg_inf
-        elif nu < 0:
-            prior += my_neg_inf
     # combine prior and log-likelihood
     if set_retq:
         vals[0] = vals[0] + prior
@@ -674,15 +668,15 @@ class Cont_Model(object):
         # initialize a multi-dim random number array
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initial values of sigma to be scattering around cont_std
-        p0[:,0] = p0[:,0] - 0.5 + np.log(self.cont_std)
-        # initial values of tau   filling 0 - 0.5rj
-        p0[:,1] = np.log(self.rj*0.5*p0[:,1])
+        p0[:, 0] = p0[:, 0] - 0.5 + np.log(self.cont_std)
+        # initial values of tau   filling cont_cad : cont_cad + 0.5rj
+        p0[:, 1] = np.log(self.cont_cad + self.rj*0.5*p0[:, 1])
         if self.covfunc == "pow_exp":
-            p0[:,2] = p0[:,2] * 1.99
+            p0[:, 2] = p0[:, 2] * 1.99
         elif self.covfunc == "matern":
-            p0[:,2] = np.log(p0[:,2] * 5)
+            p0[:, 2] = np.log(p0[:, 2] * 5)
         elif self.covfunc == "kepler2_exp":
-            p0[:,2] = np.log(self.rj*0.1*p0[:,2])
+            p0[:, 2] = np.log(self.cont_cad * p0[:, 2])
         if set_verbose:
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"

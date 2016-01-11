@@ -2,7 +2,7 @@
 
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
-from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail
+from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail, wkepler_exp
 import numpy as np
 
 """ Wrapping the all the continuum (source, without lines) covariance functions together.
@@ -16,6 +16,8 @@ covname_dict = {
                 "pow_tail"    : pow_tail.euclidean,
                 "kepler_exp"  : kepler_exp.euclidean,
                 "kepler2_exp" : kepler_exp.euclidean,
+                "wkepler_exp"  : wkepler_exp.euclidean,
+                "wkepler2_exp" : wkepler_exp.euclidean,
                }
 
 
@@ -28,7 +30,7 @@ def get_covfunc_dict(covfunc, **covparams):
     covfunc : str
         Names of the covariance funcrtions available, i.e., keys in
         `covname_dict`, currently including `matern`, `pow_exp`, `drw`,
-        `pareto_exp`, `pow_tail`, `kepler_exp`, and `kepler2_exp`.
+        `pareto_exp`, `pow_tail`, `(w)kepler_exp`, and `(w)kepler2_exp`.
 
     **covparams:
         keyword arguments for each `convfunc`.
@@ -51,9 +53,9 @@ def get_covfunc_dict(covfunc, **covparams):
         _cov_dict['pow']         = covparams['nu']
     elif covfunc == "pareto_exp" :
         _cov_dict['alpha']       = covparams['nu']
-    elif covfunc == "kepler_exp" :
+    elif covfunc == "kepler_exp" or covfunc == "wkepler_exp":
         _cov_dict['tcut']        = covparams['nu']
-    elif covfunc == "kepler2_exp" :
+    elif covfunc == "kepler2_exp" or covfunc == "wkepler2_exp" :
         # tcut is the ratio of the cutoff timescale to tau, so if you
         # want nu to be the cutoff timescale....
         _cov_dict['tcut']        = covparams['nu']/covparams['tau']

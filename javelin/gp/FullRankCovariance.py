@@ -169,7 +169,7 @@ class FullRankCovariance(Covariance):
 
         if self.nugget is None:
             return out
-        
+
         if return_Uo_Cxo:
             out, Uo_Cxo = out
         if x is y:
@@ -186,7 +186,7 @@ class FullRankCovariance(Covariance):
         """
         Observes self on obs_mesh with observation variance obs_V.
         Output_type controls the information returned:
-        
+
         'r' : returns information needed by Realization objects.
         'o' : returns information needed by function observe.
         's' : returns information needed by the Gaussian process
@@ -264,7 +264,7 @@ class FullRankCovariance(Covariance):
                                                         observed = False,
                                                         nugget = obs_V,
                                                         return_eval_also=True)
-                
+
             else:
                 U = self.continue_cholesky( x=obs_mesh,
                                             x_old = self.full_obs_mesh,
@@ -295,12 +295,12 @@ class FullRankCovariance(Covariance):
         # Output expected by Realization
         if output_type == 'r':
             return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old], self.full_Uo[:N_old, N_old:N_new+N_old]
-            
+
         # Ouptut expected by observe
         if output_type == 'o':
             return slice(None, None, None), obs_mesh
-            
+
         # Output expected by the GP submodel
         if output_type=='s':
             return U_new, C_eval, self.full_Uo[:N_old, N_old:N_new+N_old]
-        
+

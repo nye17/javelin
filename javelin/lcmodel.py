@@ -16,6 +16,7 @@ from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import InputError, UsageError
 from emcee import EnsembleSampler
 from graphic import figure_handler
+from copy import copy
 
 my_neg_inf = float(-1.0e+300)
 my_pos_inf = float(+1.0e+300)
@@ -185,7 +186,7 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
                   [log(sigma_hig), log(tau_hig)]])
         where 'low', 'med', and 'hig' are defined as the 68% confidence
         limits around the median. Here it is only used if the `covfunc` is
-        'kepler2_exp'.
+        '(w)kepler2_exp'.
     uselognu: bool, optional
         Whether to use lognu instead of nu (default: False).
     rank: str, optional
@@ -217,21 +218,23 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
     # prior
     prior = 0.0
     if set_prior:
-        if covfunc == "kepler2_exp":
+        if covfunc == "kepler2_exp" or covfunc == "wkepler2_exp":
             if conthpd is None:
-                raise RuntimeError("kepler2_exp prior requires conthpd")
-            # for sigma
-            if p[0] < conthpd[1,0]:
-                prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
+                # raise RuntimeError("kepler2_exp prior requires conthpd")
+                print("Warning: (w)kepler2_exp prior requires conthpd")
             else:
-                prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
-            # for tau
-            if p[1] < conthpd[1,1]:
-                prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
-            else:
-                prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
-            # final
-            prior += -0.5*(prior0*prior0+prior1*prior1)
+                # for sigma
+                if p[0] < conthpd[1,0]:
+                    prior0 = (p[0] - conthpd[1,0])/(conthpd[1,0]-conthpd[0,0])
+                else:
+                    prior0 = (p[0] - conthpd[1,0])/(conthpd[2,0]-conthpd[1,0])
+                # for tau
+                if p[1] < conthpd[1,1]:
+                    prior1 = (p[1] - conthpd[1,1])/(conthpd[1,1]-conthpd[0,1])
+                else:
+                    prior1 = (p[1] - conthpd[1,1])/(conthpd[2,1]-conthpd[1,1])
+                # final
+                prior += -0.5*(prior0*prior0+prior1*prior1)
         else:
             prior += - np.log(sigma)
             if tau > zydata.cont_cad:
@@ -282,14 +285,16 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
             return(_exit_with_retval(zydata.nlc, set_retq,
                    errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
-    elif covfunc == "kepler2_exp":
+    elif covfunc == "kepler2_exp" or covfunc == "wkepler2_exp":
         # here nu is the cutoff time scale
         if nu < 0.0 or nu >= tau:
             return(_exit_with_retval(zydata.nlc, set_retq,
                    errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
-
     # choice of ranks
+    # sigma2 = sigma * sigma
+    # unit_covfunc_dict = copy(covfunc_dict)
+    # unit_covfunc_dict['amp'] = 1.0
     if rank == "Full":
         # using full-rank
         C = FullRankCovariance(**covfunc_dict)
@@ -300,12 +305,14 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
         raise InputError("No such option for rank "+rank)
     # cholesky decompose S+N so that U^T U = S+N = C
     # using intrinsic method of C without explicitly writing out cmatrix
-    try:
-        U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
-    except:
-        return(_exit_with_retval(zydata.nlc, set_retq,
-               errmsg="Warning: non positive-definite covariance C",
-               set_verbose=set_verbose))
+    U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
+    if False:
+        try:
+            U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
+        except:
+            return(_exit_with_retval(zydata.nlc, set_retq,
+                   errmsg="Warning: non positive-definite covariance C #5",
+                   set_verbose=set_verbose))
     # calculate RPH likelihood
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)
@@ -347,7 +354,7 @@ class Cont_Model(object):
         if covfunc == "drw":
             self.uselognu = False
             self.ndim = 2
-        elif covfunc == "matern" or covfunc == "kepler2_exp":
+        elif covfunc == "matern" or covfunc == "kepler2_exp" or covfunc == "wkepler2_exp":
             self.uselognu = True
             self.ndim = 3
             self.vars.append("nu")
@@ -415,10 +422,10 @@ class Cont_Model(object):
                 set_verbose=set_verbose
                 )
         p_bst, v_bst = fmin(func, p_ini, full_output=True)[:2]
-        sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc,
-                                         uselognu=self.uselognu)
         if fixed is not None:
             p_bst = p_bst*fixed+p_ini*(1.-fixed)
+        sigma, tau, nu = unpacksinglepar(p_bst, covfunc=self.covfunc,
+                                         uselognu=self.uselognu)
         if set_verbose:
             print("Best-fit parameters are:")
             print("sigma %8.3f tau %8.3f" % (sigma, tau))
@@ -670,13 +677,18 @@ class Cont_Model(object):
         # initial values of sigma to be scattering around cont_std
         p0[:, 0] = p0[:, 0] - 0.5 + np.log(self.cont_std)
         # initial values of tau   filling cont_cad : cont_cad + 0.5rj
-        p0[:, 1] = np.log(self.cont_cad + self.rj*0.5*p0[:, 1])
+        # p0[:, 1] = np.log(self.cont_cad + self.rj*0.5*p0[:, 1])
+        p0[:, 1] = np.log(2.0 * self.cont_cad + self.rj*0.5*p0[:, 1])
         if self.covfunc == "pow_exp":
             p0[:, 2] = p0[:, 2] * 1.99
         elif self.covfunc == "matern":
             p0[:, 2] = np.log(p0[:, 2] * 5)
-        elif self.covfunc == "kepler2_exp":
-            p0[:, 2] = np.log(self.cont_cad * p0[:, 2])
+        elif self.covfunc == "kepler2_exp" or self.covfunc == "wkepler2_exp":
+            # p0[:, 2] = np.log(self.cont_cad * p0[:, 2])
+            p0[:, 2] = np.log(2.0 * self.cont_cad * p0[:, 2])
+            # p0[:, 2] = np.log(self.cont_cad * p0[:, 2])
+            # p0[:, 2] = p0[:, 1] + np.log(0.2)
+            # make sure the initial values of tau_cut are smaller than tau_d
         if set_verbose:
             print("start burn-in")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
@@ -769,12 +781,12 @@ class Cont_Model(object):
             ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)):
                 ax.hist(self.flatchain[:,i], bins)
-                if self.covfunc == "kepler2_exp":
+                if self.covfunc == "kepler2_exp" or self.covfunc == "wkepler2_exp":
                     ax.axvspan(self.cont_cad_min,
                                self.cont_cad, color="g", alpha=0.2)
             else:
                 ax.hist(self.flatchain[:,i]/ln10, bins)
-                if self.vars[i] == "nu" and self.covfunc == "kepler2_exp":
+                if self.vars[i] == "nu" and (self.covfunc == "kepler2_exp" or self.covfunc == "wkepler2_exp"):
                     ax.axvspan(np.log10(self.cont_cad_min),
                                np.log10(self.cont_cad), color="g", alpha=0.2)
             ax.set_xlabel(self.texs[i])
@@ -1065,7 +1077,7 @@ def lnlikefn_spear(zydata, sigma, tau, llags, lwids, lscales, set_retq=False,
         return(
             _exit_with_retval(
                 zydata.nlc, set_retq,
-                errmsg="Warning: non positive-definite covariance C",
+                errmsg="Warning: non positive-definite covariance C #4",
                 set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)
@@ -1697,7 +1709,7 @@ def lnlikefn_photo(zydata, sigma, tau, llags, lwids, lscales, set_retq=False,
     if info > 0:
         return(_exit_with_retval(
             zydata.nlc, set_retq,
-            errmsg="Warning: non positive-definite covariance C",
+            errmsg="Warning: non positive-definite covariance C #3",
             set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)
@@ -2275,7 +2287,7 @@ def lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale, set_retq=False,
     if info > 0:
         return(_exit_with_retval(
             zydata.nlc, set_retq,
-            errmsg="Warning: non positive-definite covariance C",
+            errmsg="Warning: non positive-definite covariance C #2",
             set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)
@@ -2805,7 +2817,7 @@ def lnlikefn_scspear(zydata, sigma, tau, lags, wids, scales, set_retq=False,
     if info > 0:
         return(_exit_with_retval(
             zydata.nlc, set_retq,
-            errmsg="Warning: non positive-definite covariance C",
+            errmsg="Warning: non positive-definite covariance C #1",
             set_verbose=set_verbose))
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)

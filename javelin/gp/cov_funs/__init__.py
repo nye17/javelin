@@ -17,7 +17,8 @@ extra_parameters = {
                 'quadratic':  {'phi': 'The characteristic (scaled) distance of decorrelation.'},
                 'pareto_exp': {'alpha': 'The pareto index.'},
                 'pow_tail':   {'beta': 'the exponent in the exponential of the tail'},
-                'kepler_exp': {'tcut': 'The cutoff time scale divided by tau_drw'},
+                'kepler_exp': {'tcut': 'The cutoff time scale divided by tau_drw; pow=1.5'},
+                'wkepler_exp': {'tcut': 'The cutoff time scale divided by tau_drw; pow=1.2'},
                 }
 
 

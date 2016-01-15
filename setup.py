@@ -88,7 +88,7 @@ except:
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="0.31",
+    setup(  version="0.32",
             description="JAVELIN: Python Version of SPEAR",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                  ],
             cmdclass = {
                 # Use our customized commands
-                # 'clean': MyClean,
+                'clean': MyClean,
                 },
             requires=['NumPy (>=1.3)',],
             long_description="""

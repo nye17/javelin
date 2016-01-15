@@ -131,7 +131,7 @@ class PredictSignal(object):
 
         """
         # make the Mean object
-        try :
+        try:
             const = float(lcmean)
             meanfunc = lambda x: const*(x*0.0+1.0)
             self.M = Mean(meanfunc)
@@ -154,7 +154,7 @@ class PredictSignal(object):
             jdata = zydata.jarr
             mdata = zydata.marr + zydata.blist[0]
             edata = zydata.earr
-            observe(self.M, self.C, obs_mesh=jdata, obs_V = edata, obs_vals = mdata)
+            observe(self.M, self.C, obs_mesh=jdata, obs_V=edata*edata, obs_vals=mdata)
 
     def mve_var(self, jwant):
         """ Generate the minimum variance estimate and its associated variance.

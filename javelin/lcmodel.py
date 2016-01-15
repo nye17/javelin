@@ -53,7 +53,9 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
     # multiply L^T and b so that C_p = L^T C^-1 L = C_q^-1
     C_p = np.dot(zydata.larrTr, b)
     # for 'issingle is True' case, C_p is a scalar.
-    if np.isscalar(C_p):
+    # C_p is a nested list for some reason [[C_p]], so isscalar is bad
+    # if np.isscalar(C_p):
+    if zydata.issingle:
         # for single-mode, cholesky of C_p is simply squre-root of C_p
         W = np.sqrt(C_p)
         detCp_log = np.log(C_p.squeeze())
@@ -70,6 +72,8 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
         detCp_log = chodet_from_tri(W, retlog=True)
         # solve for C_p d = L^T so that d = C_p^-1 L^T = C_q L^T
         d = chosolve_from_tri(W, zydata.larrTr)
+    # print d[0][0]
+    # print d[4]
     # multiply b d and a so that e = C^-1 L C_p^-1 L^T C^-1 y
     e = np.dot(b, np.dot(d, a))
     # a minus e so that f = a - e = C^-1 y - C^-1 L C_p^-1 L^T C^-1 y
@@ -291,10 +295,8 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
             return(_exit_with_retval(zydata.nlc, set_retq,
                    errmsg="Warning: illegal input of parameters in nu",
                    set_verbose=set_verbose))
+    # test sigma
     # choice of ranks
-    # sigma2 = sigma * sigma
-    # unit_covfunc_dict = copy(covfunc_dict)
-    # unit_covfunc_dict['amp'] = 1.0
     if rank == "Full":
         # using full-rank
         C = FullRankCovariance(**covfunc_dict)
@@ -305,14 +307,15 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
         raise InputError("No such option for rank "+rank)
     # cholesky decompose S+N so that U^T U = S+N = C
     # using intrinsic method of C without explicitly writing out cmatrix
-    U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
-    if False:
-        try:
-            U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
-        except:
-            return(_exit_with_retval(zydata.nlc, set_retq,
-                   errmsg="Warning: non positive-definite covariance C #5",
-                   set_verbose=set_verbose))
+    try:
+        U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
+    except:
+        return(_exit_with_retval(zydata.nlc, set_retq,
+               errmsg="Warning: non positive-definite covariance C #5",
+               set_verbose=set_verbose))
+    # print "test U"
+    # print U[:6, :6]
+    # print U[5, 5]
     # calculate RPH likelihood
     retval = _lnlike_from_U(U, zydata, set_retq=set_retq,
                             set_verbose=set_verbose)

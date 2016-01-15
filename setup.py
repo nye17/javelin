@@ -106,7 +106,7 @@ if __name__ == '__main__':
                  ],
             cmdclass = {
                 # Use our customized commands
-                'clean': MyClean,
+                # 'clean': MyClean,
                 },
             requires=['NumPy (>=1.3)',],
             long_description="""

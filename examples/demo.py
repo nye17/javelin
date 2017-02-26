@@ -394,6 +394,7 @@ def demo(mode, covfunc="drw") :
 
 if __name__ == "__main__":
     import sys
+    print "demo test/show/run"
     mode = sys.argv[1]
     try:
         covfunc = sys.argv[2]

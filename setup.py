@@ -41,6 +41,10 @@ for arg in sys.argv :
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
 # Otherwise compile blas and lapack from netlib sources.
 lapack_info = get_info('lapack_opt',1)
+# lapack_info = get_info('',1)
+# lapack_info = False
+print lapack_info
+# quit()
 
 
 

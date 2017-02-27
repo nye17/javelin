@@ -41,10 +41,6 @@ for arg in sys.argv :
 # If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
 # Otherwise compile blas and lapack from netlib sources.
 lapack_info = get_info('lapack_opt',1)
-# lapack_info = get_info('',1)
-# lapack_info = False
-print lapack_info
-# quit()
 
 
 
@@ -92,8 +88,8 @@ except:
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="0.32",
-            description="JAVELIN: Python Version of SPEAR",
+    setup(  version="0.3alpha",
+            description="JAVELIN: Just Another Vehicle for Estimting Lags In Nuclei",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
             url="https://bitbucket.org/nye17/javelin",
@@ -116,14 +112,10 @@ if __name__ == '__main__':
             long_description="""
             Ongoing effort to combine an integral GP module to the AGN variablility study.
             """,
-            packages=["javelin",
-                      "javelin/gp",
+            packages=["javelin", 
+                      "javelin/gp", 
                       "javelin/gp/cov_funs",
                       "javelin/emcee",
                       ],
             **(config_dict)
             )
-
-
-
-

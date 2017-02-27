@@ -1,5 +1,5 @@
 import gp
-import emcee
+import emcee_internal
 import cov
 import cholesky_utils
 import err
@@ -13,6 +13,6 @@ import spear
 import threadpool
 import zylc
 
-__all__ = ["gp", "emcee", "cov", "cholesky_utils", "err", "graphic",
+__all__ = ["gp", "emcee_internal", "cov", "cholesky_utils", "err", "graphic",
 "lcio", "lcmodel", "peakdetect", "predict", "psd", "spear",
 "threadpool", "zylc"]

@@ -12,6 +12,7 @@ __all__ = ["MHSampler"]
 
 import numpy as np
 
+from . import autocorr
 from .sampler import Sampler
 
 
@@ -32,8 +33,12 @@ class MHSampler(Sampler):
         position.
 
     :param args: (optional)
-        A list of extra arguments for ``lnpostfn``. ``lnpostfn`` will be
-        called with the sequence ``lnpostfn(p, *args)``.
+        A list of extra positional arguments for ``lnpostfn``. ``lnpostfn``
+        will be called with the sequence ``lnpostfn(p, *args, **kwargs)``.
+
+    :param kwargs: (optional)
+        A list of extra keyword arguments for ``lnpostfn``. ``lnpostfn``
+        will be called with the sequence ``lnpostfn(p, *args, **kwargs)``.
 
     """
     def __init__(self, cov, *args, **kwargs):
@@ -45,8 +50,8 @@ class MHSampler(Sampler):
         self._chain = np.empty((0, self.dim))
         self._lnprob = np.empty(0)
 
-    def sample(self, p0, lnprob=None, randomstate=None, thin=1,
-            storechain=True, iterations=1):
+    def sample(self, p0, lnprob=None, rstate0=None, thin=1,
+               storechain=True, iterations=1):
         """
         Advances the chain ``iterations`` steps as an iterator
 
@@ -86,7 +91,7 @@ class MHSampler(Sampler):
 
         """
 
-        self.random_state = randomstate
+        self.random_state = rstate0
 
         p = np.array(p0)
         if lnprob is None:
@@ -96,7 +101,7 @@ class MHSampler(Sampler):
         if storechain:
             N = int(iterations / thin)
             self._chain = np.concatenate((self._chain,
-                    np.zeros((N, self.dim))), axis=0)
+                                          np.zeros((N, self.dim))), axis=0)
             self._lnprob = np.append(self._lnprob, np.zeros(N))
 
         i0 = self.iterations
@@ -110,10 +115,7 @@ class MHSampler(Sampler):
             diff = newlnprob - lnprob
 
             # M-H acceptance ratio
-            if diff < 0:
-                diff = np.exp(diff) - self._random.rand()
-
-            if diff > 0:
+            if diff >= 0.0 or diff >= np.log(self._random.rand()):
                 p = q
                 lnprob = newlnprob
                 self.naccepted += 1
@@ -125,3 +127,38 @@ class MHSampler(Sampler):
 
             # Heavy duty iterator action going on right here...
             yield p, lnprob, self.random_state
+
+    @property
+    def acor(self):
+        """
+        An estimate of the autocorrelation time for each parameter (length:
+        ``dim``).
+
+        """
+        return self.get_autocorr_time()
+
+    def get_autocorr_time(self, low=10, high=None, step=1, c=10, fast=False):
+        """
+        Compute an estimate of the autocorrelation time for each parameter
+        (length: ``dim``).
+
+        :param low: (Optional[int])
+            The minimum window size to test.
+            (default: ``10``)
+        :param high: (Optional[int])
+            The maximum window size to test.
+            (default: ``x.shape[axis] / (2*c)``)
+        :param step: (Optional[int])
+            The step size for the window search.
+            (default: ``1``)
+        :param c: (Optional[float])
+            The minimum number of autocorrelation times needed to trust the
+            estimate.
+            (default: ``10``)
+        :param fast: (Optional[bool])
+            If ``True``, only use the first ``2^n`` (for the largest power)
+            entries for efficiency.
+            (default: False)
+        """
+        return autocorr.integrated_time(self.chain, axis=0, low=low,
+                                        high=high, step=step, c=c, fast=fast)

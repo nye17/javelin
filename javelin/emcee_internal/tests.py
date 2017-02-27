@@ -83,6 +83,8 @@ def ln_flat(x):
 class Tests:
 
     def setUp(self):
+        np.random.seed(42)
+
         self.nwalkers = 100
         self.ndim = 5
 
@@ -149,7 +151,7 @@ class Tests:
             + 0.5 * np.log(np.linalg.det(self.cov))
 
         lnZ, dlnZ = self.sampler.thermodynamic_integration_log_evidence()
-        print(self.sampler.get_autocorr_time())
+        print(self.sampler.get_autocorr_time(c=2))
 
         assert np.abs(lnZ - (gaussian_integral - log_volume)) < 3 * dlnZ, \
             ("evidence incorrect: {0:g} versus correct {1:g} (uncertainty "
@@ -159,10 +161,21 @@ class Tests:
         assert np.all((np.cov(chain, rowvar=0) - self.cov) ** 2.0 / N ** 2.0
                       < maxdiff), 'covariance incorrect'
 
+        # PT sampler used to not work with run_mcmc(); check that the trivial
+        # case is OK.
+        self.sampler.run_mcmc (p0, 10, lnlike0=-4)
+
     def test_mh(self):
         self.sampler = MHSampler(self.cov, self.ndim, lnprob_gaussian,
                                  args=[self.icov])
         self.check_sampler(N=self.N * self.nwalkers, p0=self.p0[0])
+
+    def test_mh_unif(self):
+        f = lambda x: 0.0 if np.all((0.0 <= x) & (x <= 1.0)) else -np.inf
+        self.sampler = MHSampler(self.cov, self.ndim, f)
+        self.sampler.run_mcmc(np.random.rand(self.ndim), 100)
+        chain = self.sampler.chain
+        assert np.any(np.abs(np.diff(chain, axis=0)) > 0.0)
 
     def test_ensemble(self):
         self.sampler = EnsembleSampler(self.nwalkers, self.ndim,

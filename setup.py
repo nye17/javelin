@@ -119,7 +119,7 @@ if __name__ == '__main__':
             packages=["javelin",
                       "javelin/gp",
                       "javelin/gp/cov_funs",
-                      "javelin/emcee",
+                      "javelin/emcee_internal",
                       ],
             **(config_dict)
             )

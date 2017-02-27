@@ -14,7 +14,12 @@ from predict import (PredictSignal, PredictRmap, PredictPmap, PredictSPmap,
                      PredictSCmap)
 from gp import FullRankCovariance, NearlyFullRankCovariance
 from err import InputError, UsageError
-from emcee import EnsembleSampler
+try:
+    # try to use locally-installed emcee
+    from emcee import EnsembleSampler
+except ImportError:
+    # try to use the internal emcee
+    from emcee_internal import EnsembleSampler
 from graphic import figure_handler
 from copy import copy
 

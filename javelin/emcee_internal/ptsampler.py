@@ -175,7 +175,7 @@ class PTSampler(Sampler):
         assert self.nwalkers % 2 == 0, \
             "The number of walkers must be even."
         assert self.nwalkers >= 2*self.dim, \
-            "The number of walkers must be greater than 2*dimension."
+            "The number of walkers must be greater than or equal to 2*dimension."
 
         self._chain = None
         self._lnprob = None
@@ -210,7 +210,7 @@ class PTSampler(Sampler):
         self._lnprob = None
         self._lnlikelihood = None
 
-    def sample(self, p0, lnprob0=None, lnlike0=None, iterations=1,
+    def sample(self, p0, lnprob0=None, lnlike0=None, rstate0=None, iterations=1,
                thin=1, storechain=True):
         """
         Advance the chains ``iterations`` steps as a generator.
@@ -226,6 +226,10 @@ class PTSampler(Sampler):
         :param lnlike0: (optional)
             The initial likelihood values for the ensembles.  Shape
             ``(ntemps, nwalkers)``.
+
+        :param rstate0: (optional)
+            The state of the random number generator.
+            See the :attr:`Sampler.random_state` property for details.
 
         :param iterations: (optional)
             The number of iterations to preform.
@@ -247,6 +251,9 @@ class PTSampler(Sampler):
         * ``lnlike`` the current likelihood values for the walkers.
 
         """
+        # See comments in EnsembleSampler.sample(). Fails silently.
+        self.random_state = rstate0
+
         p = np.copy(np.array(p0))
 
         # If we have no lnprob or logls compute them
@@ -271,7 +278,7 @@ class PTSampler(Sampler):
 
         # Expand the chain in advance of the iterations
         if storechain:
-            nsave = iterations / thin
+            nsave = iterations // thin
             if self._chain is None:
                 isave = 0
                 self._chain = np.zeros((self.ntemps, self.nwalkers, nsave,
@@ -549,19 +556,17 @@ class PTSampler(Sampler):
         """
         return self.get_autocorr_time()
 
-    def get_autocorr_time(self, window=50):
+    def get_autocorr_time(self, **kwargs):
         """
         Returns a matrix of autocorrelation lengths for each
         parameter in each temperature of shape ``(Ntemps, Ndim)``.
 
-        :param window: (optional)
-            The size of the windowing function. This is equivalent to the
-            maximum number of lags to use. (default: 50)
+        Any arguments will be passed to :func:`autocorr.integrate_time`.
 
         """
         acors = np.zeros((self.ntemps, self.dim))
 
         for i in range(self.ntemps):
             x = np.mean(self._chain[i, :, :, :], axis=0)
-            acors[i, :] = autocorr.integrated_time(x, window=window)
+            acors[i, :] = autocorr.integrated_time(x, **kwargs)
         return acors

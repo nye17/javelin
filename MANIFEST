@@ -42,6 +42,7 @@ blas/BLAS/dznrm2.f
 blas/BLAS/idamax.f
 blas/BLAS/lsame.f
 blas/BLAS/xerbla.f
+examples/debug_threading.py
 examples/demo.py
 examples/plotcov.py
 examples/dat/chain0.dat

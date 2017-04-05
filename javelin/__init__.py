@@ -1,5 +1,5 @@
 import gp
-import emcee
+import emcee_internal
 import cov
 import cholesky_utils
 import err

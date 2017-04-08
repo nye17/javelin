@@ -45,6 +45,7 @@ blas/BLAS/xerbla.f
 examples/debug_threading.py
 examples/demo.py
 examples/plotcov.py
+examples/test_pfix.py
 examples/dat/chain0.dat
 examples/dat/chain0.dat.kepler
 examples/dat/chain1.dat

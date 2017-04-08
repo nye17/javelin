@@ -12,11 +12,13 @@ for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
 *SPEAR* algorithm written in Python to provide more flexibility in both
 functionality and visualization. You can use **JAVELIN** to model quasar
 variability using different covariance functions
-(`Zu et al. 2013a <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
+(`Zu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
 and measure emission line lags using either spectroscopic light cruves
 (`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_)
 or photometric light curves
-(`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_).
+(`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
+
+*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.
 
 *The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
 
@@ -656,7 +658,7 @@ for quasar optical variability studies,
 
 for spectroscopic reverberation mapping, and to
 
-`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, astro-ph/1310.6774 <http://arxiv.org/abs/1310.6774>`_
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2016, ApJ, 819, 122 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_
 
 for photometric reverberation mapping.
 

@@ -172,7 +172,8 @@ def unpacksinglepar(p, covfunc="drw", uselognu=False):
 
 def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
                       conthpd=None, uselognu=False, rank="Full",
-                      set_retq=False, set_verbose=False):
+                      set_retq=False, set_verbose=False,
+                      fixed=None, p_fix=None):
     """ Calculate the log posterior for parameter set `p`.
 
     Parameters
@@ -205,6 +206,14 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
         Whether to return all the components of the posterior (default: False).
     set_verbose: bool, optional
         Turn on/off verbose mode (default: True).
+    fixed: list
+        Bit list indicating which parameters are to be fixed during
+        minimization, `1` means varying, while `0` means fixed,
+        so [1, 1, 0] means fixing only the third parameter, and `len(fixed)`
+        equals the number of parameters (default: None, i.e., varying all
+        the parameters simultaneously).
+    p_fix: list
+        parameter list, with p_fix[fixed==0] being fixed.
 
     Returns
     -------
@@ -214,6 +223,12 @@ def lnpostfn_single_p(p, zydata, covfunc, taulimit=None, set_prior=True,
         correction_to_the_mean].
 
     """
+    if fixed is not None:
+        # fix parameters during inference.
+        fixed = np.asarray(fixed)
+        p_fix = np.asarray(p_fix)
+        p = np.asarray(p)
+        p = p * fixed + p_fix * (1. - fixed)
     sigma, tau, nu = unpacksinglepar(p, covfunc, uselognu=uselognu)
     # log-likelihood
     if set_retq:
@@ -406,6 +421,7 @@ class Cont_Model(object):
         if set_retq is True:
             raise InputError("set_retq has to be False")
         p_ini = np.asarray(p_ini)
+        # FIXME the new lnpostfn_single_p could take fixed and p_ini directly as input...
         if fixed is not None:
             fixed = np.asarray(fixed)
             func = lambda _p: -lnpostfn_single_p(
@@ -646,7 +662,8 @@ class Cont_Model(object):
 
     def do_mcmc(self, conthpd=None, set_prior=True, taulimit="baseline",
                 rank="Full", nwalkers=100, nburn=50, nchain=50, fburn=None,
-                fchain=None, flogp=None, threads=1, set_verbose=True):
+                fchain=None, flogp=None, threads=1, set_verbose=True,
+                fixed=None, p_fix=None):
         """ Run MCMC sampling over the parameter space.
 
         Parameters
@@ -678,6 +695,14 @@ class Cont_Model(object):
             Number of threads (default: 1).
         set_verbose: bool, optional
             Turn on/off verbose mode (default: True).
+        fixed: list
+            Bit list indicating which parameters are to be fixed during
+            minimization, `1` means varying, while `0` means fixed,
+            so [1, 1, 0] means fixing only the third parameter, and `len(fixed)`
+            equals the number of parameters (default: None, i.e., varying all
+            the parameters simultaneously).
+        p_fix: list
+            parameter list, with p_fix[fixed==0] being fixed.
 
         """
         # initialize a multi-dim random number array
@@ -706,13 +731,18 @@ class Cont_Model(object):
         sampler = EnsembleSampler(
             nwalkers, self.ndim, lnpostfn_single_p,
             args=(self.zydata, self.covfunc, taulimit, set_prior, conthpd,
-                  self.uselognu, rank, False, False), threads=threads)
+                  self.uselognu, rank, False, False, fixed, p_fix), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
                 print("save burn-in chains to %s" % fburn)
+            if fixed is not None:
+                # modify flatchain
+                for i in xrange(self.ndim):
+                    if fixed[i] == 0:
+                        sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
         # reset sampler
         sampler.reset()
@@ -725,6 +755,11 @@ class Cont_Model(object):
         if set_verbose:
             print("acceptance fractions for all walkers are")
             print(" ".join([format(r, "3.2f") for r in af]))
+        if fixed is not None:
+            # modify flatchain
+            for i in xrange(self.ndim):
+                if fixed[i] == 0:
+                    sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
                 print("save MCMC chains to %s" % fchain)
@@ -954,7 +989,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False):
 
 def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
                      set_threading=False, blocksize=10000, set_retq=False,
-                     set_verbose=False):
+                     set_verbose=False, fixed=None, p_fix=None):
     """ log-posterior function of p.
 
     Parameters
@@ -991,6 +1026,14 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         log-likelihood if True (default: False).
     set_verbose: bool, optional
         True if you want verbosity (default: False).
+    fixed: list
+        Bit list indicating which parameters are to be fixed during
+        minimization, `1` means varying, while `0` means fixed,
+        so [1, 1, 0] means fixing only the third parameter, and `len(fixed)`
+        equals the number of parameters (default: None, i.e., varying all
+        the parameters simultaneously).
+    p_fix: list
+        parameter list, with p_fix[fixed==0] being fixed.
 
     Returns
     -------
@@ -1000,6 +1043,12 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         DC_penalty, correction_to_the_mean].
 
     """
+    if fixed is not None:
+        # fix parameters during inference.
+        fixed = np.asarray(fixed)
+        p_fix = np.asarray(p_fix)
+        p = np.asarray(p)
+        p = p * fixed + p_fix * (1. - fixed)
     # unpack the parameters from p
     sigma, tau, llags, lwids, lscales = unpackspearpar(p, zydata.nlc,
                                                        hascontlag=False)
@@ -1216,7 +1265,7 @@ class Rmap_Model(object):
     def do_mcmc(self, conthpd=None, lagtobaseline=0.3, laglimit="baseline",
                 nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
                 fchain=None, flogp=None, set_threading=False, blocksize=10000,
-                set_verbose=True):
+                set_verbose=True, fixed=None, p_fix=None):
         """ Run MCMC sampling over the parameter space.
 
         Parameters
@@ -1259,6 +1308,14 @@ class Rmap_Model(object):
             Maximum matrix block size in threading (default: 10000).
         set_verbose: bool, optional
             Turn on/off verbose mode (default: True).
+        fixed: list
+            Bit list indicating which parameters are to be fixed during
+            minimization, `1` means varying, while `0` means fixed,
+            so [1, 1, 0] means fixing only the third parameter, and `len(fixed)`
+            equals the number of parameters (default: None, i.e., varying all
+            the parameters simultaneously).
+        p_fix: list
+            parameter list, with p_fix[fixed==0] being fixed.
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
@@ -1307,13 +1364,18 @@ class Rmap_Model(object):
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_spear_p,
                                   args=(self.zydata, conthpd, lagtobaseline,
                                         laglimit, set_threading, blocksize,
-                                        False, False), threads=threads)
+                                        False, False, fixed, p_fix), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
                 print("save burn-in chains to %s" % fburn)
+            if fixed is not None:
+                # modify flatchain
+                for i in xrange(self.ndim):
+                    if fixed[i] == 0:
+                        sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -1326,6 +1388,11 @@ class Rmap_Model(object):
         if set_verbose:
             print("acceptance fractions are")
             print(" ".join([format(r, "3.2f") for r in af]))
+        if fixed is not None:
+            # modify flatchain
+            for i in xrange(self.ndim):
+                if fixed[i] == 0:
+                    sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
                 print("save MCMC chains to %s" % fchain)
@@ -1532,7 +1599,7 @@ class Rmap_Model(object):
 
 
 # ---------------------------------
-# Pmap_Model: Two-Band Spectroscopic RM
+# Pmap_Model: Two-Band Photometric RM
 
 def unpackphotopar(p, nlc=2, hascontlag=False):
     """ Unpack the physical parameters from input 1-d array for photo mode.
@@ -1570,7 +1637,7 @@ def unpackphotopar(p, nlc=2, hascontlag=False):
 def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False,
                      lagtobaseline=0.3, laglimit=None, widtobaseline=0.2,
                      widlimit=None, set_threading=False, blocksize=10000,
-                     set_retq=False, set_verbose=False):
+                     set_retq=False, set_verbose=False, fixed=None, p_fix=None):
     """ log-posterior function of p.
 
     Parameters
@@ -1611,6 +1678,12 @@ def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False,
         True if you want verbosity (default: False).
 
     """
+    if fixed is not None:
+        # fix parameters during inference.
+        fixed = np.asarray(fixed)
+        p_fix = np.asarray(p_fix)
+        p = np.asarray(p)
+        p = p * fixed + p_fix * (1. - fixed)
     # unpack the parameters from p
     sigma, tau, llags, lwids, lscales = unpackphotopar(p, zydata.nlc,
                                                        hascontlag=False)
@@ -1843,7 +1916,7 @@ class Pmap_Model(object):
                 laglimit="baseline", widtobaseline=0.2, widlimit="nyquist",
                 nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
                 fchain=None, flogp=None, set_threading=False, blocksize=10000,
-                set_verbose=True):
+                set_verbose=True, fixed=None, p_fix=None):
         """ See `lnpostfn_photo_p` for doc, except for `laglimit` and `widlimit`,
         both of which have different default values ('baseline' / 'nyquist').
         'baseline' means the boundaries are naturally determined by the
@@ -1905,13 +1978,18 @@ class Pmap_Model(object):
                                   args=(self.zydata, conthpd, set_extraprior,
                                         lagtobaseline, laglimit, widtobaseline,
                                         widlimit, set_threading, blocksize,
-                                        False, False), threads=threads)
+                                        False, False, fixed, p_fix), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
                 print("save burn-in chains to %s" % fburn)
+            if fixed is not None:
+                # modify flatchain
+                for i in xrange(self.ndim):
+                    if fixed[i] == 0:
+                        sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -1924,6 +2002,11 @@ class Pmap_Model(object):
         if set_verbose:
             print("acceptance fractions are")
             print(" ".join([format(r, "3.2f") for r in af]))
+        if fixed is not None:
+            # modify flatchain
+            for i in xrange(self.ndim):
+                if fixed[i] == 0:
+                    sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
                 print("save MCMC chains to %s" % fchain)
@@ -2155,7 +2238,7 @@ def unpacksbphotopar(p, nlc=1):
 def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None,
                        lagtobaseline=0.3, laglimit=None, widtobaseline=0.2,
                        widlimit=None, set_threading=False, blocksize=10000,
-                       set_retq=False, set_verbose=False):
+                       set_retq=False, set_verbose=False, fixed=None, p_fix=None):
     """ log-posterior function of p.
 
     Parameters
@@ -2199,6 +2282,13 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None,
     set_verbose: bool, optional
         True if you want verbosity (default: False).
     """
+
+    if fixed is not None:
+        # fix parameters during inference.
+        fixed = np.asarray(fixed)
+        p_fix = np.asarray(p_fix)
+        p = np.asarray(p)
+        p = p * fixed + p_fix * (1. - fixed)
     sigma, tau, lag, wid, scale = unpacksbphotopar(p, zydata.nlc)
     if set_retq:
         vals = list(lnlikefn_sbphoto(zydata, sigma, tau, lag, wid, scale,
@@ -2399,7 +2489,7 @@ class SPmap_Model(object):
                 laglimit="baseline", widtobaseline=0.2, widlimit="nyquist",
                 nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
                 fchain=None, flogp=None, set_threading=False, blocksize=10000,
-                set_verbose=True):
+                set_verbose=True, fixed=None, p_fix=None):
         """ See `lnpostfn_sbphoto_p` for doc, except for `laglimit` and
         `widlimit`, both of which have different default values
         ('baseline' / 'nyquist').  'baseline' means the boundaries are
@@ -2479,13 +2569,18 @@ class SPmap_Model(object):
                                   args=(self.zydata, conthpd, scalehpd,
                                         lagtobaseline, laglimit, widtobaseline,
                                         widlimit, set_threading, blocksize,
-                                        False, False), threads=threads)
+                                        False, False, fixed, p_fix), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
                 print("save burn-in chains to %s" % fburn)
+            if fixed is not None:
+                # modify flatchain
+                for i in xrange(self.ndim):
+                    if fixed[i] == 0:
+                        sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -2498,6 +2593,11 @@ class SPmap_Model(object):
         if set_verbose:
             print("acceptance fractions are")
             print(" ".join([format(r, "3.2f") for r in af]))
+        if fixed is not None:
+            # modify flatchain
+            for i in xrange(self.ndim):
+                if fixed[i] == 0:
+                    sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
                 print("save MCMC chains to %s" % fchain)
@@ -2717,7 +2817,7 @@ def unpackscspearpar(p, nlc=None):
 
 def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
                        set_threading=False, blocksize=10000, set_retq=False,
-                       set_verbose=False):
+                       set_verbose=False, fixed=None, p_fix=None):
     """ log-posterior function of p.
 
     Parameters
@@ -2755,6 +2855,13 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
         DC_penalty, correction_to_the_mean].
 
     """
+
+    if fixed is not None:
+        # fix parameters during inference.
+        fixed = np.asarray(fixed)
+        p_fix = np.asarray(p_fix)
+        p = np.asarray(p)
+        p = p * fixed + p_fix * (1. - fixed)
     # unpack the parameters from p
     sigma, tau, lags, wids, scales = unpackscspearpar(p, zydata.nlc)
     if set_retq:
@@ -2956,7 +3063,7 @@ class SCmap_Model(object):
     def do_mcmc(self, lagtobaseline=0.3, laglimit="baseline", nwalkers=100,
                 nburn=100, nchain=100, threads=1, fburn=None, fchain=None,
                 flogp=None, set_threading=False, blocksize=10000,
-                set_verbose=True):
+                set_verbose=True, fixed=None, p_fix=None):
         """ Run MCMC sampling over the parameter space.
 
         Parameters
@@ -3031,7 +3138,7 @@ class SCmap_Model(object):
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_scspear_p,
                                   args=(self.zydata, lagtobaseline, laglimit,
-                                        set_threading, blocksize, False, False),
+                                        set_threading, blocksize, False, False, fixed, p_fix),
                                   threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:
@@ -3039,6 +3146,11 @@ class SCmap_Model(object):
         if fburn is not None:
             if set_verbose:
                 print("save burn-in chains to %s" % fburn)
+            if fixed is not None:
+                # modify flatchain
+                for i in xrange(self.ndim):
+                    if fixed[i] == 0:
+                        sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
         # reset the sampler
         sampler.reset()
@@ -3051,6 +3163,11 @@ class SCmap_Model(object):
         if set_verbose:
             print("acceptance fractions are")
             print(" ".join([format(r, "3.2f") for r in af]))
+        if fixed is not None:
+            # modify flatchain
+            for i in xrange(self.ndim):
+                if fixed[i] == 0:
+                    sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
                 print("save MCMC chains to %s" % fchain)

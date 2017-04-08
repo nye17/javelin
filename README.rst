@@ -18,7 +18,7 @@ and measure emission line lags using either spectroscopic light cruves
 or photometric light curves
 (`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
 
-*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.
+*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
 
 *The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
 

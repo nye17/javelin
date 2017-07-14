@@ -95,6 +95,10 @@ def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):
     _wmean_pen = -0.5*detCp_log
     # final log_likelhood
     _log_like = _chi2 + _compl_pen + _wmean_pen
+    # XXX guarding against nan
+    if np.isnan(_log_like):
+        print("warning: NaN in loglike, convert to my_neg_inf")
+        _log_like = my_neg_inf
     if set_retq:
         q = np.dot(d, a)
         return(_log_like, _chi2, _compl_pen, _wmean_pen, q)

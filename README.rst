@@ -638,6 +638,21 @@ directly fit the single broad band light curve without using ``conthpd``. You
 can either look into the ``demo.py`` code under ``example`` dir, or check the
 source code ``lcmodel.py`` under ``javelin`` dir for details.
 
+Disk RM Model of Mudd et al. 2017
+---------------------------------------------------------
+
+The Disk_Model object is developed recently by Mudd et al. 2017, and what it
+does is take in a series of continuum light curves at known
+wavelengths/effective wavelengths, and find the best-fitting thin disk model
+for the data.  The thin disk assumes that the size of the accretion disk scales
+as
+
+.. math::
+    R_{\\lambda} = R_{0}\\left(\\frac{\\lambda}{\\lambda_{0}\\right)^{\\beta},
+
+
+
+
 Additional Information
 ----------------------
 

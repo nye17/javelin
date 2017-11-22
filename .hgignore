@@ -12,3 +12,4 @@ build/**
 *.ori
 *.orig
 *.mod
+.DS_Store

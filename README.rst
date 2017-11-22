@@ -648,10 +648,10 @@ for the data.  The thin disk assumes that the size of the accretion disk scales
 as
 
 .. math::
-    R = \frac{\lambda}
+    R = \\frac{\\lambda}
 
 
-R_{\lambda} = R_{0}\left(\frac{\lambda}{\lambda_{0}\right)^{\beta},
+<!-- R_{\lambda} = R_{0}\left(\frac{\lambda}{\lambda_{0}\right)^{\beta}, -->
 
 
 

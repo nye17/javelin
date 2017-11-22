@@ -666,17 +666,17 @@ light curve "driver.dat", and then three other continuum light curves "wave2.dat
 "wave4.dat", measured at wavelengths of 2000A, 4000A, 5000A, and 8000A.  You can use the "get_data()"
 method to read your light curves right into your Disk_Model object, the only difference here compared to the
 other models is that you also need to specify the wavelengths of the light curves in addition to reading in
-the light curves with "get_data()".
+the light curves with "get_data()".::
 
->>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names=["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave=[2000., 4000., 5000., 8000.])
+    >>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names=["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave=[2000., 4000., 5000., 8000.])
 
 Note that the "get_data()" method takes in a list of file names as before (or a singular file with multiple
 light curves formatted as directed in a previous example) and a list of names, but it is the Disk_Model object
 instance that requires the "effwave" parameter as well, which is a list or array of wavelengths for the light
 curve.  Note that the Disk Model will always treat the first light curve in the list as the driver.  You can
-then run your model exactly as in other RM models:
+then run your model exactly as in other RM models: ::
 
->>>disk1.do_mcmc(nwalkers=100, nburn=100, nchain=500, threads=1, fchain="thin_disk_chain.dat", flogp="thin_disk_flogp.dat", fburn="thin_disk_burn.dat")
+    >>>disk1.do_mcmc(nwalkers=100, nburn=100, nchain=500, threads=1, fchain="thin_disk_chain.dat", flogp="thin_disk_flogp.dat", fburn="thin_disk_burn.dat")
 
 In this example, the "thin_disk_chain.dat" will wind up being a 50000 line text file with 10 columns and fburn
 will be a 10000 line text file with 10 columns.  These will correspond to the DRW model amplitude (sigma) and
@@ -698,9 +698,9 @@ of initial walker values in this case as "p_fix".  Even though the lags are not 
 still place boundaries on parameter spaces for each light curve using the "lagtobaseline" or "laglimit"
 parameters as with the "RMap_Model" before.  Options unique to the Thin Disk object are the ability to set a top
 hat minimum width (in the same units as your light curve), as well as place limits on the :math:`R_{0}` and :math:`\beta`
-parameters when initializing the "Disk_Model" object. Using our previous example,
+parameters when initializing the "Disk_Model" object. Using our previous example,::
 
->>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names = ["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave = [2000., 4000., 5000., 8000.], tophatminwidth = 0.1, alpha_lims = [-5., 5.], beta_lims = [-2., 2.])
+    >>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names = ["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave = [2000., 4000., 5000., 8000.], tophatminwidth = 0.1, alpha_lims = [-5., 5.], beta_lims = [-2., 2.])
 
 would not allow top hat widths less than 0.1, :math:`R_{0}` outside the range of [-5, 5], or :math:`\beta` outside the
 range of [-2, 2]. Again, note that the units on the top hat minimum width and  :math:`R_{0}` are the same as those

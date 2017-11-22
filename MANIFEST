@@ -77,6 +77,11 @@ examples/figs/mcmc3.png
 examples/figs/mocklc.png
 examples/figs/prediction.png
 examples/figs/signal.png
+examples/thindisk/driver.dat
+examples/thindisk/test_thindisk.py
+examples/thindisk/wave2.dat
+examples/thindisk/wave3.dat
+examples/thindisk/wave4.dat
 javelin/__init__.py
 javelin/blas_wrap.f
 javelin/cholesky_utils.py

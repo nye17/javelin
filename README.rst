@@ -18,9 +18,17 @@ and measure emission line lags using either spectroscopic light cruves
 or photometric light curves
 (`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
 
-*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
+Changelog
+=========
 
-*The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
+Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
+
+    *Version 0.33 includes the new Disk_Model method from Mudd et al. 2017.*
+
+    *Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
+
+    *Version 0.3 features photometric capabilities
+
 
 Install JAVELIN
 ===============

@@ -42,7 +42,7 @@ lognu_ceiling = np.log(nu_ceiling)
 
 
 __all__ = ['Cont_Model', 'Rmap_Model', 'Pmap_Model', 'SPmap_Model',
-           'SCmap_Model']
+           'SCmap_Model', 'Disk_Model']
 
 
 def _lnlike_from_U(U, zydata, set_retq=False, set_verbose=False):

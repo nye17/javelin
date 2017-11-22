@@ -661,8 +661,11 @@ where again :math:`R_{0}` is the disk size at a reference wavelength :math:`\lam
 between a feature at wavelength :math:`\lambda_{0}` and :math:`\lambda`.  More information on the model and further
 references can be found in Mudd et al. 2017.
 
-For a usage example, you can read in data and create a model the same as above. Let's say you have a driving
-light curve "driver.dat", and then three other continuum light curves "wave2.dat", "wave3.dat", and
+For a usage example, you can find an example script at ::
+
+    javelin/examples/thindisk/test_thindisk.py
+
+Let's say you have a driving light curve "driver.dat", and then three other continuum light curves "wave2.dat", "wave3.dat", and
 "wave4.dat", measured at wavelengths of 2000A, 4000A, 5000A, and 8000A.  You can use the "get_data()"
 method to read your light curves right into your Disk_Model object, the only difference here compared to the
 other models is that you also need to specify the wavelengths of the light curves in addition to reading in

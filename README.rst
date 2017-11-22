@@ -650,7 +650,33 @@ as
 .. math::
     R_{\lambda} = R_{0}\left(\frac{\lambda}{\lambda_{0}}\right)^{\beta},
 
+where :math:`R_{\lambda}` is the disk size at wavelength :math:`\lambda` and :math:`R_{0` is the disk size at a reference
+wavelength :math:`\lambda_{0}`. We can instead write this in terms of a time delay :math:`\tau` between the emission at two
+wavelengths as
 
+.. math::
+    \tau = \frac{R_{0}}{c}\left[\left(\frac{\lambda}{\lambda_{0}}\right)^{\beta} - 1\right],
+
+where again :math:`R_{0}` is the disk size at a reference wavelength :math:`\lambda_{0}` and :math:`\tau` is the time delay
+between a feature at wavelength :math:`\lambda_{0}` and :math:`\lambda`.  More information on the model and further
+references can be found in Mudd et al. 2017.
+
+For a usage example, you can read in data and create a model the same as above. Let's say you have a driving
+light curve "driver.dat", and then three other continuum light curves "wave2.dat", "wave3.dat", and
+"wave4.dat", measured at wavelengths of 2000A, 4000A, 5000A, and 8000A.  You can use the "get_data()"
+method to read your light curves right into your Disk_Model object, the only difference here compared to the
+other models is that you also need to specify the wavelengths of the light curves in addition to reading in
+the light curves with "get_data()".
+
+>>> disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names=["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave=[2000., 4000., 5000., 8000.])
+
+Note that the "get_data()" method takes in a list of file names as before (or a singular file with multiple
+light curves formatted as directed in a previous example) and a list of names, but it is the Disk_Model object
+instance that requires the "effwave" parameter as well, which is a list or array of wavelengths for the light
+curve.  Note that the Disk Model will always treat the first light curve in the list as the driver.  You can
+then run your model exactly as in other RM models:
+
+>>> disk1.do_mcmc(nwalkers=100, nburn=100, nchain=500, threads=1, fchain="thin_disk_chain.dat", flogp="thin_disk_flogp.dat", fburn="thin_disk_burn.dat")
 
 
 Additional Information

@@ -1,6 +1,6 @@
 Thin Disk Model RM
 
-The new Disk Model object fits in quite well with the previous JAVELIN framework.  It has many of the same
+The new Disk_Model object fits in quite well with the previous JAVELIN framework.  It has many of the same
 methods as the previous Model objects and reads/writes the same format of data.  What this model does is take
 in a series of continuum light curves at known wavelengths/effective wavelengths, and find the best thin disk
 model for the data.  The thin disk assumes that the size of the accretion disk scales as

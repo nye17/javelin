@@ -23,11 +23,11 @@ Changelog
 
 Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
 
-    *Version 0.33 includes the new Disk_Model method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_.*
+    *Version 0.33* includes the new Disk_Model method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
 
-    *Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
+    *Version 0.32alpha* now has the capability to keep some parameters fixed during MCMC sampling
 
-    *Version 0.3 features photometric capabilities*
+    *Version 0.3* features photometric capabilities
 
 
 Install JAVELIN

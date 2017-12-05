@@ -731,11 +731,11 @@ use either as is or with modifications with a citation to
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
 
-for quasar optical variability studies,
+for quasar optical variability studies and general JAVELIN usage,
 
 `Zu, Y., Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
-for spectroscopic reverberation mapping,
+for spectroscopic reverberation mapping and general JAVELIN usage,
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2016, ApJ, 819, 122 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_
 

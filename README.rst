@@ -103,7 +103,7 @@ try::
 which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/1202.3783>`_.
 
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/covdemo.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/covdemo.png
    :scale: 80%
 
    Fig. 1 : Illustration of four continuum models available in JAVELIN.
@@ -144,7 +144,7 @@ scale 400 days, a variability amplitude of sigma=3, and a mean of 10.0
 factor s; for photometric RM we have an additional parameter `alpha` describing the ratio between the two continua, one off and one on the line flux.
 
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/signal.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/signal.png
    :scale: 80%
 
    Fig. 2: True light curves of loopdeeloop (from top to bottom: the Yelm band flux, the Zing emission line, the Ylem emission line, and the continuum).
@@ -152,7 +152,7 @@ factor s; for photometric RM we have an additional parameter `alpha` describing 
 In practice, what we could observe are down-sampled and noisy versions of the true light curves, sometimes with seasonal gaps because of the conflict with our Sun's
 schedule, as shown by Fig. 3.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mocklc.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mocklc.png
    :scale: 80%
 
    Fig. 3: Same as Fig. 2, but observed versions.
@@ -166,7 +166,7 @@ parameters of the continuum light curve. Fig. 4 shows the posterior distribution
 of the two DRW parameters of the continuum variability as calculated from
 JAVELIN using MCMC chains,
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc0.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mcmc0.png
    :scale: 80%
 
    Fig. 4: Posterior distributions of the DRW parameters based on fits to the
@@ -184,7 +184,7 @@ derives the posterior distribution of the lag t, the tophat width w, and the
 scale factor s of the emission line, along with updated posteriors for the
 timescale tau and the amplitude sigma of the continuum, as shown in Fig. 5.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc1.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mcmc1.png
    :scale: 150%
 
    Fig. 5: Posterior distributions of the emission line lag t, tophat width w,
@@ -204,7 +204,7 @@ compare to the two line light curves! After another MCMC run, JAVELIN is able to
 eliminate the second peak at 180 days and solve the lags for both emission lines
 simultaneously, as shown in Fig. 6.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc2.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mcmc2.png
    :scale: 150%
 
    Fig. 6: As in Fig. 5, but after running JAVELIN for both two line light
@@ -221,7 +221,7 @@ these show the weighted mean of light curves consistent with the data and the
 dispersion of those light curves --- they are not a particular realizations of a
 single light curve.
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/prediction.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/prediction.png
    :scale: 80%
 
    Fig. 7: Comparison between the simulated light curves as computed from the
@@ -229,7 +229,7 @@ single light curve.
 
 For the photometric line light curve, just to demonstrate the photometric RM function of JAVELIN, we place a hard limit on range of lags during MCMC searching, so that the 180 ambiguity won't happen. Fig. 8 shows the posterior probability disgtribution of parameters in the photometric RM model
 
-.. figure:: http://bitbucket.org/nye17/javelin/raw/default/examples/figs/mcmc3.png
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mcmc3.png
    :scale: 150%
 
    Fig. 8: As in Fig. 5, but after running JAVELIN for the Yelm band light

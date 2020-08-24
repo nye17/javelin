@@ -154,9 +154,14 @@ class Sampler(object):
         :param kwargs: (optional)
             Other parameters that are directly passed to :func:`sample`.
 
-        This returns the results of the final sample in whatever form
-        :func:`sample` yields.  Usually, that's:
-        ``pos``, ``lnprob``, ``rstate``, ``blobs`` (blobs optional)
+        This method returns the most recent result from :func:`sample`. The
+        particular values vary from sampler to sampler, but the result is
+        generally a tuple ``(pos, lnprob, rstate)`` or ``(pos, lnprob, rstate,
+        blobs)`` where ``pos`` is the most recent position
+        vector (or ensemble thereof), ``lnprob`` is the most recent
+        log posterior probability (or ensemble thereof), ``rstate`` is the
+        state of the random number generator, and the optional ``blobs`` are
+        user-provided large data blobs.
         """
         if pos0 is None:
             if self._last_run_mcmc_result is None:
@@ -168,7 +173,7 @@ class Sampler(object):
             if rstate0 is None:
                 rstate0 = self._last_run_mcmc_result[2]
 
-        for results in self.sample(pos0, lnprob0, rstate0, iterations=N,
+        for results in self.sample(pos0, lnprob0, rstate0=rstate0, iterations=N,
                                    **kwargs):
             pass
 

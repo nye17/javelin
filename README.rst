@@ -18,9 +18,17 @@ and measure emission line lags using either spectroscopic light cruves
 or photometric light curves
 (`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
 
-*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
+Changelog
+=========
 
-*The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
+Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
+
+    *Version 0.33* includes the new Disk_Model method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
+
+    *Version 0.32alpha* now has the capability to keep some parameters fixed during MCMC sampling
+
+    *Version 0.3* features photometric capabilities
+
 
 Install JAVELIN
 ===============
@@ -638,10 +646,10 @@ directly fit the single broad band light curve without using ``conthpd``. You
 can either look into the ``demo.py`` code under ``example`` dir, or check the
 source code ``lcmodel.py`` under ``javelin`` dir for details.
 
-Disk RM Model of Mudd et al. 2017
+Disk RM Model of `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
 ---------------------------------------------------------
 
-The Disk_Model object is developed recently by Mudd et al. 2017, and what it
+The Disk_Model object is developed recently by `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_ , and what it
 does is take in a series of continuum light curves at known
 wavelengths/effective wavelengths, and find the best-fitting thin disk model
 for the data.  The thin disk assumes that the size of the accretion disk scales
@@ -723,15 +731,18 @@ use either as is or with modifications with a citation to
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
 
-for quasar optical variability studies,
+for quasar optical variability studies and general JAVELIN usage,
 
 `Zu, Y., Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
-for spectroscopic reverberation mapping, and to
+for spectroscopic reverberation mapping and general JAVELIN usage,
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2016, ApJ, 819, 122 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_
 
-for photometric reverberation mapping.
+for photometric reverberation mapping, and
 
+`Mudd et al. 2017, arxiv:1711.11588  <https://arxiv.org/abs/1711.11588>`_
+
+for thin disk modelling.
 
 

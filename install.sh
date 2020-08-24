@@ -14,8 +14,8 @@ elif [ $name = "Sing-Sing" ];then
 elif [ $name = "Anyer" ];then
     echo "Anyer"
     python setup.py install --prefix="~/usr" sdist
-elif [ $name = "Midido" ];then
-    echo "Midido"
+elif [ $name = "Nora" ];then
+    echo "Nora"
     python setup.py install --prefix="~/usr" sdist
 elif [ $name = "arjuna.mps.ohio-state.edu" ];then
     echo "arjuna"
@@ -26,5 +26,5 @@ elif [ `echo ${name} | grep -c "node"` -eq 1 ]; then
 else
     echo "Others"
     python setup.py install --prefix="~/usr" sdist
-fi 
+fi
 

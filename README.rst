@@ -12,11 +12,13 @@ for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
 *SPEAR* algorithm written in Python to provide more flexibility in both
 functionality and visualization. You can use **JAVELIN** to model quasar
 variability using different covariance functions
-(`Zu et al. 2013a <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
+(`Zu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
 and measure emission line lags using either spectroscopic light cruves
 (`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_)
 or photometric light curves
-(`Zu et al. 2013b <http://arxiv.org/abs/1310.6774>`_).
+(`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
+
+*Version 0.32alpha now has the capability to keep some parameters fixed during MCMC sampling.*
 
 *The new release (version 0.3) featuring photometric capabilities has now come out in the download tab, feel free to grab it and give it a try! Please send an email to ``yingzu AT astronomy.ohio-state.edu`` if you have any questions.*
 
@@ -636,6 +638,77 @@ directly fit the single broad band light curve without using ``conthpd``. You
 can either look into the ``demo.py`` code under ``example`` dir, or check the
 source code ``lcmodel.py`` under ``javelin`` dir for details.
 
+Disk RM Model of Mudd et al. 2017
+---------------------------------------------------------
+
+The Disk_Model object is developed recently by Mudd et al. 2017, and what it
+does is take in a series of continuum light curves at known
+wavelengths/effective wavelengths, and find the best-fitting thin disk model
+for the data.  The thin disk assumes that the size of the accretion disk scales
+as
+
+.. math::
+    R_{\lambda} = R_{0}\left(\frac{\lambda}{\lambda_{0}}\right)^{\beta},
+
+where :math:`R_{\lambda}` is the disk size at wavelength :math:`\lambda` and :math:`R_{0}` is the disk size at a reference
+wavelength :math:`\lambda_{0}`. We can instead write this in terms of a time delay :math:`t` between the emission at two
+wavelengths as
+
+.. math::
+    t = \frac{R_{0}}{c}\left[\left(\frac{\lambda}{\lambda_{0}}\right)^{\beta} - 1\right],
+
+where again :math:`R_{0}` is the disk size at a reference wavelength :math:`\lambda_{0}` and :math:`t` is the time delay
+between a feature at wavelength :math:`\lambda_{0}` and :math:`\lambda`.  More information on the model and further
+references can be found in Mudd et al. 2017.
+
+For a usage example, you can find an example script at ::
+
+    javelin/examples/thindisk/test_thindisk.py
+
+Let's say you have a driving light curve "driver.dat", and then three other continuum light curves "wave2.dat", "wave3.dat", and
+"wave4.dat", measured at wavelengths of 2000A, 4000A, 5000A, and 8000A.  You can use the "get_data()"
+method to read your light curves right into your Disk_Model object, the only difference here compared to the
+other models is that you also need to specify the wavelengths of the light curves in addition to reading in
+the light curves with "get_data()".::
+
+    >>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names=["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave=[2000., 4000., 5000., 8000.])
+
+Note that the "get_data()" method takes in a list of file names as before (or a singular file with multiple
+light curves formatted as directed in a previous example) and a list of names, but it is the Disk_Model object
+instance that requires the "effwave" parameter as well, which is a list or array of wavelengths for the light
+curve.  Note that the Disk Model will always treat the first light curve in the list as the driver.  You can
+then run your model exactly as in other RM models: ::
+
+    >>>disk1.do_mcmc(nwalkers=100, nburn=100, nchain=500, threads=1, fchain="thin_disk_chain.dat", flogp="thin_disk_flogp.dat", fburn="thin_disk_burn.dat")
+
+In this example, the "thin_disk_chain.dat" will wind up being a 50000 line text file with 10 columns and fburn
+will be a 10000 line text file with 10 columns.  These will correspond to the DRW model amplitude (sigma) and
+timescale (tau), same as for all of the previous examples on this page.  Rather than providing a lag, tophat
+width, and tophat scale for each light curve, however, the thin disk model fits for the :math:`R_{0}` and :math:`\beta`
+parameters.  These can then be used to predict the time lags based on the effective wavelengths of the other
+light curves based on the earlier equations in this section.  Each new light curve still needs a tophat width
+and scale, however.  This means that each new light curve in the model adds 2 parameters rather than 3, and
+starts with 4 parameters (sigma, tau, :math:`R_{0}`, and :math:`\beta`).  Thus, with three light curves being fit
+to our driver, we expect 10 parameters- sigma, tau, :math:`R_{0}`, :math:`\beta`, width_wave2, scale_wave2,
+width_wave3, scale_wave3, width_wave4, and scale_wave4.  The :math:`R_{0}` parameter in the chain will correspond to
+the effective accretion disk size at a reference wavelength corresponding to that of "driver.dat".
+
+
+Additional useful tools that might be helpful are the fact that, like with previous Model objects in JAVELIN,
+you may choose to supply DRW parameters at the outset with the "conthpd" parameter in "do_mcmc()", the ability
+to fix model parameters using a "fixed" array indicating which parameters are allowed to change and a supply
+of initial walker values in this case as "p_fix".  Even though the lags are not fit for directly, you may
+still place boundaries on parameter spaces for each light curve using the "lagtobaseline" or "laglimit"
+parameters as with the "RMap_Model" before.  Options unique to the Thin Disk object are the ability to set a top
+hat minimum width (in the same units as your light curve), as well as place limits on the :math:`R_{0}` and :math:`\beta`
+parameters when initializing the "Disk_Model" object. Using our previous example,::
+
+    >>>disk1 = Disk_Model(get_data(["driver.dat", "wave2.dat", "wave3.dat", "wave4.dat"], names = ["Driver", "Wave 2", "Wave 3", "Wave 4"]), effwave = [2000., 4000., 5000., 8000.], tophatminwidth = 0.1, alpha_lims = [-5., 5.], beta_lims = [-2., 2.])
+
+would not allow top hat widths less than 0.1, :math:`R_{0}` outside the range of [-5, 5], or :math:`\beta` outside the
+range of [-2, 2]. Again, note that the units on the top hat minimum width and  :math:`R_{0}` are the same as those
+in your light curves.
+
 Additional Information
 ----------------------
 
@@ -656,7 +729,7 @@ for quasar optical variability studies,
 
 for spectroscopic reverberation mapping, and to
 
-`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2013, astro-ph/1310.6774 <http://arxiv.org/abs/1310.6774>`_
+`Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2016, ApJ, 819, 122 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_
 
 for photometric reverberation mapping.
 

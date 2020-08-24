@@ -85,7 +85,7 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     return(x)
 
 def chosolve_from_tri(U, b, nugget=None, inplace=False):
-    """ 
+    """
         solve A   x =b given U where A = U^T U, by the following steps:
         solve U^T w =b for w
         solve U   x =w for x = A^-1 b
@@ -95,7 +95,7 @@ def chosolve_from_tri(U, b, nugget=None, inplace=False):
     return(x)
 
 def chosolve(A, b, nugget=None, inplace=False):
-    """ 
+    """
         solve A   x =b by the following steps:
         decompose A to be U^T U
         solve U^T w =b for w
@@ -138,13 +138,13 @@ class CholeskyTests(unittest.TestCase):
 
     def testCholesky_Decompose(self):
         A = np.array([
-                      [25., -5., 10.], 
+                      [25., -5., 10.],
                       [-5., 17., 10.],
                       [10., 10., 62.],
                      ])
         U = cholesky(A)
         B = np.array([
-                      [ 5., -1.,  2.], 
+                      [ 5., -1.,  2.],
                       [ 0.,  4.,  3.],
                       [ 0.,  0.,  7.],
                      ])
@@ -153,7 +153,7 @@ class CholeskyTests(unittest.TestCase):
 
     def testCholesky2_Decompose(self):
         A = np.array([
-                      [25., -5., 10.], 
+                      [25., -5., 10.],
                       [-5., 17., 10.],
                       [10., 10., 62.],
                      ])
@@ -161,7 +161,7 @@ class CholeskyTests(unittest.TestCase):
         print "L"
         print L
         B = np.array([
-                      [ 5.,  0.,  0.], 
+                      [ 5.,  0.,  0.],
                       [-1.,  4.,  0.],
                       [ 2.,  3.,  7.],
                      ])
@@ -172,7 +172,7 @@ class CholeskyTests(unittest.TestCase):
         b = np.array([55., -19., 114.]).T
 #        b = regularize_array(b)
         A = np.array([
-                      [25., -5., 10.], 
+                      [25., -5., 10.],
                       [-5., 17., 10.],
                       [10., 10., 62.],
                      ])
@@ -183,7 +183,7 @@ class CholeskyTests(unittest.TestCase):
 
     def testCholesky_Det(self):
         A = np.array([
-                      [25., -5., 10.], 
+                      [25., -5., 10.],
                       [-5., 17., 10.],
                       [10., 10., 62.],
                      ])
@@ -193,8 +193,8 @@ class CholeskyTests(unittest.TestCase):
         logt = chodet(A, retlog=True)
         self.assertAlmostEqual(d, t)
         self.assertAlmostEqual(logd, logt)
-        
 
 
-if __name__ == "__main__":    
+
+if __name__ == "__main__":
     unittest.main()

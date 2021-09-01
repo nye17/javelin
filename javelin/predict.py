@@ -10,7 +10,7 @@ from zylc import LightCurve
 np.set_printoptions(precision=3)
 
 __all__ = ["PredictSignal", "PredictRmap", "PredictSpear", "PredictPmap",
-"PredictSPmap", "PredictSCmap"]
+"PredictSPmap", "PredictSCmap", "PredictDPmap"]
 
 """ Generate random realizations based on the covariance function.
 """
@@ -971,6 +971,150 @@ class PredictSCmap(object):
                 vw[i] = spear_threading(jwant, jwant, iwant+1, iwant+1, **self.covparams)
             else :
                 vw[i] = spear(jwant, jwant, iwant+1, iwant+1, **self.covparams)
+            mw[i] = np.dot(covar, self.cplusninvdoty)
+            vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
+        return(mw, vw)
+
+class PredictDPmap(object):
+    """ Predict light curves for DPmap, with data constraints.
+    """
+    def __init__(self, zydata, set_threading=False,  **covparams):
+        """ PredictPmap object.
+
+        Parameters
+        ----------
+        zydata: LightCurve object
+            Observed light curve in LightCurve format.
+
+        covparams: kwargs
+            Parameters for the spear covariance function.
+
+        """
+        self.zydata = zydata
+        self.covparams = covparams
+        self.jd = self.zydata.jarr
+        # has to be the true mean instead of the sample mean
+        self.md = self.zydata.marr
+        self.id = self.zydata.iarr
+        self.blist = self.zydata.blist
+        # variance
+        self.vd = np.power(self.zydata.earr, 2.)
+        # preparation
+        self.set_threading = set_threading
+        self._get_covmat(set_threading=set_threading)
+        self._get_cholesky()
+        self._get_cplusninvdoty()
+
+    def mve_var(self, jwant, iwant):
+        """ Generate the minimum variance estimate and its associated variance.
+
+        Parameters
+        ----------
+        jwant: array_like
+            Desired epochs for simulated light curve.
+
+        iwant: array_like
+            Desired ids for simulated light curve.
+
+        Returns
+        -------
+        m: array_like
+            Minimum variance estimate of the underlying signal.
+
+        v: array_like
+            Variance at simulated point.
+        """
+        m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
+        for i in xrange(len(jwant)) :
+            m[i] += self.blist[int(iwant[i])-1]
+        return(m, v)
+
+    def generate(self, zylclist) :
+        """ Presumably zylclist has our input j, e, and i, and the values in m
+        should be the mean.
+
+        Parameters
+        ----------
+        zylclist: list of 3-list light curves
+            Pre-simulated light curves in zylclist, with the values in m-column as
+            the light curve mean, and those in e-column as the designated errorbar.
+
+        Returns
+        -------
+        zylclist_new: list of 3-list light curves
+            Simulated light curves in zylclist.
+
+        """
+        nlc = len(zylclist)
+        jlist = []
+        mlist = []
+        elist = []
+        ilist = []
+        for ilc, lclist in enumerate(zylclist):
+            if (len(lclist) == 3):
+                jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
+                if (np.min(msubarr) != np.max(msubarr)) :
+                    print("WARNING: input zylclist has inequal m elements in "+
+                          "light curve %d, please make sure the m elements "+
+                          "are filled with the desired mean of the mock "+
+                          "light curves, now reset to zero"%ilc)
+                    msubarr = msubarr * 0.0
+                nptlc = len(jsubarr)
+                # sort the date, safety
+                p = jsubarr.argsort()
+                jlist.append(jsubarr[p])
+                mlist.append(msubarr[p])
+                elist.append(esubarr[p])
+                ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
+        zylclist_new = []
+        for ilc in xrange(nlc) :
+            m, v = self.mve_var(jlist[ilc], ilist[ilc])
+            # no covariance considered here
+            vcovmat = np.diag(v)
+            if (np.min(elist[ilc]) < 0.0):
+                raise RuntimeError("error for light curve %d should be either 0 or postive"%ilc)
+            elif np.alltrue(elist[ilc]==0.0):
+                set_error_on_mocklc = False
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat)
+            else:
+                set_error_on_mocklc = True
+                ecovmat = np.diag(elist[ilc]*elist[ilc])
+                mlist[ilc] = mlist[ilc] + multivariate_normal(m, vcovmat) + multivariate_normal(np.zeros_like(m), ecovmat)
+            zylclist_new.append([jlist[ilc], mlist[ilc], elist[ilc]])
+        return(zylclist_new)
+
+    def _get_covmat(self, set_threading=False) :
+        if set_threading :
+            self.cmatrix = spear_threading(self.jd,self.jd,self.id,self.id, set_dpmap=True, **self.covparams)
+        else :
+            self.cmatrix = spear(self.jd,self.jd,self.id,self.id, set_dpmap=True, **self.covparams)
+        print("covariance matrix calculated")
+
+    def _get_cholesky(self) :
+        self.U = cholesky(self.cmatrix, nugget=self.vd, inplace=True, raiseinfo=True)
+        print("covariance matrix decomposed and updated by U")
+
+    def _get_cplusninvdoty(self) :
+        # now we want cpnmatrix^(-1)*mag = x, which is the same as
+        #    mag = cpnmatrix*x, so we solve this equation for x
+        self.cplusninvdoty = chosolve_from_tri(self.U, self.md, nugget=None, inplace=False)
+
+    def _fastpredict(self, jw, iw, set_threading=False) :
+        """ jw : jwant
+            iw : iwant
+        """
+        mw = np.zeros_like(jw)
+        vw = np.zeros_like(jw)
+        for i, (jwant, iwant) in enumerate(zip(jw, iw)):
+            if set_threading :
+                covar = spear_threading(jwant,self.jd,iwant,self.id, set_dpmap=True, **self.covparams)
+            else :
+                covar = spear(jwant,self.jd,iwant,self.id, set_dpmap=True, **self.covparams)
+            cplusninvdotcovar = chosolve_from_tri(self.U, covar.T, nugget=None, inplace=False)
+            if set_threading :
+                vw[i] = spear_threading(jwant, jwant, iwant, iwant, set_dpmap=True, **self.covparams)
+            else :
+                vw[i] = spear(jwant, jwant, iwant, iwant, set_dpmap=True, **self.covparams)
             mw[i] = np.dot(covar, self.cplusninvdoty)
             vw[i] = vw[i] - np.dot(covar, cplusninvdotcovar)
         return(mw, vw)

@@ -13,7 +13,7 @@ implicit none
 !f2py logical intent(in), optional :: symm=0
 !f2py integer intent(in), optional :: cmin=0
 !f2py integer intent(in), optional :: cmax=-1
-!f2py intent(in) 
+!f2py intent(in)
 !f2py threadsafe
 INTEGER(kind=4)  :: nx,ny,ncurve,cmin,cmax
 REAL(kind=8), DIMENSION(nx,ny) :: mat
@@ -68,7 +68,7 @@ implicit none
 !f2py logical intent(in), optional :: symm=0
 !f2py integer intent(in), optional :: cmin=0
 !f2py integer intent(in), optional :: cmax=-1
-!f2py intent(in) 
+!f2py intent(in)
 !f2py threadsafe
 INTEGER(kind=4)  :: nx,ny,ncurve,cmin,cmax
 REAL(kind=8), DIMENSION(nx,ny) :: mat
@@ -117,6 +117,87 @@ else
 endif
 return
 END SUBROUTINE covmatpmap_bit
+
+
+SUBROUTINE covmatdpmap_bit(mat,jd1,jd2,id1,id2,sigma,tau,slagarr,swidarr,scalearr,nx,ny,ncurve,cmin,cmax,symm)
+implicit none
+!f2py intent(inplace) mat
+!f2py intent(in) jd1,jd2,id1,id2
+!f2py intent(hide) nx,ny,ncurve
+!f2py logical intent(in), optional :: symm=0
+!f2py integer intent(in), optional :: cmin=0
+!f2py integer intent(in), optional :: cmax=-1
+!f2py intent(in)
+!f2py threadsafe
+INTEGER(kind=4)  :: nx,ny,ncurve,cmin,cmax
+REAL(kind=8), DIMENSION(nx,ny) :: mat
+REAL(kind=8), DIMENSION(nx) :: jd1
+REAL(kind=8), DIMENSION(ny) :: jd2
+INTEGER(kind=4), DIMENSION(nx) :: id1
+INTEGER(kind=4), DIMENSION(ny) :: id2
+REAL(kind=8) :: sigma,tau
+! here ncurve is not the actual number --> we count the line band flux as two.
+REAL(kind=8), DIMENSION(ncurve) :: slagarr,swidarr,scalearr
+LOGICAL :: symm
+INTEGER(kind=4)  :: i,j
+REAL(kind=8) :: slag1,swid1,scale1,slag2,swid2,scale2,slag3,swid3,scale3
+
+if (cmax .eq. -1) then
+    cmax = ny
+endif
+! given that I have to input all lags to the covmatdpmapij anyway,
+! there's no point in confusing myself by swappig the indices.
+slag1 = slagarr(1)
+swid1 = swidarr(1)
+scale1=scalearr(1)
+slag2 = slagarr(2)
+swid2 = swidarr(2)
+scale2=scalearr(2)
+slag3 = slagarr(3)
+swid3 = swidarr(3)
+scale3=scalearr(3)
+if (symm) then
+    do j = cmin+1,cmax
+        ! slag2 = slagarr(id2(j))
+        ! swid2 = swidarr(id2(j))
+        ! scale2=scalearr(id2(j))
+        do i=1,j
+            ! slag1 = slagarr(id1(i))
+            ! swid1 = swidarr(id1(i))
+            ! scale1=scalearr(id1(i))
+            ! slag3 = slagarr(3)
+            ! swid3 = swidarr(3)
+            ! scale3=scalearr(3)
+            call covmatdpmapij(mat(i,j), id1(i),id2(j),jd1(i),jd2(j),sigma,tau,slag1,swid1,scale1,slag2,swid2,scale2, &
+            slag3,swid3,scale3)
+            ! print*, i
+            ! print*, j
+            ! print*, id1(i)
+            ! print*, id2(j)
+            ! print*, jd1(i)
+            ! print*, jd2(j)
+            ! print*,mat(i,j)
+        enddo
+    enddo
+else
+    do j = cmin+1,cmax
+        ! slag2 = slagarr(id2(j))
+        ! swid2 = swidarr(id2(j))
+        ! scale2=scalearr(id2(j))
+        do i=1,nx
+            ! slag1 = slagarr(id1(i))
+            ! swid1 = swidarr(id1(i))
+            ! scale1=scalearr(id1(i))
+            ! slag3 = slagarr(3)
+            ! swid3 = swidarr(3)
+            ! scale3=scalearr(3)
+            call covmatdpmapij(mat(i,j), id1(i),id2(j),jd1(i),jd2(j),sigma,tau,slag1,swid1,scale1,slag2,swid2,scale2, &
+            slag3,swid3,scale3)
+        enddo
+    enddo
+endif
+return
+END SUBROUTINE covmatdpmap_bit
 
 !XXX this is deprecated.
 SUBROUTINE covmat(mat,npt,ncurve,idarr,jdarr,sigma,tau,slagarr,swidarr,scalearr)
@@ -195,7 +276,7 @@ else
         else
             covij = getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
         endif
-    else 
+    else
         ! line1 and line2 cross
         twidth1 = swid1
         twidth2 = swid2
@@ -270,7 +351,7 @@ if (imin .eq. imax) then
         endif
     endif
 else
-    ! between two epochs of different light curves 
+    ! between two epochs of different light curves
     !XXX now just the continuum and line bands
     ! continuum band and line band cross cov(c0i, c1j) + cov(c0i, lj)
     ! cov(c0i, c1j)
@@ -286,6 +367,134 @@ endif
 covij = sigma*sigma*covij
 return
 END SUBROUTINE covmatpmapij
+
+! dpmap version of covmatij, two light curves one continuum only, the other the sum of two line components.
+SUBROUTINE covmatdpmapij(covij,id1,id2,jd1,jd2,sigma,tau,slag1,swid1,scale1,slag2,swid2,scale2,slag3,swid3,scale3)
+implicit none
+REAL(kind=8),intent(out) :: covij
+INTEGER(kind=4),intent(in) :: id1,id2
+REAL(kind=8),intent(in)  :: jd1,jd2
+REAL(kind=8),intent(in)  :: sigma,tau
+REAL(kind=8),intent(in)  :: slag1,swid1,scale1,slag2,swid2,scale2,slag3,swid3,scale3
+REAL(kind=8) :: twidth,twidth1,twidth2
+REAL(kind=8) :: tgap,tgap1,tgap2
+INTEGER(kind=4) :: imax,imin
+
+imax = max(id1,id2)
+imin = min(id1,id2)
+
+! here imin(imax) is either one or two.
+if (imin .le. 0) then
+    print*,"ids can not be smaller than 1"
+    covij = -1.0D0
+    return
+endif
+
+if (imin .eq. imax) then
+    ! between two epochs of the same light curve
+    if (imin .eq. 1) then
+        ! id1 = id2 = 1
+        ! continuum band auto: cov(c0i,c0j)
+        covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag1,scale1)
+    else
+        ! id1 = id2 = 2
+        ! line band auto: cov(l1i, l1j) + cov(l2i, l2j) + 2*cov(l1i, l2j)
+        ! cov(l1i, l1j)
+        ! line 1  auto
+        if(swid2 .le. 0.01D0) then
+            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag2,scale2,slag2,scale2)
+        else
+            covij = getcmat_lauto(id1,jd1,jd2,tau,slag2,swid2,scale2)
+        endif
+        ! cov(l2i, l2j)
+        ! line 2  auto
+        if(swid3 .le. 0.01D0) then
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag3,scale3,slag3,scale3)
+        else
+            covij = covij + getcmat_lauto(id1,jd1,jd2,tau,slag3,swid3,scale3)
+        endif
+        ! cov(l1i, l2j) = cov(l2i, l1j)
+        ! line1 and line2 cross
+        ! if((swid1.le.0.01D0).and.(swid3.le.0.01D0)) then
+        !     covij = covij + 2.*getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag3,scale3)
+        ! else if((swid1 .le. 0.01D0).or.(swid3 .le. 0.01D0)) then
+        !     covij = covij + 2.*getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag3,swid3,scale3)
+        ! else
+        !     covij = covij + 2.*getcmat_lcross(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag3,swid3,scale3)
+        ! endif
+        !
+        ! cov(l1i, l2j)
+        if((swid2.le.0.01D0).and.(swid3.le.0.01D0)) then
+            ! covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag2,scale2,slag3,scale3) +&
+                ! getcmat_delta(id1,id2,jd1,jd2,tau,slag3,scale3,slag2,scale2)
+            covij = covij + 2.0D0*getcmat_delta(id1,id2,jd1,jd2,tau,slag2,scale2,slag3,scale3)
+        else if((swid2 .le. 0.01D0).or.(swid3 .le. 0.01D0)) then
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag2,swid2,scale2,slag3,swid3,scale3) +&
+                getcmat_lc(id1,id2,jd1,jd2,tau,slag3,swid3,scale3,slag2,swid2,scale2)
+            !FIXME below is incorrect, ! symmetry does not apply here!!!!!
+            ! covij = covij + 2.0D0*getcmat_lc(id1,id2,jd1,jd2,tau,slag2,swid2,scale2,slag3,swid3,scale3)
+        else
+            covij = covij + getcmat_lcross(id1,id2,jd1,jd2,tau,slag2,swid2,scale2,slag3,swid3,scale3) +&
+                getcmat_lcross(id1,id2,jd1,jd2,tau,slag3,swid3,scale3,slag2,swid2,scale2)
+            !FIXME below is incorrect, ! symmetry does not apply here!!!!!
+            ! covij = covij + 2.0D0*getcmat_lcross(id1,id2,jd1,jd2,tau,slag2,swid2,scale2,slag3,swid3,scale3)
+        endif
+    endif
+else
+    ! between two epochs of different light curves
+    ! now just the continuum and line bands
+    if (id1 .eq. 1) then
+        ! continuum band and line band cross cov(c0i, l1j) + cov(c0i, l2j)
+        ! cov(c0i, l1j)
+        twidth = max(swid1, swid2)
+        if (twidth .le. 0.01D0) then
+            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag2,scale2)
+        else
+            covij = getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag2,swid2,scale2)
+        endif
+        ! cov(c0i, l2j)
+        twidth = max(swid1, swid3)
+        if (twidth .le. 0.01D0) then
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag1,scale1,slag3,scale3)
+        else
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag1,swid1,scale1,slag3,swid3,scale3)
+        endif
+    else
+        ! cov(l1i, c0j)
+        twidth = max(swid1, swid2)
+        if (twidth .le. 0.01D0) then
+            covij = getcmat_delta(id1,id2,jd1,jd2,tau,slag2,scale2,slag1,scale1)
+        else
+            ! print*, id1
+            ! print*, id2
+            ! print*, jd1
+            ! print*, jd2
+            ! print*, tau
+            ! print*, slag2
+            ! print*, swid2
+            ! print*, scale2
+            ! print*, slag1
+            ! print*, swid1
+            ! print*, scale1
+            covij = getcmat_lc(id1,id2,jd1,jd2,tau,slag2,swid2,scale2,slag1,swid1,scale1)
+        endif
+        ! print*, 'covij!!!!'
+        ! print*, covij
+        ! cov(l2i, c0j)
+        twidth = max(swid1, swid3)
+        if (twidth .le. 0.01D0) then
+            covij = covij + getcmat_delta(id1,id2,jd1,jd2,tau,slag3,scale3,slag1,scale1)
+            ! print*, getcmat_delta(id1,id2,jd1,jd2,tau,slag3,scale3,slag1,scale1)
+        else
+            covij = covij + getcmat_lc(id1,id2,jd1,jd2,tau,slag3,swid3,scale3,slag1,swid1,scale1)
+            ! print*, getcmat_lc(id1,id2,jd1,jd2,tau,slag3,swid3,scale3,slag1,swid1,scale1)
+        endif
+    endif
+endif
+covij = sigma*sigma*covij
+return
+END SUBROUTINE covmatdpmapij
+
 
 FUNCTION expcov(djd,tau)
 implicit none
@@ -344,7 +553,7 @@ if (thig.le.0.0D0) then
     getcmat_lc = exp( thig/tau)-exp( tlow/tau)
 else if (tlow.ge.0.0D0) then
     getcmat_lc = exp(-tlow/tau)-exp(-thig/tau)
-else 
+else
     getcmat_lc = 2.0D0-exp(tlow/tau)-exp(-thig/tau)
 endif
 getcmat_lc = tau*(emscale/twidth)*getcmat_lc
@@ -418,7 +627,7 @@ thig  = (ti-tj)-(t1-t4)
 if((thig.le.0.0D0).or.(tlow.ge.0.0D0)) then
     getcmat_lcross = dexp(-dabs(tlow)/tau) +dexp(-dabs(thig)/tau)&
                     -dexp(-dabs(tmid1)/tau)-dexp(-dabs(tmid2)/tau)
-else 
+else
     getcmat_lcross = dexp(tlow/tau)+dexp(-thig/tau)&
                     -dexp(-dabs(tmid1)/tau)-dexp(-dabs(tmid2)/tau)
     if(tmid2.le.0.0D0) then

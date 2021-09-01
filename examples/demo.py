@@ -4,16 +4,16 @@ import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
 from javelin.lcio import *
 from javelin.zylc import LightCurve, get_data
-from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
+from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model, DPmap_Model
 
 """ Tests from scratch.
 """
 
 #************** PLEASE DO NOT EDIT THIS PART*****
 # show figures interactively
-figext = None
+figext = 'pdf'
 # names of the true light curves
-names  = ["Continuum", "Yelm", "Zing", "YelmBand"]
+names  = ["Continuum", "Yelm", "Zing", "YelmBand", "YelmZingBand"]
 # dense sampling of the underlying signal
 jdense = np.linspace(0.0, 2000.0, 2000)
 # DRW parameters
@@ -21,15 +21,15 @@ sigma, tau = (3.00, 400.0)
 # tau_cut
 tau_cut = 7.0
 # line parameters
-lagy, widy, scaley = (100.0,   2.0, 0.5)
-lagz, widz, scalez = (250.0,   4.0, 0.25)
+lagy, widy, scaley = (100.0, 2.0, 0.5)
+lagz, widz, scalez = (250.0, 4.0, 0.5)
 lags   = [0.0,   lagy,   lagz]
 wids   = [0.0,   widy,   widz]
 scales = [1.0, scaley, scalez]
 llags   = [   lagy,   lagz]
 lwids   = [   widy,   widz]
 lscales = [ scaley, scalez]
-lcmeans= [10.0,  5.0,  2.5]
+lcmeans= [10.0, 5.0, 5.0]
 #************************************************
 
 def file_exists(fname) :
@@ -127,9 +127,20 @@ def generateTrueLC(covfunc="kepler2_exp"):
             edense_yb = np.zeros_like(jdense_yb)
             sdense_yb = PS.generate(jdense_yb, ewant=edense_yb)
             phlc = [jdense_yb, sdense_yb + lcmeans[i] + zylist[1][1], edense_yb]
+        if i == 2:
+            # special yelm prediction for YelmZing at the observed epochs of the ZingLine
+            jl_y, sl_y = generateLine(jdense, sdense, lags[1], wids[1], scales[1], mc_mean=0.0, ml_mean=0.0)
+            imin_y = np.searchsorted(jl_y, jmin)
+            imax_y = np.searchsorted(jl_y, jmax)
+            jdense_yz = jl_y[imin_y: imax_y]
+            edense_yz = np.zeros_like(jdense_yz)
+            sdense_yz = sl_y[imin_y: imax_y]+lcmeans[1]
+            dplc = [jdense_yz, sdense_yz + zylist[2][2], edense_yz]
     # this is for handling the prediction for YelmBand.
     # combine into a single LightCurve
     zylist.append(phlc)
+    # this is for handling the prediction for YelmZing.
+    zylist.append(dplc)
     zydata = LightCurve(zylist, names=names)
     return(zydata)
 
@@ -151,8 +162,12 @@ def generateTrueLC2(covfunc="drw"):
     # this is for handling the prediction for YelmBand.
     phlc = [jdense, mdense, edense]
     phlc[1] = zylistnew[0][1] + zylistnew[1][1]
-    # combine into a single LightCurve
     zylistnew.append(phlc)
+    # this is for handling the prediction for YelmZingBand.
+    dplc = [jdense, mdense, edense]
+    dplc[1] = zylistnew[1][1] + zylistnew[2][1]
+    # combine into a single LightCurve
+    zylistnew.append(dplc)
     zydata = LightCurve(zylistnew, names=names)
     return(zydata)
 
@@ -197,32 +212,37 @@ def True2Mock(zydata, sparse=[2, 4, 4], errfac=[0.01, 0.01, 0.01], hasgap=[True,
     zymock = LightCurve(zylclist_new, names=names)
     return(zymock)
 
-def getMock(zydata, confile, topfile, doufile, phofile, set_plot=False, mode="test") :
+def getMock(zydata, confile, topfile, doufile, phofile, dphfile, set_plot=False, mode="test") :
     """ downsample the truth to get more realistic light curves
     """
     if mode == "test" :
         return(None)
     else :
-        _c, _y, _z, _yb = zydata.split()
+        _c, _y, _z, _yb, _yzb = zydata.split()
         _zydata = _c + _y + _z
-        zydata_dou = True2Mock(_zydata, sparse=[8, 8, 8], errfac=[0.01, 0.01, 0.01], hasgap=[True, True, True], errcov=0.0)
+        zydata_dou = True2Mock(_zydata, sparse=[8, 8, 8], errfac=[0.01, 0.01, 0.01], hasgap=[False, False, False], errcov=0.0)
         zylclist_top = zydata_dou.zylclist[:2]
         zydata_top = LightCurve(zylclist_top, names=names[0:2])
         _zydata = _c + _yb
-        zydata_pho = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[True, True], errcov=0.0)
+        zydata_pho = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[False, False], errcov=0.0)
+        _zydata = _c + _yzb
+        zydata_dph = True2Mock(_zydata, sparse=[8, 8], errfac=[0.01, 0.01], hasgap=[False, False], errcov=0.0)
         if mode == "run" :
             confile = ".".join([confile, "myrun"])
             doufile = ".".join([doufile, "myrun"])
             topfile = ".".join([topfile, "myrun"])
             phofile = ".".join([phofile, "myrun"])
+            dphfile = ".".join([dphfile, "myrun"])
             zydata_dou.save_continuum(confile)
             zydata_dou.save(doufile)
             zydata_top.save(topfile)
             zydata_pho.save(phofile)
+            zydata_dph.save(dphfile)
     if set_plot :
-        print("plot mock light curves for continuum, yelm, zing, and yelm band lines")
+        print("plot mock light curves for continuum, yelm, zing, yelm band, and yelm+zing band lines")
         _c, _yb = zydata_pho.split()
-        zymock = zydata_dou + _yb
+        _c, _yzb = zydata_dph.split()
+        zymock = zydata_dou + _yb + _yzb
         zymock.plot(figout="mocklc", figext=figext)
 
 def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100, mode="test") :
@@ -277,7 +297,7 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
         rmap.show_hist(bins=100, lagbinsize=lagbinsize, figout=figout, figext=figext)
     return(rmap.hpd)
 
-def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100,mode="test") :
+def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100,mode="test", fixed=None, p_fix=None) :
     """ fit the Pmap model.
     """
     if mode == "run" :
@@ -290,17 +310,49 @@ def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbins
     elif mode == "show" :
         pmap.load_chain(phofchain, set_verbose=False)
     elif mode == "run" :
-        laglimit = [[50.0, 130.0]] # XXX here we want to avoid 180 day limit.
+        # laglimit = [[50.0, 130.0]] # XXX here we want to avoid 180 day limit.
+        laglimit = [lagrange,] # XXX here we want to avoid 180 day limit.
         widlimit = [[0, 7.0]] # XXX here we want to avoid long smoothing width
         phofchain = ".".join([phofchain, "myrun"])
         pmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit,
                 widlimit=widlimit, nwalkers=nwalkers, nburn=nburn, nchain=nchain,
-                fburn=None, fchain=phofchain, threads=threads)
+                fburn=None, fchain=phofchain, threads=threads, fixed=fixed, p_fix=p_fix)
     if set_plot :
         pmap.break_chain([lagrange,])
         pmap.get_hpd()
         pmap.show_hist(bins=100, lagbinsize=lagbinsize, figout="mcmc3", figext=figext)
     return(pmap.hpd)
+
+def fitDPmap(dphfile, dphfchain, conthpd, names=None, lagrange=[-50, 300], lagbinsize=1, threads=1, set_plot=False, nwalkers=100, nburn=100, nchain=100,mode="test", fixed=None, p_fix=None) :
+    """ fit the DPmap model.
+    """
+    if mode == "run" :
+        dphfile = ".".join([dphfile, "myrun"])
+    zydata = get_data(dphfile, names=names)
+    dpmap   = DPmap_Model(zydata)
+    if mode == "test" :
+        print(dpmap([np.log(2.), np.log(100), lagy, widy, scaley, lagz, widz, scalez]))
+        return(None)
+    elif mode == "show" :
+        dpmap.load_chain(dphfchain, set_verbose=False)
+    elif mode == "run" :
+        laglimit = [lagrange,lagrange]
+        # laglimit = [lagrange,[-50, 300]] # FIXME temperary fix
+        widlimit = [[0, 7.0], [0, 7.0]] # XXX here we want to avoid long smoothing width
+        dphfchain = ".".join([dphfchain, "myrun"])
+        dpmap.do_mcmc(conthpd=conthpd, lagtobaseline=0.5, laglimit=laglimit,
+                widlimit=widlimit, nwalkers=nwalkers, nburn=nburn, nchain=nchain,
+                fburn=None, fchain=dphfchain, threads=threads, fixed=fixed, p_fix=p_fix)
+    if set_plot :
+        # dpmap.break_chain([lagrange,[-50, 300]])
+        dpmap.break_chain([lagrange,lagrange])
+        dpmaphpd = dpmap.get_hpd()
+        dpmap.show_hist(bins=100, lagbinsize=lagbinsize, figout="mcmc4", figext=figext)
+    if True:
+        zypred = dpmap.do_pred(dpmap.hpd[1,:])
+        zypred.names = names
+        zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
+    return(dpmap.hpd)
 
 def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
     if mode == "run" :
@@ -363,34 +415,45 @@ def demo(mode, covfunc="drw") :
         doufile   = "dat/loopdeloop_con_y_z.dat" + tag
         # observed continuum band+y band light curve w/out seasonal gap
         phofile   = "dat/loopdeloop_con_yb.dat" + tag
+        # observed continuum band+yz band light curve w/out seasonal gap
+        dphfile   = "dat/loopdeloop_con_yzb.dat" + tag
         # file for storing MCMC chains
         confchain = "dat/chain0.dat" + tag
         topfchain = "dat/chain1.dat" + tag
         doufchain = "dat/chain2.dat" + tag
         phofchain = "dat/chain3.dat" + tag
+        dphfchain = "dat/chain4.dat" + tag
 
     # generate truth drw signal
-    zydata  = getTrue(trufile, set_plot=set_plot, mode=mode, covfunc=covfunc)
+    # zydata  = getTrue(trufile, set_plot=set_plot, mode=mode, covfunc=covfunc)
 
     # generate mock light curves
-    getMock(zydata, confile, topfile, doufile, phofile, set_plot=set_plot, mode=mode)
+    # getMock(zydata, confile, topfile, doufile, phofile, dphfile, set_plot=set_plot, mode=mode)
 
     # fit continuum
-    conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode)
+    # conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode); print conthpd
+    conthpd = np.array([[0.61, 4.962], [0.801, 5.352], [1.068, 5.881]])
 
     # fit tophat
-    tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
+    # tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
 
     # fit douhat
-    douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads,
-            nwalkers=150, nburn=150, nchain=150,set_plot=set_plot, mode=mode)
+    # douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=150, nburn=150, nchain=150,set_plot=set_plot, mode=mode)
 
     # show fit
-    showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
+    # showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
 
     # fit pmap
-    phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[0, 150], lagbinsize=0.2, threads=threads,
-            nwalkers=200, nburn=200, nchain=200, set_plot=set_plot, mode=mode)
+    # phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[-50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
+
+    # fit phofile with one variable
+    # phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=200, nburn=200, nchain=200, set_plot=set_plot, mode=mode, fixed=[0, 0, 1, 0, 0, 0], p_fix=[np.log(3.0), np.log(400.0), 1, 2.0, 0.5, 1])
+
+    # fit phofile with dpmap
+    # dphhpd = fitDPmap(phofile, dphfchain, conthpd, names=[names[0], names[3]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode, fixed=[0, 0, 1, 0, 0, 0, 0, 0], p_fix=[np.log(3.0), np.log(400.0), 1, 2.0, 0.5, 0, 0.001, 1])
+
+    # fit dpmap
+    dphhpd = fitDPmap(dphfile, dphfchain, conthpd, names=[names[0], names[4]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
 
 if __name__ == "__main__":
     import sys

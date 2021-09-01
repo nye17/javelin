@@ -14,7 +14,7 @@ import unittest
 """
 
 
-def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False,blocksize=10000) :
+def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False,set_dpmap=False,blocksize=10000) :
     """
     threaded version, divide matrix into subblocks with *blocksize*
     elements each. Do not use it when multiprocessing is on (e.g., in emcee MCMC
@@ -48,6 +48,9 @@ def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=Fa
     if set_pmap :
         def targ(C,x,y,idx,idy,cmin,cmax,symm) :
             SCF.covmatpmap_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,cmin,cmax,symm)
+    elif set_dpmap :
+        def targ(C,x,y,idx,idy,cmin,cmax,symm) :
+            SCF.covmatdpmap_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,cmin,cmax,symm)
     else :
         def targ(C,x,y,idx,idy,cmin,cmax,symm) :
             SCF.covmat_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,cmin,cmax,symm)
@@ -61,7 +64,7 @@ def spear_threading(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=Fa
     return(C)
 
 
-def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False) :
+def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False, set_dpmap=False) :
     """ Clean version without multithreading. Used when multiprocessing is on
     (e.g., in emcee MCMC sampling).
 
@@ -83,6 +86,8 @@ def spear(x,y,idx,idy,sigma,tau,lags,wids,scales,symm=None,set_pmap=False) :
     C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
     if set_pmap :
         SCF.covmatpmap_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,0,-1,symm)
+    elif set_dpmap :
+        SCF.covmatdpmap_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,0,-1,symm)
     else :
         SCF.covmat_bit(C,x,y,idx,idy,sigma,tau,lags,wids,scales,0,-1,symm)
     if symm:
@@ -122,6 +127,44 @@ class PmapCovTest(unittest.TestCase):
         print "Calculated (threading) :"
         print C_thread
         C_bare = spear(jdarr, jdarr, idarr, idarr, sigma, tau, lags, wids, scales, symm=None, set_pmap=True)
+        print "Calculated (no threading) :"
+        print C_bare
+        # compare
+        self.assertTrue(np.allclose(C_true, C_thread, rtol=1e-05, atol=1e-08))
+        self.assertTrue(np.allclose(C_true, C_bare,   rtol=1e-05, atol=1e-08))
+
+class DPmapCovTest(unittest.TestCase):
+    def testDPmapCov(self):
+        # fixed
+        jdarr = np.array([0, 1, 0, 1]) # not sorted here.
+        idarr = np.array([1, 1, 2, 2])
+        # parameters, can be changed
+        tau   = 1.0
+        sigma = 1.0
+        lags  = np.array([0.00, 0.25, 0.00])
+        wids  = np.array([0.00, 0.00, 0.00])
+        scales= np.array([1.00, 3.00, 2.00])
+        C_true= np.empty((4,4), order="F")
+        # diagonal
+        C_true[0, 0] = 1.0
+        C_true[1, 1] = 1.0
+        C_true[2, 2] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2
+        C_true[3, 3] = scales[2]**2 + scales[2]*scales[1]*np.exp(-lags[1]/tau) + scales[1]*scales[2]*np.exp(-lags[1]/tau) + scales[1]**2
+        # off
+        C_true[0, 1] = C_true[1, 0] = np.exp(-1/tau)
+        C_true[0, 2] = C_true[2, 0] = scales[2] + scales[1]*np.exp(-lags[1]/tau)
+        C_true[0, 3] = C_true[3, 0] = scales[2]*np.exp(-1/tau) + scales[1]*np.exp(-(1.0-lags[1])/tau)
+        C_true[1, 2] = C_true[2, 1] = scales[2]*np.exp(-1/tau) + scales[1]*np.exp(-(1.0+lags[1])/tau)
+        C_true[1, 3] = C_true[3, 1] = scales[2] + scales[1]*np.exp(-lags[1]/tau)
+        C_true[2, 3] = C_true[3, 2] = scales[2]*scales[2]*np.exp(-1/tau) + scales[2]*scales[1]*np.exp(-(1.0-lags[1])/tau) + scales[2]*scales[1]*np.exp(-(1.0+lags[1])/tau) + scales[1]*scales[1]*np.exp(-1/tau)
+        C_true = C_true * sigma * sigma
+        print "Truth :"
+        print C_true
+        # calculate from spear
+        C_thread = spear_threading(jdarr, jdarr, idarr, idarr, sigma, tau, lags, wids, scales, symm=None, set_dpmap=True)
+        print "Calculated (threading) :"
+        print C_thread
+        C_bare = spear(jdarr, jdarr, idarr, idarr, sigma, tau, lags, wids, scales, symm=None, set_dpmap=True)
         print "Calculated (no threading) :"
         print C_bare
         # compare

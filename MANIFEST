@@ -45,6 +45,7 @@ blas/BLAS/xerbla.f
 examples/debug_threading.py
 examples/demo.py
 examples/plotcov.py
+examples/test_dpmap.py
 examples/test_pfix.py
 examples/dat/chain0.dat
 examples/dat/chain0.dat.kepler
@@ -54,6 +55,7 @@ examples/dat/chain2.dat
 examples/dat/chain2.dat.kepler
 examples/dat/chain3.dat
 examples/dat/chain3.dat.kepler
+examples/dat/chain4.dat
 examples/dat/continuum.dat
 examples/dat/loopdeloop_con.dat
 examples/dat/loopdeloop_con.dat.kepler
@@ -63,6 +65,7 @@ examples/dat/loopdeloop_con_y_z.dat
 examples/dat/loopdeloop_con_y_z.dat.kepler
 examples/dat/loopdeloop_con_yb.dat
 examples/dat/loopdeloop_con_yb.dat.kepler
+examples/dat/loopdeloop_con_yzb.dat
 examples/dat/rename.py
 examples/dat/trulc.dat
 examples/dat/trulc.dat.kepler

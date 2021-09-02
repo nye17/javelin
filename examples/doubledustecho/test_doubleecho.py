@@ -10,7 +10,7 @@ cont = Cont_Model(data0, "drw")
 if os.path.isfile("cont_chain.dat"):
     print ("cont model chain exists")
     cont.load_chain('cont_chain.dat')
-    # cont.show_hist(bins=100, figext='pdf')
+    cont.show_hist(figout='mcmc_con', bins=100, figext='pdf')
 else:
     cont.do_mcmc(nwalkers=100, nburn=100, nchain=100, fburn=None, fchain="cont_chain.dat", threads=8)
 

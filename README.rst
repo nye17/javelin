@@ -23,6 +23,10 @@ Changelog
 
 Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
 
+    *Version 0.34* includes the new DPmap_Model method, which is an extension of
+    the Pmap_model that works with two lagged-components in the line-band,
+    unlike Pmap_model with a continuum component and a single lagged component.
+
     *Version 0.33* includes the new Disk_Model method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
 
     *Version 0.32alpha* now has the capability to keep some parameters fixed during MCMC sampling
@@ -305,7 +309,7 @@ And finally, to do photometric RM using the continuum+line-band data, do::
     >>>cybmod = Pmap_Model(cyb)
     >>>cybmod.do_mcmc(conthpd=cmod.hpd)
 
-where ``Pmap_Model`` is the two-band photometric RM model (there is also a one-band photometric RM model ``SPmap_Model`` available). Again, the results can be shown by::
+where ``Pmap_Model`` is the two-band photometric RM model (there are also an one-band photometric RM model ``SPmap_Model`` and another two-band photometric RM model ``DPmap_Model``  with two lagged components available). Again, the results can be shown by::
 
     >>>cybmod.show_hist()
 

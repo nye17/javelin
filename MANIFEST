@@ -72,6 +72,17 @@ examples/dat/trulc.dat.kepler
 examples/dat/yelm.dat
 examples/dat/yelmband.dat
 examples/dat/zing.dat
+examples/doubledustecho/Mrk509Gband.txt
+examples/doubledustecho/Mrk509Gband_short.txt
+examples/doubledustecho/Mrk509Hband.txt
+examples/doubledustecho/Mrk509Hband_normalized.txt
+examples/doubledustecho/Mrk509Kband.txt
+examples/doubledustecho/cont_chain.dat
+examples/doubledustecho/dpmap_chain.dat
+examples/doubledustecho/test_doubleecho.py
+examples/doubledustecho/temp/dpmap_burn.dat
+examples/doubledustecho/temp/dpmap_chain.dat
+examples/doubledustecho/temp/dpmap_flogp.dat
 examples/figs/covdemo.png
 examples/figs/mcmc0.png
 examples/figs/mcmc1.png

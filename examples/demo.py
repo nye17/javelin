@@ -253,7 +253,7 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
     zydata = get_data(confile, names=names)
     cont   = Cont_Model(zydata, "drw")
     if mode == "test" :
-        print(cont([np.log(2.), np.log(100)], set_retq=True))
+        print(cont([np.log(sigma), np.log(tau)], set_retq=True))
         return(None)
     elif mode == "show" :
         cont.load_chain(confchain)
@@ -305,7 +305,7 @@ def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbins
     zydata = get_data(phofile, names=names)
     pmap   = Pmap_Model(zydata)
     if mode == "test" :
-        print(pmap([np.log(2.), np.log(100), lagy, widy, scaley,  1.0]))
+        print(pmap([np.log(sigma), np.log(tau), lagy, widy, scaley,  1.0]))
         return(None)
     elif mode == "show" :
         pmap.load_chain(phofchain, set_verbose=False)
@@ -331,7 +331,7 @@ def fitDPmap(dphfile, dphfchain, conthpd, names=None, lagrange=[-50, 300], lagbi
     zydata = get_data(dphfile, names=names)
     dpmap   = DPmap_Model(zydata)
     if mode == "test" :
-        print(dpmap([np.log(2.), np.log(100), lagy, widy, scaley, lagz, widz, scalez]))
+        print(dpmap([np.log(sigma), np.log(tau), lagz, widz, scalez, lagy, widy, scaley]))
         return(None)
     elif mode == "show" :
         dpmap.load_chain(dphfchain, set_verbose=False)
@@ -348,25 +348,31 @@ def fitDPmap(dphfile, dphfchain, conthpd, names=None, lagrange=[-50, 300], lagbi
         dpmap.break_chain([lagrange,lagrange])
         dpmaphpd = dpmap.get_hpd()
         dpmap.show_hist(bins=100, lagbinsize=lagbinsize, figout="mcmc4", figext=figext)
-    if True:
-        zypred = dpmap.do_pred(dpmap.hpd[1,:])
-        zypred.names = names
-        zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
+    # if True:
+        # zypred = dpmap.do_pred(dpmap.hpd[1,:])
+        # zypred.names = names
+        # zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
     return(dpmap.hpd)
 
-def showfit(linhpd, linfile, names=None, set_plot=False, mode="test") :
+def showfit(linhpd, linfile, names=None, set_plot=False, mode="test", model='Rmap') :
     if mode == "run" :
         linfile = ".".join([linfile, "myrun"])
     print linfile
     zydata = get_data(linfile, names=names)
-    rmap   = Rmap_Model(zydata)
+    if model == 'Rmap' or model == 'Rmap2':
+        rmap = Rmap_Model(zydata)
+    elif model == 'Pmap':
+        rmap = Pmap_Model(zydata)
+    elif model == 'DPmap':
+        rmap = DPmap_Model(zydata)
     if mode == "test" :
         return(None)
     else :
         zypred = rmap.do_pred(linhpd[1,:])
         zypred.names = names
+        print names
     if set_plot :
-        zypred.plot(set_pred=True, obs=zydata, figout="prediction", figext=figext)
+        zypred.plot(set_pred=True, obs=zydata, figout="prediction_" + model, figext=figext)
 
 def demo(mode, covfunc="drw") :
     """ Demonstrate the main functionalities of JAVELIN.
@@ -396,6 +402,8 @@ def demo(mode, covfunc="drw") :
             else :
             # if True:
                 threads = multiprocessing.cpu_count()
+                if threads > 40:
+                    threads = 40
         except (ImportError,NotImplementedError) :
             threads = 1
         if threads > 1 :
@@ -426,38 +434,58 @@ def demo(mode, covfunc="drw") :
         dphfchain = "dat/chain4.dat" + tag
 
     # generate truth drw signal
-    # zydata  = getTrue(trufile, set_plot=set_plot, mode=mode, covfunc=covfunc)
+    zydata  = getTrue(trufile, set_plot=set_plot, mode=mode, covfunc=covfunc)
 
     # generate mock light curves
-    # getMock(zydata, confile, topfile, doufile, phofile, dphfile, set_plot=set_plot, mode=mode)
+    getMock(zydata, confile, topfile, doufile, phofile, dphfile, set_plot=set_plot, mode=mode)
 
     # fit continuum
-    # conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode)
-    conthpd = np.array([[0.61, 4.962], [0.801, 5.352], [1.068, 5.881]])
-    print(conthpd)
+    conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode)
+    if conthpd is None:
+        conthpd = np.array([[0.934, 5.536], [1.139, 5.953], [1.452, 6.568]])
+    else:
+        print(conthpd)
 
     # fit tophat
     tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
+    if tophpd is None:
+        tophpd = np.array([[0.542, 4.886, 99.704, 0.308, 0.491], [  0.661, 5.085, 100.015,  0.76, 0.497], [  0.793,  5.369, 100.34, 1.668,  0.503]])
+    else:
+        print(tophpd)
 
-    showfit(tophpd, topfile, names=names[0:2], set_plot=set_plot, mode=mode)
+    showfit(tophpd, topfile, names=names[0:2], set_plot=set_plot, mode=mode, model='Rmap')
 
     # fit douhat
-    # douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
+    douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
+    if douhpd is None:
+        douhpd = np.array([[  1.132,  5.905,  99.591,  0.405,  0.502, 246.547,   0.507,   0.505],
+                           [  1.176,  6.044, 100.411,  0.494,  0.518, 250.251,   0.572,   0.521],
+                           [  1.355,  6.127, 107.987,  0.555,  0.579, 251.629,   0.671,   0.594]])
+    else:
+        print(douhpd)
 
     # show fit
-    # showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
+    showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode, model='Rmap2')
 
     # fit pmap
-    # phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[-50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
-
-    # fit phofile with one variable
-    # phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=200, nburn=200, nchain=200, set_plot=set_plot, mode=mode, fixed=[0, 0, 1, 0, 0, 0], p_fix=[np.log(3.0), np.log(400.0), 1, 2.0, 0.5, 1])
-
-    # fit phofile with dpmap
-    # dphhpd = fitDPmap(phofile, dphfchain, conthpd, names=[names[0], names[3]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode, fixed=[0, 0, 1, 0, 0, 0, 0, 0], p_fix=[np.log(3.0), np.log(400.0), 1, 2.0, 0.5, 0, 0.001, 1])
+    phohpd = fitPmap(phofile, phofchain, conthpd, names=[names[0], names[3]], lagrange=[-50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
+    if phohpd is None:
+        phohpd =np.array([[  1.098,   5.798, 100.218,   1.331,   0.504,   0.971],
+                          [  1.214,   6.061, 100.693,   3.156,   0.512,   0.98 ],
+                          [  1.396,   6.318, 101.069,   4.861,   0.521,   0.989]])
+    else:
+        print(phohpd)
+    showfit(phohpd, phofile, names=[names[0], names[3]], set_plot=set_plot, mode=mode, model='Pmap')
 
     # fit dpmap
-    # dphhpd = fitDPmap(dphfile, dphfchain, conthpd, names=[names[0], names[4]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
+    dphhpd = fitDPmap(dphfile, dphfchain, conthpd, names=[names[0], names[4]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
+    if dphhpd is None:
+        dphhpd = np.array([[  0.883,   4.77 , 173.676,   1.632,   0.339,  99.206,   2.249,   0.495],
+                           [  0.958,   5.334, 249.566,   2.981,   0.516,  99.897,   3.778,   0.514],
+                           [  1.234,   5.593, 250.5  ,   3.822,   0.538, 171.595,   4.472,   0.797]])
+    else:
+        print(dphhpd)
+    showfit(dphhpd, dphfile, names=[names[0], names[4]], set_plot=set_plot, mode=mode, model='DPmap')
 
 if __name__ == "__main__":
     import sys

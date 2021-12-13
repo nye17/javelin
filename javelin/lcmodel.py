@@ -992,6 +992,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False):
 
 
 def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
+                     widtobaseline=0.2, widlimit=None,
                      set_threading=False, blocksize=10000, set_retq=False,
                      set_verbose=False, fixed=None, p_fix=None):
     """ log-posterior function of p.
@@ -1094,6 +1095,13 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
             if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0]:
                 # try not stack priors
                 prior2 = my_pos_inf
+        # penalize on extremely large transfer function width
+        if widtobaseline < 1.0:
+            if np.abs(lwids[i]) > widtobaseline*zydata.rj:
+                prior2 += np.log(np.abs(lwids[i])/(widtobaseline*zydata.rj))
+        if widlimit is not None:
+            if lwids[i] > widlimit[i][1] or lwids[i] < widlimit[i][0]:
+                prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
     if set_retq:
@@ -1267,6 +1275,7 @@ class Rmap_Model(object):
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, lagtobaseline=0.3, laglimit="baseline",
+                widtobaseline=0.2, widlimit="nyquist",
                 nwalkers=100, nburn=100, nchain=100, threads=1, fburn=None,
                 fchain=None, flogp=None, set_threading=False, blocksize=10000,
                 set_verbose=True, fixed=None, p_fix=None):
@@ -1338,6 +1347,12 @@ class Rmap_Model(object):
         elif len(laglimit) != (self.nlc - 1):
             raise InputError(
                 "laglimit should be a list of lists matching number of lines")
+        if widlimit == "nyquist":
+            # two times the cadence, resembling Nyquist sampling.
+            widlimit = [[0.0, 2.0*self.cont_cad],]*(self.nlc-1)
+        elif len(widlimit) != (self.nlc - 1):
+            raise InputError(
+                "widlimit should be a list of lists matching number of lines")
         # generate array of random numbers
         p0 = np.random.rand(nwalkers*self.ndim).reshape(nwalkers, self.ndim)
         # initialize array
@@ -1362,12 +1377,18 @@ class Rmap_Model(object):
                       lagtobaseline)
             else:
                 print("no penalizing long lags, but within the baseline")
+            if widtobaseline < 1.0:
+                print("penalize widths longer than %3.2f of the baseline" %
+                      widtobaseline)
+            else:
+                print("no penalizing long lags, but within the baseline")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
                   % (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_spear_p,
                                   args=(self.zydata, conthpd, lagtobaseline,
-                                        laglimit, set_threading, blocksize,
+                                        laglimit, widtobaseline, widlimit,
+                                        set_threading, blocksize,
                                         False, False, fixed, p_fix), threads=threads)
         pos, prob, state = sampler.run_mcmc(p0, nburn)
         if set_verbose:

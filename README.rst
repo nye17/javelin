@@ -98,6 +98,13 @@ uses ``GFortran`` as its Fortran compiler.
 
         $ export VECLIB_MAXIMUM_THREADS=1
 
+.. caution::
+
+    For Mac users who have problems linking to -lSystem, try to add the path to
+    the relevant library
+
+        $ export LIBRARY_PATH="$LIBRARY_PATH:/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
+
 Test Installation
 -----------------
 

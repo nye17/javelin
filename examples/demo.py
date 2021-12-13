@@ -273,14 +273,14 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
     rmap   = Rmap_Model(zydata)
     if mode == "test" :
         if zydata.nlc == 2 :
-            print(rmap([np.log(2.), np.log(100), lagy, widy, scaley ]))
+            print(rmap([np.log(sigma), np.log(tau), lagy, widy, scaley ]))
         elif zydata.nlc == 3 :
-            print(rmap([np.log(2.), np.log(100), lagy, widy, scaley, lagz, widz, scalez]))
+            print(rmap([np.log(sigma), np.log(tau), lagy, widy, scaley, lagz, widz, scalez]))
         return(None)
     elif mode == "show" :
         rmap.load_chain(linfchain, set_verbose=False)
     elif mode == "run" :
-        laglimit = [[0.0, 400.0],]*(zydata.nlc-1)
+        laglimit = [[0.0, tau],]*(zydata.nlc-1)
         print(laglimit)
 #        laglimit = "baseline"
         linfchain = ".".join([linfchain, "myrun"])
@@ -394,6 +394,7 @@ def demo(mode, covfunc="drw") :
                 # for some reason, Mac cannot handle the pools in emcee.
                 threads = 1
             else :
+            # if True:
                 threads = multiprocessing.cpu_count()
         except (ImportError,NotImplementedError) :
             threads = 1
@@ -431,14 +432,17 @@ def demo(mode, covfunc="drw") :
     # getMock(zydata, confile, topfile, doufile, phofile, dphfile, set_plot=set_plot, mode=mode)
 
     # fit continuum
-    # conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode); print conthpd
+    # conthpd = fitCon(confile, confchain, names=names[0:1], threads=threads, set_plot=set_plot, mode=mode)
     conthpd = np.array([[0.61, 4.962], [0.801, 5.352], [1.068, 5.881]])
+    print(conthpd)
 
     # fit tophat
-    # tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
+    tophpd = fitLag(topfile, topfchain, conthpd, names=names[0:2], threads=threads, set_plot=set_plot, mode=mode)
+
+    showfit(tophpd, topfile, names=names[0:2], set_plot=set_plot, mode=mode)
 
     # fit douhat
-    # douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=150, nburn=150, nchain=150,set_plot=set_plot, mode=mode)
+    # douhpd = fitLag(doufile, doufchain, conthpd, names=names[0:3], threads=threads, nwalkers=100, nburn=100, nchain=100,set_plot=set_plot, mode=mode)
 
     # show fit
     # showfit(douhpd, doufile, names=names[0:3], set_plot=set_plot, mode=mode)
@@ -453,7 +457,7 @@ def demo(mode, covfunc="drw") :
     # dphhpd = fitDPmap(phofile, dphfchain, conthpd, names=[names[0], names[3]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode, fixed=[0, 0, 1, 0, 0, 0, 0, 0], p_fix=[np.log(3.0), np.log(400.0), 1, 2.0, 0.5, 0, 0.001, 1])
 
     # fit dpmap
-    dphhpd = fitDPmap(dphfile, dphfchain, conthpd, names=[names[0], names[4]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
+    # dphhpd = fitDPmap(dphfile, dphfchain, conthpd, names=[names[0], names[4]], lagrange=[50, 300], lagbinsize=0.2, threads=threads, nwalkers=100, nburn=100, nchain=100, set_plot=set_plot, mode=mode)
 
 if __name__ == "__main__":
     import sys

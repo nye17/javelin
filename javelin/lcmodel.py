@@ -1094,14 +1094,17 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         if laglimit is not None:
             if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0]:
                 # try not stack priors
-                prior2 = my_pos_inf
+                prior2 += my_pos_inf
         # penalize on extremely large transfer function width
         if widtobaseline < 1.0:
             if np.abs(lwids[i]) > widtobaseline*zydata.rj:
                 prior2 += np.log(np.abs(lwids[i])/(widtobaseline*zydata.rj))
         if widlimit is not None:
             if lwids[i] > widlimit[i][1] or lwids[i] < widlimit[i][0]:
-                prior2 = my_pos_inf
+                # print "wid prior applied"
+                # print lwids[i]
+                # print widlimit[i]
+                prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
     if set_retq:
@@ -1381,7 +1384,7 @@ class Rmap_Model(object):
                 print("penalize widths longer than %3.2f of the baseline" %
                       widtobaseline)
             else:
-                print("no penalizing long lags, but within the baseline")
+                print("no penalizing long widths, but within the baseline")
             print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
                   % (nburn, nwalkers, nburn*nwalkers))
         # initialize the ensemble sampler
@@ -1747,14 +1750,14 @@ def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False,
     # penalize long lags to be impossible
     if laglimit is not None:
         if llags[0] > laglimit[0][1] or llags[0] < laglimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # penalize on extremely large transfer function width
     if widtobaseline < 1.0:
         if np.abs(lwids[0]) > widtobaseline*zydata.rj:
             prior2 += np.log(np.abs(lwids[0])/(widtobaseline*zydata.rj))
     if widlimit is not None:
         if lwids[0] > widlimit[0][1] or lwids[0] < widlimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # if np.abs(lwids[0]) >= zydata.cont_cad:
         # prior2 += np.log(np.abs(lwids[0])/zydata.cont_cad)
     # else:
@@ -1764,10 +1767,10 @@ def lnpostfn_photo_p(p, zydata, conthpd=None, set_extraprior=False,
         # penalize on extremely short lags (below median cadence).
         if (np.abs(llags[0]) <= zydata.cont_cad or
                 np.abs(llags[0]) <= np.abs(lwids[0])):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         # penalize on extremely small line responses (below mean error level).
         if sigma * np.abs(lscales[0]) <= np.mean(zydata.elist[1]):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         # }}}
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
@@ -2359,14 +2362,14 @@ def lnpostfn_sbphoto_p(p, zydata, conthpd=None, scalehpd=None,
     # penalize long lags to be impossible
     if laglimit is not None:
         if lag > laglimit[0][1] or lag < laglimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # penalize on extremely large transfer function width
     if widtobaseline < 1.0:
         if np.abs(wid) > lagtobaseline*zydata.rj:
             prior2 += np.log(np.abs(wid)/(lagtobaseline*zydata.rj))
     if widlimit is not None:
         if wid > widlimit[0][1] or wid < widlimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1+prior3*prior3) - prior2
     if set_retq:
@@ -2919,7 +2922,7 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
             # laglimit starts with the 1st line lightcurve.
             if lags[i] > laglimit[_i][1] or lags[i] < laglimit[_i][0]:
                 # try not stack priors
-                prior2 = my_pos_inf
+                prior2 += my_pos_inf
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2
     if set_retq:
@@ -3607,7 +3610,7 @@ def lnpostfn_thindisk_p(p, zydata, bandwaves, ref_wave, conthpd=None,
         if laglimit is not None:
             if llags[i] > laglimit[i][1] or llags[i] < laglimit[i][0]:
                 # try not stack priors
-                prior2 = my_pos_inf
+                prior2 += my_pos_inf
     # Add penalty for alpha, beta
     if (alpha <= a_lims[0]) or (beta <= b_lims[0]) or \
        (alpha >= a_lims[1]) or (beta >= b_lims[1]):
@@ -4252,7 +4255,7 @@ def lnpostfn_doublephoto_p(p, zydata, conthpd=None, set_extraprior=False,
     prior2 = 0.0
     if llags[0] < llags[1]:
         # make sure the first lag is always larger
-        prior2 = my_pos_inf
+        prior2 += my_pos_inf
     if lagtobaseline < 1.0:
         if np.abs(llags[0]) > lagtobaseline*zydata.rj:
             # penalize long lags when larger than 0.3 times the baseline,
@@ -4265,9 +4268,9 @@ def lnpostfn_doublephoto_p(p, zydata, conthpd=None, set_extraprior=False,
     # penalize long lags to be impossible
     if laglimit is not None:
         if llags[0] > laglimit[0][1] or llags[0] < laglimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         if llags[1] > laglimit[1][1] or llags[1] < laglimit[1][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # penalize on extremely large transfer function width
     if widtobaseline < 1.0:
         if np.abs(lwids[0]) > widtobaseline*zydata.rj:
@@ -4276,9 +4279,9 @@ def lnpostfn_doublephoto_p(p, zydata, conthpd=None, set_extraprior=False,
             prior2 += np.log(np.abs(lwids[1])/(widtobaseline*zydata.rj))
     if widlimit is not None:
         if lwids[0] > widlimit[0][1] or lwids[0] < widlimit[0][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         if lwids[1] > widlimit[1][1] or lwids[1] < widlimit[1][0]:
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
     # if np.abs(lwids[0]) >= zydata.cont_cad:
         # prior2 += np.log(np.abs(lwids[0])/zydata.cont_cad)
     # else:
@@ -4287,14 +4290,14 @@ def lnpostfn_doublephoto_p(p, zydata, conthpd=None, set_extraprior=False,
         # XXX {{{Extra penalizations.
         # penalize on extremely short lags (below median cadence).
         if (np.abs(llags[0]) <= zydata.cont_cad or np.abs(llags[0]) <= np.abs(lwids[0])):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         if (np.abs(llags[1]) <= zydata.cont_cad or np.abs(llags[1]) <= np.abs(lwids[1])):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         # penalize on extremely small line responses (below mean error level).
         if sigma * np.abs(lscales[0]) <= np.mean(zydata.elist[1]):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         if sigma * np.abs(lscales[1]) <= np.mean(zydata.elist[2]):
-            prior2 = my_pos_inf
+            prior2 += my_pos_inf
         # }}}
     # add logp of all the priors
     prior = -0.5*(prior0*prior0+prior1*prior1) - prior2

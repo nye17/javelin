@@ -25,6 +25,6 @@ elif [ `echo ${name} | grep -c "node"` -eq 1 ]; then
     python setup.py config_fc --fcompiler=intelem install --prefix="~/local" sdist
 else
     echo "Others"
-    python setup.py install --prefix="~/usr" sdist
+    python setup.py install sdist
 fi
 

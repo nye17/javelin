@@ -1,15 +1,18 @@
 # Copyright (c) Anand Patil, 2007
 
+from __future__ import absolute_import
 import numpy as np
-import wrapped_distances
+from . import wrapped_distances
 import inspect
 import imp
 import pickle
-from isotropic_cov_funs import symmetrize, imul
+from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 import sys,os
 import javelin
 from javelin.threadpool import get_threadpool_size, map_noreturn
+import six
+from six.moves import range
 mod_search_path = [javelin.__path__[0]+'/gp/cov_funs', os.getcwd()] + sys.path
 
 
@@ -98,29 +101,31 @@ class covariance_wrapper(object):
         self.with_x = with_x
 
         # Add covariance parameters to function signature
-        for parameter in extra_cov_params.iterkeys():
+        for parameter in six.iterkeys(extra_cov_params):
             self.__doc__ += ', ' + parameter
         # Add distance parameters to function signature
         if hasattr(distance_fun,'extra_parameters'):
             self.extra_distance_params = distance_fun.extra_parameters
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in six.iterkeys(self.extra_distance_params):
                 self.__doc__ += ', ' + parameter
         # Document covariance parameters
         self.__doc__ += covariance_wrapperdoc[1]
         if hasattr(cov_fun, 'extra_parameters'):
-            for parameter in extra_cov_params.iterkeys():
+            for parameter in six.iterkeys(extra_cov_params):
                 self.__doc__ += "\n\n    - " + parameter + ": " + extra_cov_params[parameter]
         # Document distance parameters.
         if hasattr(distance_fun,'extra_parameters'):
-            for parameter in self.extra_distance_params.iterkeys():
+            for parameter in six.iterkeys(self.extra_distance_params):
                 self.__doc__ += "\n\n    - " + parameter + ": " + self.extra_distance_params[parameter]
 
         self.__doc__ += "\n\nDistances are computed using "+distance_fun.__name__+":\n\n"+distance_fun.__doc__
 
     def __call__(self,x,y,amp=1.,scale=1.,symm=None,*args,**kwargs):
 
+
         if amp<0. or scale<0.:
-            raise ValueError, 'The amp and scale parameters must be positive.'
+            raise ValueError('The amp and scale parameters must be positive.')
+
 
         if symm is None:
             symm = (x is y)
@@ -128,7 +133,8 @@ class covariance_wrapper(object):
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
         ny = y.shape[0]
-        n_threads = min(get_threadpool_size(), nx*ny / 10000)
+        n_threads = min(get_threadpool_size(), np.int(nx*ny / 10000))
+
 
         if n_threads > 1:
             if not symm:
@@ -136,15 +142,18 @@ class covariance_wrapper(object):
             else:
                 bounds = np.array(np.sqrt(np.linspace(0,ny*ny,n_threads+1)),dtype=int)
 
+
         # Split off the distance arguments
         distance_arg_dict = {}
         if hasattr(self.distance_fun, 'extra_parameters'):
-            for key in self.extra_distance_params.iterkeys():
-                if key in kwargs.keys():
+            for key in six.iterkeys(self.extra_distance_params):
+                if key in list(kwargs.keys()):
                     distance_arg_dict[key] = kwargs.pop(key)
+
 
         # Allocate the matrix
         C = np.asmatrix(np.empty((nx,ny),dtype=float,order='F'))
+
 
         def targ(C,x,y, cmin, cmax,symm, d_kwargs=distance_arg_dict, c_args=args, c_kwargs=kwargs):
             # Compute distance for this bit
@@ -160,7 +169,7 @@ class covariance_wrapper(object):
         if n_threads <= 1:
             targ(C,x,y,0,-1,symm)
         else:
-            thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
+            thread_args = [(C,x,y,bounds[i],bounds[i+1],symm) for i in range(n_threads)]
             map_noreturn(targ, thread_args)
 
         if symm:
@@ -244,7 +253,7 @@ class covariance_function_bundle(object):
         self.cov_fun_module = cov_fun_module
         self.extra_cov_params = extra_cov_params
         self.ampsq_is_diag = ampsq_is_diag
-        
+
         self.wrappers = []
 
         self.add_distance_metric('euclidean','wrapped_distances',with_x=with_x)

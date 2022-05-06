@@ -1,11 +1,15 @@
-from gp import Mean, Covariance, observe, Realization, GPutils
-from gp import NearlyFullRankCovariance, FullRankCovariance
-from cholesky_utils import cholesky, cholesky2, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
+from __future__ import absolute_import
+from __future__ import print_function
+from .gp import Mean, Covariance, observe, Realization, GPutils
+from .gp import NearlyFullRankCovariance, FullRankCovariance
+from .cholesky_utils import cholesky, cholesky2, trisolve, chosolve, chodet, chosolve_from_tri, chodet_from_tri
 import numpy as np
 from numpy.random import normal, multivariate_normal
-from cov import get_covfunc_dict
-from spear import spear, spear_threading
-from zylc import LightCurve
+from .cov import get_covfunc_dict
+from .spear import spear, spear_threading
+from .zylc import LightCurve
+from six.moves import range
+from six.moves import zip
 
 np.set_printoptions(precision=3)
 
@@ -91,15 +95,15 @@ def generateLine(jc, mc, lag, wid, scale, mc_mean=0.0, ml_mean=0.0):
     # continuum signal
     sc = mc - mc_mean
     if wid < 0.0 :
-        print("WARNING: negative wid? set to abs(wid) %10.4f"%wid)
+        print(("WARNING: negative wid? set to abs(wid) %10.4f"%wid))
         wid = np.abs(wid)
     if scale < 0.0 :
-        print("WARNING: negative scale? set to abs(scale) %10.4f"%scale)
+        print(("WARNING: negative scale? set to abs(scale) %10.4f"%scale))
         scale = np.abs(scale)
     sl = smooth(sc,window_len=window_len,window='flat')
     ml = ml_mean + sl*scale
     jl = jc + lag
-    print(len(ml))
+    print((len(ml)))
     return(jl, ml)
 
 class PredictSignal(object):
@@ -231,7 +235,7 @@ class PredictSignal(object):
             return(mwant)
         else:
             mwant_list = []
-            for i in xrange(num):
+            for i in range(num):
                 f = Realization(self.M, self.C)
                 mwant = f(jwant)
                 if set_error_on_mocklc:
@@ -289,7 +293,7 @@ class PredictRmap(object):
             Variance at simulated point.
         """
         m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
-        for i in xrange(len(jwant)) :
+        for i in range(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
 
@@ -318,10 +322,10 @@ class PredictRmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in "+
+                    print(("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                          "light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -331,7 +335,7 @@ class PredictRmap(object):
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
         zylclist_new = []
-        for ilc in xrange(nlc) :
+        for ilc in range(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
             # no covariance considered here
             vcovmat = np.diag(v)
@@ -447,9 +451,9 @@ class PredictSpear(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in light curve %d," +
+                    print(("WARNING: input zylclist has inequal m elements in light curve %d," +
                            "please make sure the m elements are filled with the desired mean" +
-                           "of the mock light curves, now reset to zero"%ilc)
+                           "of the mock light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -493,7 +497,7 @@ class PredictSpear(object):
         # unpack the data
         _jlist, _mlist, _elist = self._unpackdataarr(npt, nptlist, jarr, m, earr, iarr)
         zylclist_new = []
-        for ilc in xrange(self.nlc_obs) :
+        for ilc in range(self.nlc_obs) :
             zylclist_new.append([_jlist[ilc], _mlist[ilc], _elist[ilc]])
         return(zylclist_new)
 
@@ -521,7 +525,7 @@ class PredictSpear(object):
         jlist = []
         mlist = []
         elist = []
-        for i in xrange(self.nlc_obs) :
+        for i in range(self.nlc_obs) :
             indxlc = (iarr == (i+1))
             # print marr.shape
             if np.sum(indxlc) != nptlist[i] :
@@ -581,7 +585,7 @@ class PredictPmap(object):
             Variance at simulated point.
         """
         m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
-        for i in xrange(len(jwant)) :
+        for i in range(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
 
@@ -610,10 +614,10 @@ class PredictPmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in "+
+                    print(("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                          "light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -623,7 +627,7 @@ class PredictPmap(object):
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
         zylclist_new = []
-        for ilc in xrange(nlc) :
+        for ilc in range(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
             # no covariance considered here
             vcovmat = np.diag(v)
@@ -734,7 +738,7 @@ class PredictSPmap(object):
             Variance at simulated point.
         """
         m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
-        for i in xrange(len(jwant)) :
+        for i in range(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
 
@@ -766,10 +770,10 @@ class PredictSPmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in "+
+                    print(("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                          "light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -779,7 +783,7 @@ class PredictSPmap(object):
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
         zylclist_new = []
-        for ilc in xrange(nlc) :
+        for ilc in range(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
             # no covariance considered here
             vcovmat = np.diag(v)
@@ -881,7 +885,7 @@ class PredictSCmap(object):
             Variance at simulated point.
         """
         m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
-        for i in xrange(len(jwant)) :
+        for i in range(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
 
@@ -910,10 +914,10 @@ class PredictSCmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in "+
+                    print(("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                          "light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -923,7 +927,7 @@ class PredictSCmap(object):
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
         zylclist_new = []
-        for ilc in xrange(nlc) :
+        for ilc in range(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
             # no covariance considered here
             vcovmat = np.diag(v)
@@ -1025,7 +1029,7 @@ class PredictDPmap(object):
             Variance at simulated point.
         """
         m, v = self._fastpredict(jwant, iwant, set_threading=self.set_threading)
-        for i in xrange(len(jwant)) :
+        for i in range(len(jwant)) :
             m[i] += self.blist[int(iwant[i])-1]
         return(m, v)
 
@@ -1054,10 +1058,10 @@ class PredictDPmap(object):
             if (len(lclist) == 3):
                 jsubarr, msubarr, esubarr = [np.array(l) for l in lclist]
                 if (np.min(msubarr) != np.max(msubarr)) :
-                    print("WARNING: input zylclist has inequal m elements in "+
+                    print(("WARNING: input zylclist has inequal m elements in "+
                           "light curve %d, please make sure the m elements "+
                           "are filled with the desired mean of the mock "+
-                          "light curves, now reset to zero"%ilc)
+                          "light curves, now reset to zero"%ilc))
                     msubarr = msubarr * 0.0
                 nptlc = len(jsubarr)
                 # sort the date, safety
@@ -1067,7 +1071,7 @@ class PredictDPmap(object):
                 elist.append(esubarr[p])
                 ilist.append(np.zeros(nptlc, dtype="int")+ilc+1)
         zylclist_new = []
-        for ilc in xrange(nlc) :
+        for ilc in range(nlc) :
             m, v = self.mve_var(jlist[ilc], ilist[ilc])
             # no covariance considered here
             vcovmat = np.diag(v)
@@ -1153,13 +1157,13 @@ def smooth(x,window_len=11,window='flat'):
     TODO: the window parameter could be the window itself if an array instead of a string
     """
     if x.ndim != 1:
-        raise ValueError, "smooth only accepts 1 dimension arrays."
+        raise ValueError("smooth only accepts 1 dimension arrays.")
     if x.size < window_len:
-        raise ValueError, "Input vector needs to be bigger than window size."
+        raise ValueError("Input vector needs to be bigger than window size.")
     if window_len<3:
         return x
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
     # increment the original array
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
     if window == 'flat': #moving average

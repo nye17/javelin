@@ -1,14 +1,17 @@
 # Copyright (c) Anand Patil, 2007
 
+from __future__ import absolute_import
+from six.moves import range
 __docformat__='reStructuredText'
 __all__ = ['FullRankCovariance']
 
 
+import numpy as np
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 from javelin.gp.linalg_utils import dpotrf_wrap
-from Covariance import Covariance
+from .Covariance import Covariance
 from javelin.gp.incomplete_chol import ichol, ichol_continue
 
 
@@ -84,18 +87,19 @@ class FullRankCovariance(Covariance):
         N_new = x.shape[0]
 
         U=self.__call__(x, x, regularize = False, observed = observed)
+
         if return_eval_also:
             C_eval = U.copy('F')
 
         if nugget is not None:
-            for i in xrange(N_new):
+            for i in range(N_new):
                 U[i,i] += nugget[i]
 
         # print self.params, x.shape, observed, nugget
 
         info = dpotrf_wrap(U)
         if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info
+            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info)
 
         if return_eval_also:
             return U, C_eval
@@ -140,7 +144,7 @@ class FullRankCovariance(Covariance):
 
         # not really implemented yet.
         if nugget is not None:
-            for i in xrange(N_new):
+            for i in range(N_new):
                 U_new[i,i] += nugget[i]
 
         U = asmatrix(zeros((N_new + N_old, N_old + N_new), dtype=float, order='F'))
@@ -156,7 +160,7 @@ class FullRankCovariance(Covariance):
 
         info = dpotrf_wrap(U_new)
         if info>0:
-            raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info
+            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info)
 
         U[N_old:,N_old:] = U_new
         if return_eval_also:
@@ -166,6 +170,7 @@ class FullRankCovariance(Covariance):
 
     def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
         out = Covariance.__call__(self,x,y,observed,regularize,return_Uo_Cxo=return_Uo_Cxo)
+        # super(FullRankCovariance, self).__call__(x,y,observed,regularize,return_Uo_Cxo=return_Uo_Cxo, eval_fun=self.eval_fun)
 
         if self.nugget is None:
             return out
@@ -173,7 +178,7 @@ class FullRankCovariance(Covariance):
         if return_Uo_Cxo:
             out, Uo_Cxo = out
         if x is y:
-            for i in xrange(out.shape[0]):
+            for i in range(out.shape[0]):
                 out[i,i] += self.nugget
         elif y is None:
             out += self.nugget
@@ -198,7 +203,7 @@ class FullRankCovariance(Covariance):
 
         if self.ndim is not None:
             if not ndim==self.ndim:
-                raise ValueError, "Dimension of observation mesh is not equal to dimension of base mesh."
+                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 

@@ -1,17 +1,22 @@
-import isotropic_cov_funs
+from __future__ import absolute_import
+# import isotropic_cov_funs
+from javelin.gp.cov_funs import isotropic_cov_funs
 import numpy as np
-from isotropic_cov_funs import symmetrize, imul
+from .isotropic_cov_funs import symmetrize, imul
 from copy import copy
 from javelin.threadpool import get_threadpool_size, map_noreturn
+from six.moves import range
 
 __all__ = ['brownian']
 
 def brownian_targ(C,x,y,h,amp,cmin, cmax,symm):
     # Compute covariance for this bit
     if h==.5:
-        isotropic_cov_funs.brownian(C,x,y,cmin=0,cmax=-1,symm=symm)
+        # isotropic_cov_funs.brownian(C,x,y,cmin=0,cmax=-1,symm=symm)
+        brownian(C,x,y,cmin=0,cmax=-1,symm=symm)
     else:
-        isotropic_cov_funs.frac_brownian(C,x,y,h,cmin=0,cmax=-1,symm=symm)
+        # isotropic_cov_funs.frac_brownian(C,x,y,h,cmin=0,cmax=-1,symm=symm)
+        frac_brownian(C,x,y,h,cmin=0,cmax=-1,symm=symm)
 
     imul(C, amp*amp, cmin=cmin, cmax=cmax, symm=symm)
     # Possibly symmetrize this bit
@@ -60,10 +65,10 @@ def brownian(x,y,amp=1.,scale=1.,origin=None,h=.5,symm=None):
     # multithreaded call.
 
     if h<0 or h>1:
-        raise ValueError, 'Parameter h must be between 0 and 1.'
+        raise ValueError('Parameter h must be between 0 and 1.')
 
     if amp<0. or scale<0.:
-        raise ValueError, 'The amp and scale parameters must be positive.'
+        raise ValueError('The amp and scale parameters must be positive.')
 
     if symm is None:
         symm = (x is y)
@@ -90,7 +95,7 @@ def brownian(x,y,amp=1.,scale=1.,origin=None,h=.5,symm=None):
     if n_threads <= 1:
         brownian_targ(C,x,y,h,amp,0,-1,symm)
     else:
-        thread_args=[(C,x,y,h,amp,bounds[i],bounds[i+1],symm) for i in xrange(n_threads)]
+        thread_args=[(C,x,y,h,amp,bounds[i],bounds[i+1],symm) for i in range(n_threads)]
         map_noreturn(brownian_targ, thread_args)
 
     return C

@@ -1,10 +1,13 @@
-from isotropic_cov_funs import *
-from cov_utils import *
-from bases import *
-from wrapped_distances import *
-import isotropic_cov_funs
-from brownian import *
-from nsmatern import *
+from __future__ import absolute_import
+from .isotropic_cov_funs import *
+from .cov_utils import *
+from .bases import *
+from .wrapped_distances import *
+# import isotropic_cov_funs
+from javelin.gp.cov_funs import isotropic_cov_funs
+from .brownian import *
+from .nsmatern import *
+import six
 
 
 
@@ -22,7 +25,7 @@ extra_parameters = {
                 }
 
 
-for name in extra_parameters.iterkeys():
+for name in six.iterkeys(extra_parameters):
     locals()[name] = covariance_function_bundle(name, 'isotropic_cov_funs', extra_parameters[name], ampsq_is_diag=True)
 
 nsmatern_extra_params = {'diff_degree': 'A function giving the local degree of differentiability.',

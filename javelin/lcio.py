@@ -1,11 +1,14 @@
 # Last-modified: 30 Sep 2013 12:25:36 PM
 
+from __future__ import absolute_import
 __all__ = ['combinelc', 'readlc', 'writelc', 'readlc_3c', 'file_len']
 
 """ I/O functions for light curve data. 
 
 The functions were originally written in hopes of avoiding numpy dependencies, so
 there are no numpy arrays involved, but the speed should suffice.  """
+from six.moves import map
+from six.moves import range
 
 def combinelc(lctxt, lcdata):
     """ Write a list of 3-column based light curve files into the ZY light curve data file.
@@ -169,7 +172,7 @@ def writelc(lightcurvearray, lcdata, fmt="10.5f"):
         f = lcdata
     nlc = len(lightcurvearray)
     f.write(str(nlc)+"\n")
-    for ilc in xrange(nlc):
+    for ilc in range(nlc):
         lightcurve = lightcurvearray[ilc]
         assert len(lightcurve) == 3, "Input list not consist of 3-column sublists"
         jd, pt, er = lightcurve

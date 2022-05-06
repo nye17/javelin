@@ -1,4 +1,6 @@
 # 01 Sep 2021 18:10:57
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
@@ -20,7 +22,7 @@ def test_dpmap():
     # print(dpmap([np.log(3.), np.log(400), 100, 2, 0.5, 0, 0, 1]))
     # print(dpmap([np.log(3.), np.log(400), 100, 2, 0.5, 250, 0, 0.5]))
     # print(dpmap([np.log(3.), np.log(400), 250, 0, 0.5, 100, 2, 0.5]))
-    print(dpmap([np.log(3.), np.log(400), 250, 2, 0.5, 100, 2, 0.5]))
+    print((dpmap([np.log(3.), np.log(400), 250, 2, 0.5, 100, 2, 0.5])))
     # print(dpmap([np.log(3.), np.log(400), 250, 0.011, 0.5, 100, 2, 0.5]))
     # print(dpmap([np.log(3.), np.log(400), 250.0, 4.0, 0.5, 100.0, 2, 0.5]))
     # pmap   = Pmap_Model(zydata)

@@ -1,17 +1,21 @@
 #Last-modified: 08 Dec 2013 15:54:47
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from javelin.predict import PredictSignal, PredictRmap, generateLine, generateError, PredictSpear
 from javelin.lcio import *
 from javelin.zylc import LightCurve, get_data
 from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model, DPmap_Model
+from six.moves import range
 
 """ Tests from scratch.
 """
 
 #************** PLEASE DO NOT EDIT THIS PART*****
 # show figures interactively
-figext = 'pdf'
+figext = None
+# figext = 'pdf'
 # names of the true light curves
 names  = ["Continuum", "Yelm", "Zing", "YelmBand", "YelmZingBand"]
 # dense sampling of the underlying signal
@@ -63,7 +67,7 @@ def getTrue(trufile, set_plot=False, mode="test", covfunc="drw"):
     if mode == "test" :
         return(None)
     elif mode == "show" :
-        print("read true light curve signal from %s"%trufile)
+        print(("read true light curve signal from %s"%trufile))
         zydata = get_data(trufile, names=names)
     elif mode == "run" :
         print("generate true light curve signal")
@@ -75,7 +79,7 @@ def getTrue(trufile, set_plot=False, mode="test", covfunc="drw"):
             print("generating Kepler light curves...")
             # slower
             zydata = generateTrueLC(covfunc="kepler2_exp")
-        print("save true light curve signal to %s"%trufile)
+        print(("save true light curve signal to %s"%trufile))
         trufile = ".".join([trufile, "myrun"])
         zydata.save(trufile)
     if set_plot :
@@ -112,7 +116,7 @@ def generateTrueLC(covfunc="kepler2_exp"):
     imax = np.searchsorted(jdense, jmax)
     zylist.append([jdense[imin: imax], sdense[imin: imax]+lcmeans[0], edense[imin: imax]])
     # this is for handling the prediction for Yelm, and Zing.
-    for i in xrange(1, 3) :
+    for i in range(1, 3) :
         lag  = lags[i]
         wid  = wids[i]
         scale= scales[i]
@@ -191,7 +195,7 @@ def True2Mock(zydata, sparse=[2, 4, 4], errfac=[0.01, 0.01, 0.01], hasgap=[True,
         j0 = zydata.jarr[0]
         j1 = zydata.jarr[-1]
         ng = np.floor(rj/180.0)
-    for i in xrange(zydata.nlc):
+    for i in range(zydata.nlc):
         ispa = np.arange(0, zydata.nptlist[i], sparse[i])
         j = zydata.jlist[i][ispa]
         # strip off gaps
@@ -253,7 +257,7 @@ def fitCon(confile, confchain, names=None, threads=1, set_plot=False, nwalkers=1
     zydata = get_data(confile, names=names)
     cont   = Cont_Model(zydata, "drw")
     if mode == "test" :
-        print(cont([np.log(sigma), np.log(tau)], set_retq=True))
+        print((cont([np.log(sigma), np.log(tau)], set_retq=True)))
         return(None)
     elif mode == "show" :
         cont.load_chain(confchain)
@@ -273,9 +277,9 @@ def fitLag(linfile, linfchain, conthpd, names=None, lagrange=[50, 300], lagbinsi
     rmap   = Rmap_Model(zydata)
     if mode == "test" :
         if zydata.nlc == 2 :
-            print(rmap([np.log(sigma), np.log(tau), lagy, widy, scaley ]))
+            print((rmap([np.log(sigma), np.log(tau), lagy, widy, scaley ])))
         elif zydata.nlc == 3 :
-            print(rmap([np.log(sigma), np.log(tau), lagy, widy, scaley, lagz, widz, scalez]))
+            print((rmap([np.log(sigma), np.log(tau), lagy, widy, scaley, lagz, widz, scalez])))
         return(None)
     elif mode == "show" :
         rmap.load_chain(linfchain, set_verbose=False)
@@ -305,7 +309,7 @@ def fitPmap(phofile, phofchain, conthpd, names=None, lagrange=[50, 300], lagbins
     zydata = get_data(phofile, names=names)
     pmap   = Pmap_Model(zydata)
     if mode == "test" :
-        print(pmap([np.log(sigma), np.log(tau), lagy, widy, scaley,  1.0]))
+        print((pmap([np.log(sigma), np.log(tau), lagy, widy, scaley,  1.0])))
         return(None)
     elif mode == "show" :
         pmap.load_chain(phofchain, set_verbose=False)
@@ -331,7 +335,7 @@ def fitDPmap(dphfile, dphfchain, conthpd, names=None, lagrange=[-50, 300], lagbi
     zydata = get_data(dphfile, names=names)
     dpmap   = DPmap_Model(zydata)
     if mode == "test" :
-        print(dpmap([np.log(sigma), np.log(tau), lagz, widz, scalez, lagy, widy, scaley]))
+        print((dpmap([np.log(sigma), np.log(tau), lagz, widz, scalez, lagy, widy, scaley])))
         return(None)
     elif mode == "show" :
         dpmap.load_chain(dphfchain, set_verbose=False)
@@ -357,7 +361,7 @@ def fitDPmap(dphfile, dphfchain, conthpd, names=None, lagrange=[-50, 300], lagbi
 def showfit(linhpd, linfile, names=None, set_plot=False, mode="test", model='Rmap') :
     if mode == "run" :
         linfile = ".".join([linfile, "myrun"])
-    print linfile
+    print(linfile)
     zydata = get_data(linfile, names=names)
     if model == 'Rmap' or model == 'Rmap2':
         rmap = Rmap_Model(zydata)
@@ -370,7 +374,7 @@ def showfit(linhpd, linfile, names=None, set_plot=False, mode="test", model='Rma
     else :
         zypred = rmap.do_pred(linhpd[1,:])
         zypred.names = names
-        print names
+        print(names)
     if set_plot :
         zypred.plot(set_pred=True, obs=zydata, figout="prediction_" + model, figext=figext)
 
@@ -407,7 +411,7 @@ def demo(mode, covfunc="drw") :
         except (ImportError,NotImplementedError) :
             threads = 1
         if threads > 1 :
-            print("use multiprocessing on %d cpus"%threads)
+            print(("use multiprocessing on %d cpus"%threads))
         else :
             print("use single cpu")
         if covfunc == "drw":
@@ -489,7 +493,7 @@ def demo(mode, covfunc="drw") :
 
 if __name__ == "__main__":
     import sys
-    print "demo test/show/run"
+    print("demo test/show/run")
     mode = sys.argv[1]
     try:
         covfunc = sys.argv[2]

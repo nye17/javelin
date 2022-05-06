@@ -1,5 +1,6 @@
 #Last-modified: 04 Dec 2013 16:21:16
 
+from __future__ import print_function
 all = ['InputError', 'UsageError', 'Error']
 
 """ Error handlers. 

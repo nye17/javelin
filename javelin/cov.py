@@ -1,8 +1,10 @@
 #Last-modified: 04 Dec 2013 16:36:10
 
+from __future__ import absolute_import
+from six.moves import range
 all = ['get_covfunc_dict', 'covname_dict', 'MyCovariance']
 
-from gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail, wkepler_exp
+from .gp.cov_funs import matern, pow_exp, pareto_exp, kepler_exp, pow_tail, wkepler_exp
 import numpy as np
 
 """ Wrapping the all the continuum (source, without lines) covariance functions together.
@@ -98,7 +100,7 @@ class MyCovariance(object):
             # Otherwise, evaluate the diagonal in a loop.
             else:
                 V=empty(lenx,dtype=float)
-                for i in xrange(lenx):
+                for i in range(lenx):
                     this_x = x[i].reshape((1,-1))
                     V[i] = self.eval_fun(this_x, this_x, **self.params)
             return(V.reshape(orig_shape))

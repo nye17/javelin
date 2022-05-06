@@ -1,4 +1,7 @@
-import isotropic_cov_funs
+from __future__ import absolute_import
+from javelin.gp.cov_funs import isotropic_cov_funs
+# import isotropic_cov_funs
+# from .isotropic_cov_funs import *
 import numpy as np
 
 
@@ -24,7 +27,7 @@ def nsmatern(C,x,y,diff_degree,amp=1.,scale=1.,h=default_h,cmin=0,cmax=-1,symm=F
 
         - `diff_degree`: A function that takes arrays and returns the degree
                          of differentiability at each location.
-    
+
         - `h`: A function that takes arrays and returns the relative amplitude
                at each location.
 
@@ -48,12 +51,13 @@ def nsmatern(C,x,y,diff_degree,amp=1.,scale=1.,h=default_h,cmin=0,cmax=-1,symm=F
     """
     ddx, ddy = diff_degree(x), diff_degree(y)
     hx, hy = h(x), h(y)
-    
+
     # for rkbesl
     nmax = np.floor(max(np.max(ddx), np.max(ddy)))
-    
+
     # Compute covariance for this bit
     isotropic_cov_funs.nsmatrn(C,ddx,ddy,hx,hy,nmax,cmin,cmax,symm=symm)
+    # nsmatrn(C,ddx,ddy,hx,hy,nmax,cmin,cmax,symm=symm)
 
     return C
 

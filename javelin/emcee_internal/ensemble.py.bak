@@ -10,7 +10,6 @@ Goodman & Weare, Ensemble Samplers With Affine Invariance
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
-from six.moves import range
 
 __all__ = ["EnsembleSampler"]
 

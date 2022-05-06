@@ -36,6 +36,10 @@ Website : http://chrisarndt.de/projects/threadpool/
 
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
 __all__ = [
     'WorkRequest',
     'set_threadpool_size',
@@ -55,7 +59,7 @@ __all__ = [
 # standard library modules
 import sys
 import threading
-import Queue
+import six.moves.queue
 import traceback
 import os
 import numpy as np
@@ -77,7 +81,7 @@ def _handle_thread_exception(request, exc_info):
     This just prints the exception info via ``traceback.print_exception``.
 
     """
-    print exc_info
+    print(exc_info)
     traceback.print_exception(*exc_info)
 
 
@@ -264,7 +268,7 @@ class ThreadPool:
             To prevent this, always set ``timeout > 0`` when calling
             ``ThreadPool.putRequest()`` and catch ``Queue.Full`` exceptions.
         """
-        self._requests_queue = Queue.Queue(q_size)
+        self._requests_queue = six.moves.queue.Queue(q_size)
         # self._results_queue = Queue.Queue(resq_size)
         self.workers = []
         self.workRequests = {}
@@ -323,7 +327,7 @@ class CountDownLatch(object):
         if self.n == 0:
             self.main_lock.release()
         self.counter_lock.release()
-    def await(self):
+    def _await(self):
         self.main_lock.acquire()
         self.main_lock.release()
 
@@ -358,11 +362,11 @@ def map_noreturn(targ, argslist):
 
     for args in argslist:
         __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))
-    done_lock.await()
+    done_lock._await()
 
     if exceptions:
         a, b, c = exceptions[0]
-        raise a, b, c
+        six.reraise(a, b, c)
 
 
 def set_threadpool_size(n):
@@ -371,7 +375,7 @@ def set_threadpool_size(n):
 
 def get_threadpool_size():
     return len(__PyMCThreadPool__.workers)
-    
+
 def thread_partition_array(x):
     "Partition work arrays for multithreaded addition and multiplication"
     n_threads = get_threadpool_size()

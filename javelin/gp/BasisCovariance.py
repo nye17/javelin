@@ -8,16 +8,18 @@
 
 # Copyright (c) Anand Patil, 2007
 
+from __future__ import absolute_import
+from six.moves import range
 __docformat__='reStructuredText'
 
 __all__ = ['BasisCovariance', 'SeparableBasisCovariance']
 
 from numpy import *
 from numpy.linalg import eigh, solve, cholesky, LinAlgError
-from GPutils import regularize_array, trisolve
+from .GPutils import regularize_array, trisolve
 from javelin.gp.linalg_utils import basis_diag_call
 from javelin.gp.incomplete_chol import ichol_basis, ichol_full
-from Covariance import Covariance
+from .Covariance import Covariance
 
 
 class BasisCovariance(Covariance):
@@ -74,7 +76,7 @@ class BasisCovariance(Covariance):
         elif coef_cov.shape == self.shape*2:
             self.coef_cov = asmatrix(coef_cov.reshape((self.n, self.n)))
         else:
-            raise ValueError, "Covariance tensor's shape must be basis.shape or basis.shape*2 (using tuple multiplication)."
+            raise ValueError("Covariance tensor's shape must be basis.shape or basis.shape*2 (using tuple multiplication).")
 
         # Cholesky factor the covariance matrix of the coefficients.
         U, m, piv = ichol_full(c=self.coef_cov, reltol=relative_precision)
@@ -105,7 +107,7 @@ class BasisCovariance(Covariance):
 
         out = zeros((self.n, x.shape[0]), dtype=float, order='F')
 
-        for i in xrange(self.n):
+        for i in range(self.n):
             out[i] = self.basis[i](x, **self.params)
 
         return out
@@ -191,7 +193,7 @@ class BasisCovariance(Covariance):
 
         if self.ndim is not None:
             if not ndim==self.ndim:
-                raise ValueError, "Dimension of observation mesh is not equal to dimension of base mesh."
+                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 
@@ -241,7 +243,7 @@ class BasisCovariance(Covariance):
         if output_type=='s':
             return U_eval, C_eval, basis_o
             
-        raise ValueError, 'Output type not recognized.'
+        raise ValueError('Output type not recognized.')
 
 
     def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
@@ -266,7 +268,7 @@ class BasisCovariance(Covariance):
         # Safety.
         if self.ndim is not None:
             if not self.ndim == ndimx:
-                raise ValueError, "The number of spatial dimensions of x does not match the number of spatial dimensions of the Covariance instance's base mesh."
+                raise ValueError("The number of spatial dimensions of x does not match the number of spatial dimensions of the Covariance instance's base mesh.")
 
         # Evaluate the Cholesky factor of self's evaluation on x.
         # Will be observed or not depending on which version of coef_U
@@ -309,7 +311,7 @@ class BasisCovariance(Covariance):
             leny = y.shape[0]
 
             if not ndimx==ndimy:
-                raise ValueError, 'The last dimension of x and y (the number of spatial dimensions) must be the same.'
+                raise ValueError('The last dimension of x and y (the number of spatial dimensions) must be the same.')
 
             # Evaluate the Cholesky factor of self's evaluation on y.
             # Will be observed or not depending on which version of coef_U
@@ -375,7 +377,7 @@ class SeparableBasisCovariance(BasisCovariance):
         BasisCovariance.__init__(self, basis, coef_cov, relative_precision, **params)
         self.basis = basis
         self.n_per_dim = []
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             self.n_per_dim.append(len(self.basis[i]))
 
     def get_shape_from_basis(self, basis):
@@ -400,16 +402,16 @@ class SeparableBasisCovariance(BasisCovariance):
 
         # Evaluate the basis factors
         basis_factors = []
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             basis_factors.append([])
-            for j in xrange(self.n_per_dim[i]):
+            for j in range(self.n_per_dim[i]):
                 basis_factors[i].append(self.basis[i][j](x, **self.params))
 
         out = ones((self.n, x.shape[0]), dtype=float)
         out_reshaped = out.reshape(self.shape + (x.shape[0],))
 
         for ind in ndindex(self.shape):
-            for dim in xrange(self.ndim):
+            for dim in range(self.ndim):
                 out_reshaped[ind] *= basis_factors[dim][ind[dim]]
 
         return out

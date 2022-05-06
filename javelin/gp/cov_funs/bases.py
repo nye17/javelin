@@ -1,6 +1,8 @@
 # Copyright (c) Anand Patil, 2007
 
+from __future__ import absolute_import
 from numpy import *
+from six.moves import range
 
 __all__ = ['fourier_basis']
 
@@ -9,14 +11,14 @@ def fourier_basis(n):
     n_dim = len(n)
     basis = []
 
-    for i in xrange(n_dim):
+    for i in range(n_dim):
 
         def fun(x, xmin, xmax):
             return ones(x.shape[0], dtype=float)
 
         basis_now = [fun]
 
-        for j in xrange(1,n[i]+1):
+        for j in range(1,n[i]+1):
 
             def fun(x, xmin, xmax, j=j, i=i):
                 T = xmax[i] - xmin[i]

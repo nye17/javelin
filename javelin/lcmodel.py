@@ -1,26 +1,29 @@
 # Last-modified: 28 Apr 2014 05:06:35
 
 # generic packages
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 # np.seterr(all='raise')
 from scipy.optimize import fmin
 import matplotlib.pyplot as plt
 # internal packages
-from cholesky_utils import cholesky, chosolve_from_tri, chodet_from_tri
-from zylc import LightCurve
-from cov import get_covfunc_dict
-from spear import spear, spear_threading
-from predict import (PredictSignal, PredictRmap, PredictPmap, PredictSPmap,
+from .cholesky_utils import cholesky, chosolve_from_tri, chodet_from_tri
+from .zylc import LightCurve
+from .cov import get_covfunc_dict
+from .spear import spear, spear_threading
+from .predict import (PredictSignal, PredictRmap, PredictPmap, PredictSPmap,
                      PredictSCmap, PredictDPmap)
-from gp import FullRankCovariance, NearlyFullRankCovariance
-from err import InputError, UsageError
+from .gp import FullRankCovariance, NearlyFullRankCovariance
+from .err import InputError, UsageError
+from six.moves import range
 try:
     # try to use locally-installed emcee
     from emcee import EnsembleSampler
 except ImportError:
     # try to use the internal emcee
-    from emcee_internal import EnsembleSampler
-from graphic import figure_handler
+    from .emcee_internal import EnsembleSampler
+from .graphic import figure_handler
 from copy import copy
 
 my_neg_inf = float(-1.0e+300)
@@ -114,7 +117,7 @@ def _exit_with_retval(nlc, set_retq, errmsg=None, set_verbose=False):
     """
     if errmsg is not None:
         if set_verbose:
-            print("Exit: %s" % errmsg)
+            print(("Exit: %s" % errmsg))
     if set_retq:
         return(my_neg_inf, my_neg_inf, my_neg_inf, my_neg_inf,
                [my_neg_inf]*nlc)
@@ -129,7 +132,7 @@ def _get_hpd(ndim, flatchain):
     chain_len = flatchain.shape[0]
     pct1sig = chain_len*np.array([0.16, 0.50, 0.84])
     medlowhig = pct1sig.astype(np.int32)
-    for i in xrange(ndim):
+    for i in range(ndim):
         vsort = np.sort(flatchain[:,i])
         hpd[:,i] = vsort[medlowhig]
     return(hpd)
@@ -290,6 +293,13 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
     """ internal function to calculate the log likelihood,
     see `lnpostfn_single_p` for doc.  """
     covfunc_dict = get_covfunc_dict(covfunc, **covparams)
+    # print('covfunc_dict')
+    # print(covfunc_dict)
+    # print('eval_fun')
+    # print('eval_fun in lcmodel')
+    # print(covfunc_dict['eval_fun'])
+    # print(covfunc_dict['eval_fun'](np.array([[0,1],[1,0]]), np.array([[0,1],[1,0]]), symm=True, amp=3, scale=400,pow=1.0))
+    ###
     sigma = covparams.pop("sigma")
     tau = covparams.pop("tau")
     nu = covparams.pop("nu", None)
@@ -333,7 +343,9 @@ def lnlikefn_single(zydata, covfunc="drw", rank="Full", set_retq=False,
     # using intrinsic method of C without explicitly writing out cmatrix
     try:
         U = C.cholesky(zydata.jarr, observed=False, nugget=zydata.varr)
+        # print('invmat', U)
     except:
+        print('cholesky failed')
         return(_exit_with_retval(zydata.nlc, set_retq,
                errmsg="Warning: non positive-definite covariance C #5",
                set_verbose=set_verbose))
@@ -456,10 +468,10 @@ class Cont_Model(object):
                                          uselognu=self.uselognu)
         if set_verbose:
             print("Best-fit parameters are:")
-            print("sigma %8.3f tau %8.3f" % (sigma, tau))
+            print(("sigma %8.3f tau %8.3f" % (sigma, tau)))
             if nu is not None:
-                print("nu %8.3f" % nu)
-            print("with logp  %10.5g " % -v_bst)
+                print(("nu %8.3f" % nu))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_grid1d(self, p_ini, fixed, rangex, dx, fgrid1d, **lnpostparams):
@@ -501,7 +513,7 @@ class Cont_Model(object):
             f.flush()
         f.close()
         if set_verbose:
-            print("saved grid1d result to %s" % fgrid1d)
+            print(("saved grid1d result to %s" % fgrid1d))
 
     def do_grid2d(self, p_ini, fixed, rangex, dx, rangey, dy, fgrid2d,
                   **lnpostparams):
@@ -558,7 +570,7 @@ class Cont_Model(object):
                 f.flush()
         f.close()
         if set_verbose:
-            print("saved grid2d result to %s" % fgrid2d)
+            print(("saved grid2d result to %s" % fgrid2d))
 
     def read_logp_map(self, fgrid2d, set_verbose=True):
         """ Read the output from `do_grid2d`.
@@ -580,10 +592,10 @@ class Cont_Model(object):
         posx, posy, dimx, dimy = [
             int(r) for r in f.readline().lstrip("#").split()]
         if set_verbose:
-            print("grid file %s is registered for" % fgrid2d)
-            print("var_x = %10s var_y = %10s" % (self.vars[posx],
-                                                 self.vars[posy]))
-            print("dim_x = %10d dim_y = %10d" % (dimx, dimy))
+            print(("grid file %s is registered for" % fgrid2d))
+            print(("var_x = %10s var_y = %10s" % (self.vars[posx],
+                                                 self.vars[posy])))
+            print(("dim_x = %10d dim_y = %10d" % (dimx, dimy)))
         if self.covfunc != "drw":
             logp, sigma, tau, nu = np.genfromtxt(
                 f, unpack=True, usecols=(0,1,2,3))
@@ -728,8 +740,8 @@ class Cont_Model(object):
             # make sure the initial values of tau_cut are smaller than tau_d
         if set_verbose:
             print("start burn-in")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         if taulimit == "baseline":
             taulimit = [self.cont_cad, self.rj]
         sampler = EnsembleSampler(
@@ -741,10 +753,10 @@ class Cont_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -758,19 +770,19 @@ class Cont_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions for all walkers are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -791,14 +803,14 @@ class Cont_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if (self.vars[i] == "nu" and (not self.uselognu)):
-                    print("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i])))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" % tuple(
-                        np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" % tuple(
+                        np.exp(hpd[:,i]))))
         # register hpd to attr
         self.hpd = hpd
 
@@ -824,7 +836,7 @@ class Cont_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(8, 5))
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             ax = fig.add_subplot(1,self.ndim,i+1)
             if (self.vars[i] == "nu" and (not self.uselognu)):
                 ax.hist(self.flatchain[:,i], bins)
@@ -854,7 +866,7 @@ class Cont_Model(object):
 
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         # get HPD
@@ -874,8 +886,8 @@ class Cont_Model(object):
             parameter space.
         """
         if (len(covpar_segments) != self.ndim):
-            print("Error: covpar_segments has to be a list of length %d" %
-                  (self.ndim))
+            print(("Error: covpar_segments has to be a list of length %d" %
+                  (self.ndim)))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
@@ -975,7 +987,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False):
         lags = np.zeros(nlc)
         wids = np.zeros(nlc)
         scales = np.ones(nlc)
-        for i in xrange(1, nlc):
+        for i in range(1, nlc):
             lags[i] = p[2+(i-1)*3]
             wids[i] = p[3+(i-1)*3]
             scales[i] = p[4+(i-1)*3]
@@ -984,7 +996,7 @@ def unpackspearpar(p, nlc=None, hascontlag=False):
         llags = np.zeros(nlc-1)
         lwids = np.zeros(nlc-1)
         lscales = np.ones(nlc-1)
-        for i in xrange(nlc-1):
+        for i in range(nlc-1):
             llags[i] = p[2+i*3]
             lwids[i] = p[3+i*3]
             lscales[i] = p[4+i*3]
@@ -1083,7 +1095,7 @@ def lnpostfn_spear_p(p, zydata, conthpd=None, lagtobaseline=0.3, laglimit=None,
         prior1 = 0.0
     # for each lag
     prior2 = 0.0
-    for i in xrange(zydata.nlc-1):
+    for i in range(zydata.nlc-1):
         if lagtobaseline < 1.0:
             if np.abs(llags[i]) > lagtobaseline*zydata.rj:
                 # penalize long lags when they are larger than 0.3 times the
@@ -1183,7 +1195,7 @@ class Rmap_Model(object):
             self.ndim = 2 + (self.nlc-1)*3
             self.vars = ["sigma", "tau"]
             self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$"]
-            for i in xrange(1, self.nlc):
+            for i in range(1, self.nlc):
                 self.vars.append("_".join(["lag",   self.names[i]]))
                 self.vars.append("_".join(["wid",   self.names[i]]))
                 self.vars.append("_".join(["scale", self.names[i]]))
@@ -1266,15 +1278,15 @@ class Rmap_Model(object):
             p_bst, self.zydata.nlc, hascontlag=False)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f" % (sigma, tau))
-            for i in xrange(self.nlc-1):
+            print(("sigma %8.3f tau %8.3f" % (sigma, tau)))
+            for i in range(self.nlc-1):
                 ip = 2+i*3
-                print("%s %8.3f %s %8.3f %s %8.3f" % (
+                print(("%s %8.3f %s %8.3f %s %8.3f" % (
                     self.vars[ip+0], llags[i],
                     self.vars[ip+1], lwids[i],
                     self.vars[ip+2], lscales[i],
-                    ))
-            print("with logp  %10.5g " % -v_bst)
+                    )))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, lagtobaseline=0.3, laglimit="baseline",
@@ -1335,12 +1347,12 @@ class Rmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -1365,7 +1377,7 @@ class Rmap_Model(object):
         else:
             p0[:, 0] += conthpd[1,0]-0.5
             p0[:, 1] += conthpd[1,1]-0.5
-        for i in xrange(self.nlc-1):
+        for i in range(self.nlc-1):
             p0[:, 2+i*3] = p0[:,2+i*3]*(laglimit[i][1]-laglimit[i][0]) + \
                 laglimit[i][0]
         if set_verbose:
@@ -1374,19 +1386,19 @@ class Rmap_Model(object):
                 print("no priors on sigma and tau")
             else:
                 print("using priors on sigma and tau from continuum fitting")
-                print(np.exp(conthpd))
+                print((np.exp(conthpd)))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, but within the baseline")
             if widtobaseline < 1.0:
-                print("penalize widths longer than %3.2f of the baseline" %
-                      widtobaseline)
+                print(("penalize widths longer than %3.2f of the baseline" %
+                      widtobaseline))
             else:
                 print("no penalizing long widths, but within the baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_spear_p,
                                   args=(self.zydata, conthpd, lagtobaseline,
@@ -1398,10 +1410,10 @@ class Rmap_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -1415,19 +1427,19 @@ class Rmap_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -1448,14 +1460,14 @@ class Rmap_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -1485,13 +1497,13 @@ class Rmap_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*self.nlc))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
-        for k in xrange(self.nlc-1):
-            for i in xrange(2+k*3, 5+k*3):
+        for k in range(self.nlc-1):
+            for i in range(2+k*3, 5+k*3):
                 ax = fig.add_subplot(self.nlc,3,i+1+1)
                 if np.mod(i, 3) == 2:
                     # lag plots
@@ -1517,8 +1529,8 @@ class Rmap_Model(object):
 
         """
         if (len(llag_segments) != self.nlc-1):
-            print("Error: llag_segments has to be a list of length %d" %
-                  (self.nlc-1))
+            print(("Error: llag_segments has to be a list of length %d" %
+                  (self.nlc-1)))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
@@ -1552,7 +1564,7 @@ class Rmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -1615,7 +1627,7 @@ class Rmap_Model(object):
         jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             iwant = np.ones(nwant)*(i+1)
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
@@ -1934,12 +1946,12 @@ class Pmap_Model(object):
             p_bst, self.zydata.nlc, hascontlag=False)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f" % (sigma, tau))
-            print("%s %8.3f %s %8.3f %s %8.3f" % (
+            print(("sigma %8.3f tau %8.3f" % (sigma, tau)))
+            print(("%s %8.3f %s %8.3f %s %8.3f" % (
                 self.vars[2], llags[0], self.vars[3], lwids[0],
-                self.vars[4], lscales[0]))
-            print("alpha %8.3f" % (lscales[1]))
-            print("with logp  %10.5g " % -v_bst)
+                self.vars[4], lscales[0])))
+            print(("alpha %8.3f" % (lscales[1])))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, set_extraprior=False, lagtobaseline=0.3,
@@ -1955,12 +1967,12 @@ class Pmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -1995,14 +2007,14 @@ class Pmap_Model(object):
                 print("no priors on sigma and tau")
             else:
                 print("using priors on sigma and tau from continuum fitting")
-                print(np.exp(conthpd))
+                print((np.exp(conthpd)))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, restrict to < baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_photo_p,
                                   args=(self.zydata, conthpd, set_extraprior,
@@ -2014,10 +2026,10 @@ class Pmap_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -2031,19 +2043,19 @@ class Pmap_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = sampler.flatchain[:, i] * 0.0 + p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -2064,15 +2076,15 @@ class Pmap_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -2102,7 +2114,7 @@ class Pmap_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*self.nlc))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
@@ -2113,7 +2125,7 @@ class Pmap_Model(object):
         ax.set_xlabel(self.texs[5])
         ax.set_ylabel("N")
         # line
-        for i in xrange(2, 5):
+        for i in range(2, 5):
             ax = fig.add_subplot(self.nlc,3,i+1+1)
             if np.mod(i, 3) == 2:
                 # lag plots
@@ -2140,8 +2152,8 @@ class Pmap_Model(object):
 
         """
         if (len(llag_segments) != self.nlc-1):
-            print("Error: llag_segments has to be a list of length %d" %
-                  (self.nlc-1))
+            print(("Error: llag_segments has to be a list of length %d" %
+                  (self.nlc-1)))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
@@ -2176,7 +2188,7 @@ class Pmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -2229,7 +2241,7 @@ class Pmap_Model(object):
         jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             iwant = np.ones(nwant)*(i+1)
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
@@ -2505,13 +2517,13 @@ class SPmap_Model(object):
                                                        nlc=self.zydata.nlc)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f" % (sigma, tau))
-            print("%s %8.3f %s %8.3f %s %8.3f" % (
+            print(("sigma %8.3f tau %8.3f" % (sigma, tau)))
+            print(("%s %8.3f %s %8.3f %s %8.3f" % (
                 self.vars[2], lag,
                 self.vars[3], wid,
                 self.vars[3], scale,
-                ))
-            print("with logp  %10.5g " % -v_bst)
+                )))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, scalehpd=None, lagtobaseline=0.3,
@@ -2528,12 +2540,12 @@ class SPmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -2575,24 +2587,24 @@ class SPmap_Model(object):
                 print("no priors on sigma and tau")
             else:
                 print("use log-priors on sigma and tau from continuum fitting")
-                print(np.exp(conthpd))
+                print((np.exp(conthpd)))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, restrict to < laglimit")
             if widtobaseline < 1.0:
-                print("penalize wids longer than %3.2f of the baseline" %
-                      widtobaseline)
+                print(("penalize wids longer than %3.2f of the baseline" %
+                      widtobaseline))
             else:
                 print("no penalizing long wids, restrict to < widlimit")
             if scalehpd is None:
                 print("no priors on scale")
             else:
                 print("using log-priors on scale")
-                print(np.exp(scalehpd))
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+                print((np.exp(scalehpd)))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_sbphoto_p,
                                   args=(self.zydata, conthpd, scalehpd,
@@ -2604,10 +2616,10 @@ class SPmap_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -2621,19 +2633,19 @@ class SPmap_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -2654,15 +2666,15 @@ class SPmap_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -2692,13 +2704,13 @@ class SPmap_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*2))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(2,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
         # line
-        for i in xrange(2, 5):
+        for i in range(2, 5):
             ax = fig.add_subplot(2,3,i+1+1)
             if np.mod(i, 3) == 2:
                 # lag plots
@@ -2757,7 +2769,7 @@ class SPmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -2837,7 +2849,7 @@ def unpackscspearpar(p, nlc=None):
     scales = np.ones(nlc+1)
     # for the smoothed continuum
     wids[1] = p[2]
-    for i in xrange(1, nlc):
+    for i in range(1, nlc):
         lags[i+1] = p[3+(i-1)*3]
         wids[i+1] = p[4+(i-1)*3]
         scales[i+1] = p[5+(i-1)*3]
@@ -2908,7 +2920,7 @@ def lnpostfn_scspear_p(p, zydata, lagtobaseline=0.3, laglimit=None,
     prior1 = 0.0
     # for each lag
     prior2 = 0.0
-    for _i in xrange(zydata.nlc-1):
+    for _i in range(zydata.nlc-1):
         i = _i + 2
         if lagtobaseline < 1.0:
             if np.abs(lags[i]) > lagtobaseline*zydata.rj:
@@ -2995,7 +3007,7 @@ class SCmap_Model(object):
             self.ndim = 2 + (self.nlc-1)*3 + 1
             self.vars = ["sigma", "tau", "smoothing"]
             self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$", r"$t_c$"]
-            for i in xrange(1, self.nlc):
+            for i in range(1, self.nlc):
                 self.vars.append("_".join(["lag", self.names[i]]))
                 self.vars.append("_".join(["wid", self.names[i]]))
                 self.vars.append("_".join(["scale", self.names[i]]))
@@ -3078,15 +3090,15 @@ class SCmap_Model(object):
                                                           self.zydata.nlc)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f wid0 %8.3f " % (sigma, tau, wids[0]))
-            for i in xrange(self.nlc-1):
+            print(("sigma %8.3f tau %8.3f wid0 %8.3f " % (sigma, tau, wids[0])))
+            for i in range(self.nlc-1):
                 ip = 2+i*3 + 1
-                print("%s %8.3f %s %8.3f %s %8.3f" % (
+                print(("%s %8.3f %s %8.3f %s %8.3f" % (
                     self.vars[ip+0], lags[i+1],
                     self.vars[ip+1], wids[i+1],
                     self.vars[ip+2], scales[i+1],
-                    ))
-            print("with logp  %10.5g " % -v_bst)
+                    )))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_mcmc(self, lagtobaseline=0.3, laglimit="baseline", nwalkers=100,
@@ -3130,12 +3142,12 @@ class SCmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -3152,18 +3164,18 @@ class SCmap_Model(object):
         p0[:, 1] += np.log(np.sqrt(self.rj*self.cont_cad))-0.5
         # make the initial wid0 to be [0, 10*cadence]
         p0[:, 2] *= 10. * self.cont_cad
-        for i in xrange(self.nlc-1):
+        for i in range(self.nlc-1):
             p0[:, 3+i*3] = p0[:,3+i*3] * (laglimit[i][1] -
                                           laglimit[i][0]) + laglimit[i][0]
         if set_verbose:
             print("start burn-in")
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, restrict to < baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_scspear_p,
                                   args=(self.zydata, lagtobaseline, laglimit,
@@ -3174,10 +3186,10 @@ class SCmap_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -3191,19 +3203,19 @@ class SCmap_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -3224,15 +3236,15 @@ class SCmap_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -3262,7 +3274,7 @@ class SCmap_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*self.nlc))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(self.nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
@@ -3273,8 +3285,8 @@ class SCmap_Model(object):
         ax.set_xlabel(self.texs[2])
         ax.set_ylabel("N")
         # go to lines
-        for k in xrange(self.nlc-1):
-            for i in xrange(3+k*3, 6+k*3):
+        for k in range(self.nlc-1):
+            for i in range(3+k*3, 6+k*3):
                 ax = fig.add_subplot(self.nlc,3,i+1)
                 if np.mod(i, 3) == 0:
                     # lag plots
@@ -3300,8 +3312,8 @@ class SCmap_Model(object):
 
         """
         if (len(llag_segments) != self.nlc-1):
-            print("Error: llag_segments has to be a list of length %d" %
-                  (self.nlc-1))
+            print(("Error: llag_segments has to be a list of length %d" %
+                  (self.nlc-1)))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
@@ -3335,7 +3347,7 @@ class SCmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -3398,7 +3410,7 @@ class SCmap_Model(object):
         jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             iwant = np.ones(nwant)*(i+1)
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
@@ -3459,7 +3471,7 @@ def unpackthindiskpar(p, nlc=None, hascontlag=False, lwaves=None, refwave=None):
         # possible to figure out nlc from the size of p
         nlc = (len(p) - 4.)//2. + 1.
     if lwaves is None:
-    	print "You need to provide values for \'lwaves\'."
+        print("You need to provide values for \'lwaves\'.")
         sys.exit()
     sigma = np.exp(p[0])    # DRW amplitude
     tau = np.exp(p[1])      # DRW damping timescale
@@ -3469,7 +3481,7 @@ def unpackthindiskpar(p, nlc=None, hascontlag=False, lwaves=None, refwave=None):
         lags = np.zeros(nlc)
         wids = np.zeros(nlc)
         scales = np.ones(nlc)
-        for i in xrange(1, nlc): # Get values needed for lnlikefn_spear
+        for i in range(1, nlc): # Get values needed for lnlikefn_spear
             lags[i] = thin_disk_func(alph, bet, lwaves[i], refwave)
             wids[i] = p[4+(i-1)*2]
             scales[i] = p[5+(i-1)*2]
@@ -3478,7 +3490,7 @@ def unpackthindiskpar(p, nlc=None, hascontlag=False, lwaves=None, refwave=None):
         llags = np.zeros(nlc-1)
         lwids = np.zeros(nlc-1)
         lscales = np.ones(nlc-1)
-        for i in xrange(nlc-1):
+        for i in range(nlc-1):
             llags[i] = thin_disk_func(alph, bet, lwaves[i + 1], refwave)
             lwids[i] = p[4+i*2]
             lscales[i] = p[5+i*2]
@@ -3599,7 +3611,7 @@ def lnpostfn_thindisk_p(p, zydata, bandwaves, ref_wave, conthpd=None,
     prior5 = 0.0    # Don't let scales go negative
     prior6 = 0.0    # Don't let logsigma go above ceiling, below floor
     prior7 = 0.0    # Don't let logtau go above ceiling, below floor
-    for i in xrange(zydata.nlc-1):
+    for i in range(zydata.nlc-1):
         if lagtobaseline < 1.0:
             if np.abs(llags[i]) > lagtobaseline*zydata.rj:
                 # penalize long lags when they are larger than 0.3 times the
@@ -3695,7 +3707,7 @@ class Disk_Model(object):
             self.vars = ["sigma", "tau", "alpha", "beta"]  # always used params
             self.texs = [r"$\log\,\sigma$", r"$\log\,\tau$", r"$\alpha$",
                             r"$\beta$"]
-            for i in xrange(1, self.nlc):
+            for i in range(1, self.nlc):
                 self.vars.append("_".join(["wid",   self.names[i]]))
                 self.vars.append("_".join(["scale", self.names[i]]))
                 self.texs.append("".join(
@@ -3789,12 +3801,12 @@ class Disk_Model(object):
         # Print statements for knowledge of user.  These values can be changed in this script.
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -3840,14 +3852,14 @@ class Disk_Model(object):
                 print("no priors on sigma and tau")
             else:
                 print("using priors on sigma and tau from continuum fitting")
-                print(np.exp(conthpd))
+                print((np.exp(conthpd)))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, but within the baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler, proceed to burn in
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_thindisk_p,
                                   args=(self.zydata, self.effwaves,
@@ -3862,7 +3874,7 @@ class Disk_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
                 for i in range(self.ndim):
@@ -3887,14 +3899,14 @@ class Disk_Model(object):
         self.lags = np.asarray(self.lags, dtype = float)
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -3963,15 +3975,15 @@ class Disk_Model(object):
 
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f alpha %8.3f beta %8.3f" % (sigma, tau, alpha, beta))
-            for i in xrange(self.nlc-1):
+            print(("sigma %8.3f tau %8.3f alpha %8.3f beta %8.3f" % (sigma, tau, alpha, beta)))
+            for i in range(self.nlc-1):
                 ip = 4+i*2
-                print("%s %8.3f %s %8.3f" % (
+                print(("%s %8.3f %s %8.3f" % (
                     self.vars[ip+0], lwids[j],
                     self.vars[ip+1], lscales[j],
-                    ))
+                    )))
                 j = j + 1
-            print("with logp  %10.5g " % -v_bst)
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def get_hpd(self, set_verbose=True):
@@ -3984,14 +3996,14 @@ class Disk_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" % tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -4018,18 +4030,18 @@ class Disk_Model(object):
             return(1)
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*(self.nlc+1)))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(self.nlc + 1,2,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
-        for j in xrange(2,4):
+        for j in range(2,4):
             ax = fig.add_subplot(self.nlc + 1,2,j+1)
             ax.hist(self.flatchain[:,j], bins)
             ax.set_xlabel(self.texs[j])
             ax.set_ylabel("N")
-        for k in xrange(self.nlc-1):
-            for m in xrange(4+k*2, 6+k*2):
+        for k in range(self.nlc-1):
+            for m in range(4+k*2, 6+k*2):
                 ax = fig.add_subplot(self.nlc + 1, 2, m+1)
                 #ax = fig.add_subplot(self.nlc,3,i+1+1)
                 ax.hist(self.flatchain[:,m], bins)
@@ -4057,11 +4069,11 @@ class Disk_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.loadtxt(fchain)
-        print "Gen from text complete"
+        print("Gen from text complete")
         self.flatchain_whole = np.copy(self.flatchain)
-        print "flatchain complete"
+        print("flatchain complete")
         self.ndim = self.flatchain.shape[1]
         # get HPD
         self.get_hpd(set_verbose=set_verbose)
@@ -4124,7 +4136,7 @@ class Disk_Model(object):
         jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             iwant = np.ones(nwant)*(i+1)
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)
@@ -4467,12 +4479,12 @@ class DPmap_Model(object):
             p_bst, self.zydata.nlc, hascontlag=False)
         if set_verbose:
             print("Best-fit parameters are")
-            print("sigma %8.3f tau %8.3f" % (sigma, tau))
-            print("%s %8.3f %s %8.3f %s %8.3f" % (
-                self.vars[2], llags[0], self.vars[3], lwids[0], self.vars[4], lscales[0]))
-            print("%s %8.3f %s %8.3f %s %8.3f" % (
-                self.vars[5], llags[1], self.vars[6], lwids[1], self.vars[7], lscales[1]))
-            print("with logp  %10.5g " % -v_bst)
+            print(("sigma %8.3f tau %8.3f" % (sigma, tau)))
+            print(("%s %8.3f %s %8.3f %s %8.3f" % (
+                self.vars[2], llags[0], self.vars[3], lwids[0], self.vars[4], lscales[0])))
+            print(("%s %8.3f %s %8.3f %s %8.3f" % (
+                self.vars[5], llags[1], self.vars[6], lwids[1], self.vars[7], lscales[1])))
+            print(("with logp  %10.5g " % -v_bst))
         return(p_bst, -v_bst)
 
     def do_mcmc(self, conthpd=None, set_extraprior=False, lagtobaseline=0.3,
@@ -4488,12 +4500,12 @@ class DPmap_Model(object):
         """
         if (threads > 1 and (not set_threading)):
             if set_verbose:
-                print("run parallel chains of number %2d " % threads)
+                print(("run parallel chains of number %2d " % threads))
         elif (threads == 1):
             if set_verbose:
                 if set_threading:
-                    print("run single chain in submatrix blocksize %10d " %
-                          blocksize)
+                    print(("run single chain in submatrix blocksize %10d " %
+                          blocksize))
                 else:
                     print("run single chain without subdividing matrix ")
         else:
@@ -4530,14 +4542,14 @@ class DPmap_Model(object):
                 print("no priors on sigma and tau")
             else:
                 print("using priors on sigma and tau from continuum fitting")
-                print(np.exp(conthpd))
+                print((np.exp(conthpd)))
             if lagtobaseline < 1.0:
-                print("penalize lags longer than %3.2f of the baseline" %
-                      lagtobaseline)
+                print(("penalize lags longer than %3.2f of the baseline" %
+                      lagtobaseline))
             else:
                 print("no penalizing long lags, restrict to < baseline")
-            print("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
-                  % (nburn, nwalkers, nburn*nwalkers))
+            print(("nburn: %d nwalkers: %d --> number of burn-in iterations: %d"
+                  % (nburn, nwalkers, nburn*nwalkers)))
         # initialize the ensemble sampler
         sampler = EnsembleSampler(nwalkers, self.ndim, lnpostfn_doublephoto_p,
                                   args=(self.zydata, conthpd, set_extraprior,
@@ -4549,10 +4561,10 @@ class DPmap_Model(object):
             print("burn-in finished")
         if fburn is not None:
             if set_verbose:
-                print("save burn-in chains to %s" % fburn)
+                print(("save burn-in chains to %s" % fburn))
             if fixed is not None:
                 # modify flatchain
-                for i in xrange(self.ndim):
+                for i in range(self.ndim):
                     if fixed[i] == 0:
                         sampler.flatchain[:, i] = p_fix[i]
             np.savetxt(fburn, sampler.flatchain)
@@ -4566,19 +4578,19 @@ class DPmap_Model(object):
         af = sampler.acceptance_fraction
         if set_verbose:
             print("acceptance fractions are")
-            print(" ".join([format(r, "3.2f") for r in af]))
+            print((" ".join([format(r, "3.2f") for r in af])))
         if fixed is not None:
             # modify flatchain
-            for i in xrange(self.ndim):
+            for i in range(self.ndim):
                 if fixed[i] == 0:
                     sampler.flatchain[:, i] = p_fix[i]
         if fchain is not None:
             if set_verbose:
-                print("save MCMC chains to %s" % fchain)
+                print(("save MCMC chains to %s" % fchain))
             np.savetxt(fchain, sampler.flatchain)
         if flogp is not None:
             if set_verbose:
-                print("save logp of MCMC chains to %s" % flogp)
+                print(("save logp of MCMC chains to %s" % flogp))
             np.savetxt(flogp, np.ravel(sampler.lnprobability), fmt='%16.8f')
         # make chain an attritue
         self.flatchain = sampler.flatchain
@@ -4599,15 +4611,15 @@ class DPmap_Model(object):
 
         """
         hpd = _get_hpd(self.ndim, self.flatchain)
-        for i in xrange(self.ndim):
+        for i in range(self.ndim):
             if set_verbose:
-                print("HPD of %s" % self.vars[i])
+                print(("HPD of %s" % self.vars[i]))
                 if i < 2:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(np.exp(hpd[:,i])))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(np.exp(hpd[:,i]))))
                 else:
-                    print("low: %8.3f med %8.3f hig %8.3f" %
-                          tuple(hpd[:,i]))
+                    print(("low: %8.3f med %8.3f hig %8.3f" %
+                          tuple(hpd[:,i])))
         # register hpd to attr
         self.hpd = hpd
 
@@ -4638,13 +4650,13 @@ class DPmap_Model(object):
         _nlc = self.nlc + 1
         ln10 = np.log(10.0)
         fig = plt.figure(figsize=(14, 2.8*_nlc))
-        for i in xrange(2):
+        for i in range(2):
             ax = fig.add_subplot(_nlc,3,i+1)
             ax.hist(self.flatchain[:,i]/ln10, bins)
             ax.set_xlabel(self.texs[i])
             ax.set_ylabel("N")
         # line
-        for i in xrange(2, 8):
+        for i in range(2, 8):
             ax = fig.add_subplot(_nlc,3,i+1+1)
             if np.mod(i, 3) == 2:
                 # lag plots
@@ -4671,12 +4683,12 @@ class DPmap_Model(object):
 
         """
         if (len(llag_segments) != 2):
-            print("Error: llag_segments has to be a list of length %d" % 2)
+            print(("Error: llag_segments has to be a list of length %d" % 2))
             return(1)
         if not hasattr(self, "flatchain"):
             print("Warning: need to run do_mcmc or load_chain first")
             return(1)
-        for i in xrange(2):
+        for i in range(2):
             llag_seq = llag_segments[i]
             if llag_seq is None:
                 print("Warning: no rule to break chains with")
@@ -4707,7 +4719,7 @@ class DPmap_Model(object):
             True if you want verbosity (default: True).
         """
         if set_verbose:
-            print("load MCMC chain from %s" % fchain)
+            print(("load MCMC chain from %s" % fchain))
         self.flatchain = np.genfromtxt(fchain)
         self.flatchain_whole = np.copy(self.flatchain)
         self.ndim = self.flatchain.shape[1]
@@ -4760,7 +4772,7 @@ class DPmap_Model(object):
         jwant1 = self.jend + 0.1*self.rj
         jwant = np.linspace(jwant0, jwant1, nwant)
         zylclist_pred = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             iwant = np.ones(nwant)*(i+1)
             mve, var = P.mve_var(jwant, iwant)
             sig = np.sqrt(var)

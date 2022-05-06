@@ -1,12 +1,14 @@
 # Copyright (c) Anand Patil, 2007
 
+from __future__ import absolute_import
+from six.moves import range
 __docformat__='reStructuredText'
 __all__ = ['Covariance']
 
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from GPutils import regularize_array, trisolve, square_and_sum
+from .GPutils import regularize_array, trisolve, square_and_sum
 from javelin.gp.linalg_utils import diag_call, dpotrf_wrap
 from javelin.gp.incomplete_chol import ichol, ichol_continue
 
@@ -83,7 +85,7 @@ class Covariance(object):
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
 
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
 
@@ -133,7 +135,7 @@ class Covariance(object):
 
         # Arrange output matrix and return.
         if m<0:
-            raise ValueError, "Matrix does not appear to be positive semidefinite"
+            raise ValueError("Matrix does not appear to be positive semidefinite")
 
         if not apply_pivot:
             # Useful for self.observe and Realization.__call__. U is upper triangular.
@@ -147,7 +149,7 @@ class Covariance(object):
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False, rank_limit=0):
         """
 
-        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None, 
+        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None,
             rank_limit=0])
 
 
@@ -157,7 +159,7 @@ class Covariance(object):
         Computes incomplete Cholesky factorization of self(z,z), without
         actually evaluating the matrix first. Here z is the concatenation of x
         and x_old. Assumes the Cholesky factorization of self(x_old, x_old) has
-        already been computed. 
+        already been computed.
 
 
         :Arguments:
@@ -183,8 +185,8 @@ class Covariance(object):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
-                
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
 
@@ -279,7 +281,7 @@ class Covariance(object):
 
         # Arrange output matrix and return.
         if m<0:
-            raise ValueError, 'Matrix does not appear positive semidefinite.'
+            raise ValueError('Matrix does not appear positive semidefinite.')
 
         if not apply_pivot:
             # Useful for self.observe. U is upper triangular.
@@ -298,7 +300,7 @@ class Covariance(object):
         """
         Observes self on obs_mesh with observation variance obs_V.
         Output_type controls the information returned:
-        
+
         'r' : returns information needed by Realization objects.
         'o' : returns information needed by function observe.
         's' : returns information needed by the Gaussian process
@@ -312,7 +314,7 @@ class Covariance(object):
 
         if self.ndim is not None:
             if not ndim==self.ndim:
-                raise ValueError, "Dimension of observation mesh is not equal to dimension of base mesh."
+                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 
@@ -337,11 +339,11 @@ class Covariance(object):
             else:
                 C_eval = self.__call__(obs_mesh,obs_mesh,regularize=False)
                 U = C_eval.copy('F')
-                for i in xrange(U.shape[0]):
+                for i in range(U.shape[0]):
                     U[i,i] += obs_V[i]
                 info = dpotrf_wrap(U)
                 if info>0:
-                    raise LinAlgError, "Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." %info
+                    raise LinAlgError("Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." %info)
                 obs_dict = {'U': U,'pivots': arange(U.shape[0]),'U_new':U,'C_eval':C_eval}
             obs_dict_new = obs_dict
 
@@ -442,11 +444,11 @@ class Covariance(object):
         # Output expected by Realization
         if output_type == 'r':
             return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
-            
+
         # Ouptut expected by observe
         if output_type == 'o':
             return relevant_slice, obs_mesh_new
-            
+
         # Output expected by the GP submodel
         if output_type=='s':
             return obs_dict_new['U_new'], obs_dict_new['C_eval'], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
@@ -459,7 +461,6 @@ class Covariance(object):
             symm=True
         else:
             symm=False
-
         # Remember shape of x, and then 'regularize' it.
         orig_shape = shape(x)
         if len(orig_shape)>1:
@@ -470,23 +471,19 @@ class Covariance(object):
 
         ndimx = x.shape[-1]
         lenx = x.shape[0]
-
         if return_Uo_Cxo:
             Uo_Cxo = None
 
         # Safety
         if self.ndim is not None:
             if not self.ndim == ndimx:
-                raise ValueError, "The number of spatial dimensions of x, "+\
+                raise ValueError("The number of spatial dimensions of x, "+\
                                     ndimx.__str__()+\
                                     ", does not match the number of spatial dimensions of the Covariance instance's base mesh, "+\
-                                    self.ndim.__str__()+"."
-
+                                    self.ndim.__str__()+".")
 
         # If there are observation points, prepare self(obs_mesh, x)
         # and chol(self(obs_mesh, obs_mesh)).T.I * self(obs_mesh, x)
-
-
 
         # ==========================================================
         # = If only one argument is provided, return the diagonal. =
@@ -498,7 +495,7 @@ class Covariance(object):
             # Otherwise, evaluate the diagonal in a loop.
             else:
                 V=empty(lenx,dtype=float)
-                for i in xrange(lenx):
+                for i in range(lenx):
                     this_x = x[i].reshape((1,-1))
                     V[i] = self.eval_fun(this_x, this_x, **self.params)
             if self.observed and observed:
@@ -507,14 +504,11 @@ class Covariance(object):
                 Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
                 square_and_sum(Uo_Cxo, sqpart)
                 V -= sqpart
-
-            if return_Uo_Cxo:    
+            if return_Uo_Cxo:
                 return V.reshape(orig_shape), Uo_Cxo
             else:
                 return V.reshape(orig_shape)
-
         else:
-
             # ====================================================
             # = # If x and y are the same array, save some work: =
             # ====================================================
@@ -544,7 +538,7 @@ class Covariance(object):
                 leny = y.shape[0]
 
                 if not ndimx==ndimy:
-                    raise ValueError, 'The last dimension of x and y (the number of spatial dimensions) must be the same.'
+                    raise ValueError('The last dimension of x and y (the number of spatial dimensions) must be the same.')
 
                 C = self.eval_fun(x,y,**self.params)
 
@@ -572,7 +566,7 @@ class Covariance(object):
         trisolve(self.Uo[m_old:,m_old:].T, reg_mat_new, 'L', inplace=True)
         reg_mat_new += asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
         return asmatrix(vstack((M.reg_mat,reg_mat_new)))
-        
+
     def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
         if Uo_Cxo is None:
             Uo_Cxo = trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')

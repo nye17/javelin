@@ -1,5 +1,8 @@
 #Last-modified: 19 Feb 2013 10:10:06 PM
 
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
 __all__ = ['cholesky', 'trisolve', 'chosolve', 'chodet', 'chosolve_from_tri', 'chodet_from_tri']
 
 import unittest
@@ -27,7 +30,7 @@ def cholesky(A, nugget=None, inplace=False, raiseinfo=True):
     else:
         U = A.copy('F')
     if nugget is not None:
-        for i in xrange(n):
+        for i in range(n):
             U[i,i] += nugget[i]
     info = dpotrf_wrap(U)
     if raiseinfo:
@@ -51,7 +54,7 @@ def cholesky2(A, nugget=None, inplace=False, raiseinfo=True):
     else:
         L = A.copy('F')
     if nugget is not None:
-        for i in xrange(n):
+        for i in range(n):
             L[i,i] += nugget[i]
     info = dpotrf2_wrap(L)
     if raiseinfo:
@@ -80,7 +83,7 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     else:
         x = b.copy('F')
     if U.shape[0] == 0:
-        raise ValueError, 'Attempted to solve zero-rank triangular system'
+        raise ValueError('Attempted to solve zero-rank triangular system')
     dtrsm_wrap(a=U,b=x,side='L',uplo=uplo,transa=transa,alpha=alpha)
     return(x)
 
@@ -113,13 +116,13 @@ def chodet_from_tri(U, nugget=None, retlog=True):
     n = U.shape[0]
     if retlog:
         logdet = 0.0
-        for i in xrange(n):
+        for i in range(n):
             logdet = logdet + np.log(U[i,i])
         logdet = logdet*2.0
         return(logdet)
     else:
         det = 1.0
-        for i in xrange(n):
+        for i in range(n):
             det = det*U[i,i]**2
         return(det)
 
@@ -158,8 +161,8 @@ class CholeskyTests(unittest.TestCase):
                       [10., 10., 62.],
                      ])
         L = cholesky2(A)
-        print "L"
-        print L
+        print("L")
+        print(L)
         B = np.array([
                       [ 5.,  0.,  0.],
                       [-1.,  4.,  0.],

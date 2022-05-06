@@ -1,11 +1,15 @@
 # Last-modified: 06 Dec 2013 01:58:44
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
 __all__ = ['LightCurve', 'get_data']
 
-from lcio import readlc, readlc_3c, writelc
+from .lcio import readlc, readlc_3c, writelc
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from graphic import figure_handler
+from .graphic import figure_handler
 import numpy as np
 from numpy.random import normal, multivariate_normal
 from copy import copy, deepcopy
@@ -37,7 +41,7 @@ class LightCurve(object):
             raise RuntimeError("zylclist has to be a list of lists or arrays")
         else :
             self.zylclist = []
-            for i in xrange(len(zylclist)) :
+            for i in range(len(zylclist)) :
                 if isinstance(zylclist[i], np.ndarray) :
                     if zylclist[i].shape[-1] == 3 :
                         # if each element is an ndarray, convert to a list of 1d arrays
@@ -53,7 +57,7 @@ class LightCurve(object):
         self.nlc = len(self.zylclist)
         if names is None :
             # simply use the sequences as their names (start from 0)
-            self.names = [str(i) for i in xrange(self.nlc)]
+            self.names = [str(i) for i in range(self.nlc)]
         else :
             if len(names) != self.nlc :
                 raise RuntimeError("names should match the dimension of zylclist")
@@ -105,7 +109,7 @@ class LightCurve(object):
 
         # construct the linear response matrix
         self.larr   = np.zeros((self.npt, self.nlc))
-        for i in xrange(self.npt):
+        for i in range(self.npt):
             lcid = self.iarr[i] - 1
             self.larr[i, lcid] = 1.0
         self.larrTr = self.larr.T
@@ -139,7 +143,7 @@ class LightCurve(object):
         """ split into individual LightCurves objects whenever the parent has multiple lightcurves.
         """
         eggs = []
-        for i in xrange(self.nlc) :
+        for i in range(self.nlc) :
             _zylclist = [self.zylclist[i],]
             _names    = [self.names[i],]
             eggs.append(LightCurve(_zylclist, names=_names))
@@ -150,7 +154,7 @@ class LightCurve(object):
         """
         # _zylclist = list(self.zylclist) # copy the original list
         _zylclist = deepcopy(self.zylclist) # copy the original list
-        for i in xrange(self.nlc) :
+        for i in range(self.nlc) :
             e = np.atleast_1d(_zylclist[i][2])
             nwant = e.size
             ediag = np.diag(e*e)
@@ -174,7 +178,7 @@ class LightCurve(object):
         self.jstart = self.jarr[0]
         self.jend   = self.jarr[-1]
         # fix jlist and zylclist
-        for i in xrange(self.nlc) :
+        for i in range(self.nlc) :
             # fix jlist
             self.jlist[i] = self.jlist[i] + timeoffset
             # fix the original zylclist
@@ -216,7 +220,7 @@ class LightCurve(object):
         """
         fig  = plt.figure(figsize=(8, 2*self.nlc))
         height = 0.85/self.nlc
-        for i in xrange(self.nlc) :
+        for i in range(self.nlc) :
             ax = fig.add_axes([0.10, 0.1+i*height, 0.85, height])
             mfc = cm.jet(i/(self.nlc-1.) if self.nlc > 1 else 0)
             if set_pred :
@@ -279,8 +283,8 @@ class LightCurve(object):
         _ndt = _np*(_np-1)/2
         dtarr = np.zeros(_ndt)
         _k = 0
-        for i in xrange(_np-1) :
-            for j in xrange(i+1, _np) :
+        for i in range(_np-1) :
+            for j in range(i+1, _np) :
                 dtarr[_k] = self.jlist[0][j] - self.jlist[0][i]
                 _k += 1
         if set_logdt :
@@ -311,10 +315,10 @@ class LightCurve(object):
             if not set_overwrite :
                 raise RuntimeError("%s exists, exit"%fname)
             else :
-                print("save light curves to %s"%fname)
+                print(("save light curves to %s"%fname))
                 writelc(self.zylclist, fname)
         except IOError :
-            print("save light curves to %s"%fname)
+            print(("save light curves to %s"%fname))
             writelc(self.zylclist, fname)
 
     def save_continuum(self, fname, set_overwrite=True):
@@ -334,10 +338,10 @@ class LightCurve(object):
             if not set_overwrite :
                 raise RuntimeError("%s exists, exit"%fname)
             else :
-                print("save continuum light curves to %s"%fname)
+                print(("save continuum light curves to %s"%fname))
                 writelc([self.zylclist[0]], fname)
         except IOError :
-            print("save continuum light curves to %s"%fname)
+            print(("save continuum light curves to %s"%fname))
             writelc([self.zylclist[0]], fname)
 
     def save_lcarr(self, fname, set_overwrite=True, set_addmean=True, set_saveid=False) :
@@ -363,12 +367,12 @@ class LightCurve(object):
                 raise RuntimeError("%s exists, exit"%fname)
         except IOError :
             print("%s does not exist")
-        print("save light curve data array to %s"%fname)
+        print(("save light curve data array to %s"%fname))
 
         # TODO
         _marr = np.empty(self.npt)
         if set_addmean :
-            for i in xrange(self.nlc) :
+            for i in range(self.nlc) :
                 sel = (self.iarr == i+1)
                 _marr[sel] = self.marr[sel] + self.blist[i]
         else :
@@ -388,7 +392,7 @@ class LightCurve(object):
             Best-fit light curve mean modulation factors.
 
         """
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             # recover original data when qlist=0
             self.blist[i] -= self.qlist[i]
             self.mlist[i] += self.qlist[i]
@@ -413,7 +417,7 @@ class LightCurve(object):
 
         """
         blist = []
-        for i in xrange(self.nlc):
+        for i in range(self.nlc):
             bar = np.mean(self.mlist[i])
             blist.append(bar)
             self.mlist[i] = self.mlist[i] - bar
@@ -519,7 +523,7 @@ def get_data(lcfile, names=None, set_subtractmean=True, timeoffset=0.0):
         Combined data in a LightCurve object
 
     """
-    if isinstance(lcfile, basestring):
+    if isinstance(lcfile, six.string_types):
         nlc = 1
         # lcfile should be a single file
         try :
@@ -538,7 +542,7 @@ def get_data(lcfile, names=None, set_subtractmean=True, timeoffset=0.0):
         for lcf in lcfile :
             lc = readlc_3c(lcf)
             lclist.append(lc[0])
-    for ilc in xrange(len(lclist)) :
+    for ilc in range(len(lclist)) :
         lclist[ilc][0] = np.atleast_1d(lclist[ilc][0]) + timeoffset
     zydata = LightCurve(lclist, names=names, set_subtractmean=set_subtractmean)
     return(zydata)
@@ -563,4 +567,4 @@ if __name__ == "__main__":
                ]
               ]
     zylc = LightCurve(zylclist=zylclist)
-    print(zylc.cont_cad)
+    print((zylc.cont_cad))

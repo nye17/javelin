@@ -2,6 +2,7 @@
 
 # Where matrix evaluations can be done in chunks, the chunk size will be
 # kept below this limit.
+from __future__ import absolute_import
 chunksize = 1e8
 
 __modules__ = [ 'GPutils',
@@ -15,14 +16,14 @@ __modules__ = [ 'GPutils',
               ]
 
 
-from GPutils import *
-from Mean import *
-from Covariance import *
-from BasisCovariance import *
-from FullRankCovariance import *
-from NearlyFullRankCovariance import *
-from Realization import *
-from cov_funs import *
+from .GPutils import *
+from .Mean import *
+from .Covariance import *
+from .BasisCovariance import *
+from .FullRankCovariance import *
+from .NearlyFullRankCovariance import *
+from .Realization import *
+from .cov_funs import *
 
 try:
     import SparseCovariance

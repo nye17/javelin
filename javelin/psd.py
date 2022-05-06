@@ -1,9 +1,11 @@
 from __future__ import with_statement
+from __future__ import absolute_import
 import os
 import warnings
 import pickle
 import math
 import numpy as np
+from six.moves import map
 
 def getMatplotlibVersion():
     """
@@ -16,7 +18,7 @@ def getMatplotlibVersion():
         import matplotlib
         version = matplotlib.__version__.replace('svn', '')
         version = matplotlib.__version__.replace('svn', '')
-        version = map(int, version.split(".")[:2])
+        version = list(map(int, version.split(".")[:2]))
     except ImportError:
         version = None
     return version

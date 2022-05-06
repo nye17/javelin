@@ -1,11 +1,14 @@
 #Last-modified: 08 Dec 2013 03:41:24
 
+from __future__ import absolute_import
+from __future__ import print_function
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, font_manager
 import numpy as np
 from javelin.gp import Covariance
 from javelin.cov import get_covfunc_dict
+from six.moves import zip
 
 
 # for citing covfunc properties in plotting
@@ -62,7 +65,7 @@ def show_drw(ax, xtuple=None, set_color="color"):
     """ plot drw model.
     """
     covfunc = "drw"
-    print("plotting %s "%covfunc)
+    print(("plotting %s "%covfunc))
     plotcov(ax, covfunc=covfunc, color="k", ls="--", lw=2.5, scale=1.0,
             transparency=0.5, xtuple=xtuple, label="$\mathrm{DRW}$")
     ax.axvline(1.0, color="gray", ls="-", lw=0.5, alpha=1.0)
@@ -73,8 +76,8 @@ def show_powexp(ax, set_color="color"):
     covfunc = "pow_exp"
     numin, numax, nnu = 0.01, 1.99, 10
     nuarr = np.linspace(numin, numax, nnu)
-    print("plotting %s model with %4d numbers of nu from %.4g to %.4g\
-            "%(covfunc, nnu, numin, numax))
+    print(("plotting %s model with %4d numbers of nu from %.4g to %.4g\
+            "%(covfunc, nnu, numin, numax)))
     for i, nu in enumerate(nuarr):
         if set_color:
             color= cm.jet(1.*i/len(nuarr))
@@ -88,8 +91,8 @@ def show_matern(ax, set_color="color"):
     covfunc = "matern"
     numin, numax, nnu = 0.10, 2.50, 10
     nuarr = np.power(10.0, np.linspace(np.log10(numin), np.log10(numax), nnu))
-    print("plotting %s model with %4d numbers of nu from %.4g to %.4g\
-            "%(covfunc, nnu, numin, numax))
+    print(("plotting %s model with %4d numbers of nu from %.4g to %.4g\
+            "%(covfunc, nnu, numin, numax)))
     for i, nu in enumerate(nuarr):
         if set_color:
             color= cm.jet(1.*i/len(nuarr))
@@ -103,8 +106,8 @@ def show_paretoexp(ax, set_color="color"):
     covfunc = "pareto_exp"
     numin, numax, nnu = 1.0, 5.0, 10
     nuarr = np.power(10.0, np.linspace(np.log10(numin), np.log10(numax), nnu))
-    print("plotting %s model with %4d numbers of nu from %.4g to %.4g\
-            "%(covfunc, nnu, numin, numax))
+    print(("plotting %s model with %4d numbers of nu from %.4g to %.4g\
+            "%(covfunc, nnu, numin, numax)))
     for i, nu in enumerate(nuarr):
         if set_color:
             color= cm.jet(1.*i/len(nuarr))
@@ -119,8 +122,8 @@ def show_keplerexp(ax, xtuple=None, set_color="color"):
     covfunc = "kepler_exp"
     numin, numax, nnu = 0.0, 0.8, 10
     nuarr = np.linspace(numin, numax, nnu)
-    print("plotting %s model with %4d numbers of nu from %.4g to %.4g\
-            "%(covfunc, nnu, numin, numax))
+    print(("plotting %s model with %4d numbers of nu from %.4g to %.4g\
+            "%(covfunc, nnu, numin, numax)))
     for i, nu in enumerate(nuarr):
         if set_color:
             color= cm.jet(1.*i/len(nuarr))

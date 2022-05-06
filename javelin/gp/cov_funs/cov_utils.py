@@ -133,7 +133,7 @@ class covariance_wrapper(object):
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
         ny = y.shape[0]
-        n_threads = min(get_threadpool_size(), np.int(nx*ny / 10000))
+        n_threads = min(get_threadpool_size(), np.ceil(nx*ny / 10000))
 
 
         if n_threads > 1:

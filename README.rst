@@ -281,15 +281,15 @@ Starting from the data files in the ``examples/dat`` directly::
 Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommened!),::
 
     $ python
-    Python 2.7.2+ (default, Jan 20 2012, 23:05:38)
-    [GCC 4.6.2] on linux2
+    Python 3.7.11 (default, Jul 27 2021, 14:32:16)
+    [GCC 7.5.0] :: Anaconda, Inc. on linux
     Type "help", "copyright", "credits" or "license" for more information.
     >>>
 
 and do ::
 
     >>>from javelin.zylc import get_data
-    >>>from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model
+    >>>from javelin.lcmodel import Cont_Model, Rmap_Model, Pmap_Model, Disk_Model, DPmap_Model
 
 to load the necessary modules, then::
 

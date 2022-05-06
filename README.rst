@@ -13,10 +13,12 @@ for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
 functionality and visualization. You can use **JAVELIN** to model quasar
 variability using different covariance functions
 (`Zu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
-and measure emission line lags using either spectroscopic light cruves
+and measure lags using either spectroscopic light cruves
 (`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_)
 or photometric light curves
-(`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_).
+(`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_)
+and over a thin-disk model
+(`Mudd et al. 2017, arxiv:1711.11588  <https://arxiv.org/abs/1711.11588>`_).
 
 Changelog
 =========
@@ -25,11 +27,11 @@ Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
 
     *Version 0.35* is now working under Python 3, and please go to `JAVELIN2 <https://github.com/nye17/javelin2>`_ for the previous version that is compatible with Python 2.
 
-    *Version 0.34* includes the new DPmap_Model method, which is an extension of
-    the Pmap_model that works with two lagged-components in the line-band,
-    unlike Pmap_model with a continuum component and a single lagged component.
+    *Version 0.34* includes the new *DPmap_Model* method, which is an extension of
+    the *Pmap_model* that works with two lagged-components in the line-band,
+    unlike *Pmap_model* with a continuum component and a single lagged component.
 
-    *Version 0.33* includes the new Disk_Model method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
+    *Version 0.33* includes the new *Disk_Model* method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
 
     *Version 0.32alpha* now has the capability to keep some parameters fixed during MCMC sampling
 
@@ -68,17 +70,22 @@ the package on a regular basis.
 
 You can install JAVELIN by the standard Python package installation procedure::
 
-    $ python setup.py config_fc --fcompiler=intel  install
+    $ python setup.py install
 
-or if you want to install the package to a specified directory ``JAVELINDIR``::
+or if you want to install the package locallly::
 
-    $ python setup.py config_fc --fcompiler=intel install --prefix=JAVELINDIR
+    $ python setup.py install --user
+
+Sometimes the system cannot find you the correct *Fortran compiler* for JAVELIN,
+and you have to do something like::
+
+    $ python setup.py config_fc --fcompiler=intel install
 
 where ``config_fc --fcompiler=intel`` tells Python to use the *intel fortran
 compiler* to compile Fortran source codes. You can also specifies other fortran
 compilers that are available in your system, e.g.,::
 
-    $ python setup.py config_fc --fcompiler=gnu95 install --prefix=JAVELINDIR
+    $ python setup.py config_fc --fcompiler=gnu95 install
 
 uses ``GFortran`` as its Fortran compiler.
 
@@ -152,7 +159,7 @@ show the figures below locally by running::
 
     $ python demo.py show
 
-on the command line.
+on the command line. There are many more functionallities that are currently implemented in JAVELIN than listed below, so I strongly encourage the users to go through the ``demo.py`` file --- I have written one simple snippet for each of those functionalities in the ``demo`` function.
 
 In our RM models, we assume the quasar variability on scales longer than a few
 days can be well described by a Damped Random Walk (DRW) model, and the
@@ -729,6 +736,22 @@ parameters when initializing the "Disk_Model" object. Using our previous example
 would not allow top hat widths less than 0.1, :math:`R_{0}` outside the range of [-5, 5], or :math:`\beta` outside the
 range of [-2, 2]. Again, note that the units on the top hat minimum width and  :math:`R_{0}` are the same as those
 in your light curves.
+
+Double Photometric RM: Fitting the Continuum and the Combined Light Curve of Two Lagged Components
+---------------------------------------------------------
+
+The Photometric RM module is as easy to use as the Spectroscopic one::
+
+    >>>javdata7 = get_data("loopdeloop_con_yzb.dat", names=["Continuum", "YelmZingBand"])
+    >>>dpmap = DPmap_Model(javdata7)
+
+Again, the procedure is similar to the Spectroscopic RM,
+where we constrain the continuum variability first and use that as prior
+information for the second step of calling ``DPmap_Model``. The model now asks
+for 8 parameters, two for the continuum variability, and three for each of the
+two lagged components.  Please check the ``demo.py`` code under ``example`` dir or the
+source code ``lcmodel.py`` under ``javelin`` dir for more details on this
+particular RM model.
 
 Additional Information
 ----------------------

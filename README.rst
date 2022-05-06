@@ -18,7 +18,7 @@ and measure lags using either spectroscopic light cruves
 or photometric light curves
 (`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_)
 and over a thin-disk model
-(`Mudd et al. 2017, arxiv:1711.11588  <https://arxiv.org/abs/1711.11588>`_).
+(`Mudd et al. 2018 <https://ui.adsabs.harvard.edu/abs/2018ApJ...862..123M>`_).
 
 Changelog
 =========
@@ -31,7 +31,7 @@ Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
     the *Pmap_model* that works with two lagged-components in the line-band,
     unlike *Pmap_model* with a continuum component and a single lagged component.
 
-    *Version 0.33* includes the new *Disk_Model* method from `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
+    *Version 0.33* includes the new *Disk_Model* method from Mudd et al. 2018.
 
     *Version 0.32alpha* now has the capability to keep some parameters fixed during MCMC sampling
 
@@ -47,24 +47,15 @@ Prerequisites
 JAVELIN requires
 
 #. `Fortran Compiler <http://en.wikipedia.org/wiki/Fortran>`_ (>F90)
-#. `Python <http://python.org>`_ (>2.5)
+#. `Python <http://python.org>`_ (>3.0)
 #. `Numpy <http://numpy.org>`_ (>1.4)
 #. `Scipy <http://scipy.org>`_ (>0.1)
 #. `Matplotlib <http://matplotlib.sourceforge.net/>`_ (>1.0)
 
-We strongly recommend that you have the ``Lapack`` and ``Atlas`` libraries installed
-on the system, although they are not necessary. It requires no extra effort to
-install them, as many systems either come with LAPACK and BLAS pre-installed
-(MAC), or have them conveniently in software repositories (Linux distributions).
-They provide native support for fast solving linear systems inside JAVELIN, otherwise
-JAVELIN will simply install a subset of the the ``Lapack`` source from scratch.
-
-
 Installation
 ------------
 
-To download the package, you can either go to the ``Downloads`` tab for stable
-releases or directly pull the cutting-edge version using ``mercurial``. We
+To download the package, you can directly pull the cutting-edge version using ``git``. We
 strongly suggest you clone the repo for the latest version, as we are updating
 the package on a regular basis.
 
@@ -130,7 +121,7 @@ try::
 
     $ python plotcov.py
 
-which exactly reproduces Figure 1 in `Zu et al. (2013) <http://arxiv.org/abs/1202.3783>`_.
+which exactly reproduces Figure 1 in `Zu et al. 2013  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_.
 
 
 .. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/covdemo.png
@@ -147,7 +138,7 @@ Demonstration
 Here we briefly explain how to use JAVELIN to caculate the spectroscopic and photometric line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
 <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
 observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing. If you are
-already familiar with the `Zu et al. (2011) <http://arxiv.org/abs/1008.0641>`_
+already familiar with the `Zu et al. <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 paper, feel free to skip to the next section.  Every file and script referred
 to here can be found inside ``examples`` directory::
 
@@ -666,10 +657,10 @@ directly fit the single broad band light curve without using ``conthpd``. You
 can either look into the ``demo.py`` code under ``example`` dir, or check the
 source code ``lcmodel.py`` under ``javelin`` dir for details.
 
-Disk RM Model of `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_
+Disk RM Model of Mudd et al. 2018
 ---------------------------------------------------------
 
-The Disk_Model object is developed recently by `Mudd et al. 2017 <https://arxiv.org/abs/1711.11588>`_ , and what it
+The Disk_Model object is developed by `Mudd et al. 2018 <https://ui.adsabs.harvard.edu/abs/2018ApJ...862..123M>`_ , and what it
 does is take in a series of continuum light curves at known
 wavelengths/effective wavelengths, and find the best-fitting thin disk model
 for the data.  The thin disk assumes that the size of the accretion disk scales
@@ -687,7 +678,7 @@ wavelengths as
 
 where again :math:`R_{0}` is the disk size at a reference wavelength :math:`\lambda_{0}` and :math:`t` is the time delay
 between a feature at wavelength :math:`\lambda_{0}` and :math:`\lambda`.  More information on the model and further
-references can be found in Mudd et al. 2017.
+references can be found in Mudd et al. 2018.
 
 For a usage example, you can find an example script at ::
 
@@ -777,7 +768,7 @@ for spectroscopic reverberation mapping and general JAVELIN usage,
 
 for photometric reverberation mapping, and
 
-`Mudd et al. 2017, arxiv:1711.11588  <https://arxiv.org/abs/1711.11588>`_
+`Mudd, Martini, Zu et al. 2018 <https://ui.adsabs.harvard.edu/abs/2018ApJ...862..123M>`_
 
 for thin disk modelling.
 

@@ -23,6 +23,8 @@ Changelog
 
 Please send an email to ``yingzu AT sjtu.edu.cn`` if you have any questions.
 
+    *Version 0.35* is now working under Python 3, and please go to `JAVELIN2 <https://github.com/nye17/javelin2>`_ for the previous version that is compatible with Python 2.
+
     *Version 0.34* includes the new DPmap_Model method, which is an extension of
     the Pmap_model that works with two lagged-components in the line-band,
     unlike Pmap_model with a continuum component and a single lagged component.

@@ -94,7 +94,7 @@ except:
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="0.34",
+    setup(  version="0.35",
             description="JAVELIN: Python Version of SPEAR",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
@@ -114,7 +114,7 @@ if __name__ == '__main__':
                 # Use our customized commands
                 'clean': MyClean,
                 },
-            requires=['NumPy (>=1.3)',],
+            requires=['NumPy (>=1.3)', 'Python (>=3.0)',],
             long_description="""
             Ongoing effort to combine an integral GP module to the AGN variablility study.
             """,

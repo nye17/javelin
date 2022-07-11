@@ -150,7 +150,7 @@ show the figures below locally by running::
 
     $ python demo.py show
 
-on the command line. There are many more functionallities that are currently implemented in JAVELIN than listed below, so I strongly encourage the users to go through the ``demo.py`` file --- I have written one simple snippet for each of those functionalities in the ``demo`` function.
+on the command line. There are many more functionallities that are currently implemented in JAVELIN than listed below~(e.g., you can simulate random light curves from input variability parameters and lag parameters), so I strongly encourage the users to go through the ``demo.py`` file --- I have written one simple snippet for each of those functionalities in the ``demo`` function.
 
 In our RM models, we assume the quasar variability on scales longer than a few
 days can be well described by a Damped Random Walk (DRW) model, and the

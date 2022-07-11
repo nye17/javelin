@@ -40,15 +40,12 @@ for arg in sys.argv :
 # = Compile Fortran extensions =
 # ==============================
 
-# If optimized lapack/ BLAS libraries are present, compile distributions that involve linear algebra against those.
-# Otherwise compile blas and lapack from netlib sources.
-# lapack_info = get_info('lapack_opt',1)
 
-# I have disabled linking to the system lapack, quite a headache it seems.
+# I have disabled linking to the system lapack, quite a headache it seems for inexperienced users.
 lapack_info = get_info('',1)
-# lapack_info = False
-# print(lapack_info)
-# quit()
+
+# For advanced users, if optimized lapack/ BLAS libraries are present, you can uncomment the following line to compile distributions that involve linear algebra against those.
+# lapack_info = get_info('lapack_opt',1)
 
 
 

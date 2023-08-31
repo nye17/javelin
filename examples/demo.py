@@ -400,11 +400,11 @@ def demo(mode, covfunc="drw") :
             set_plot = True
         try :
             import multiprocessing
-            if _platform == "darwin" :
+            # if _platform == "darwin" :
                 # for some reason, Mac cannot handle the pools in emcee.
-                threads = 1
-            else :
-            # if True:
+                # threads = 1
+            # else :
+            if True:
                 threads = multiprocessing.cpu_count()
                 if threads > 40:
                     threads = 40

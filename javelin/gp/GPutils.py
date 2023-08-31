@@ -88,7 +88,7 @@ def caching_call(f, x, x_sofar, f_sofar):
     f[repeat_to]=f[repeat_from]
 
     return f, x_sofar, f_sofar
-    
+
 def square_and_sum(a,s):
     """
     Writes np.sum(a**2,axis=0) into s
@@ -340,32 +340,32 @@ def point_eval(M, C, x):
     from .BasisCovariance import BasisCovariance
     """
     Evaluates M(x) and C(x).
-    
+
     Minimizes computation; evaluating M(x) and C(x) separately would
     evaluate the off-diagonal covariance term twice, but callling
     point_eval(M,C,x) would only evaluate it once.
-    
+
     Also chunks the evaluations if the off-diagonal term.
     """
-    
+
     x_ = regularize_array(x)
-    
+
     M_out = empty(x_.shape[0])
     V_out = empty(x_.shape[0])
-    
+
     if isinstance(C, BasisCovariance):
         y_size = len(C.basis)
     elif C.obs_mesh is not None:
         y_size = C.obs_mesh.shape[0]
     else:
         y_size = 1
-    
-    n_chunks = ceil(y_size*x_.shape[0]/float(chunksize))
+
+    n_chunks = ceil(y_size*x_.shape[0]/float(chunksize)).astype(int)
     bounds = array(linspace(0,x_.shape[0],n_chunks+1),dtype='int')
     cmin=bounds[:-1]
     cmax=bounds[1:]
-    for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):           
-        x__ = x_[cmin:cmax] 
+    for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):
+        x__ = x_[cmin:cmax]
         V_out[cmin:cmax], Uo_Cxo = C(x__, regularize=False, return_Uo_Cxo=True)
         M_out[cmin:cmax] = M(x__, regularize=False, Uo_Cxo=Uo_Cxo)
 

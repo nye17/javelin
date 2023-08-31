@@ -1,0 +1,23 @@
+Metadata-Version: 2.1
+Name: javelin
+Version: 0.35
+Summary: JAVELIN: Python Version of SPEAR
+Home-page: https://bitbucket.org/nye17/javelin
+Author: Ying Zu
+Author-email: zuying@gmail.com 
+License: Academic Free License
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Academic Free License (AFL)
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Fortran
+Classifier: Topic :: Scientific/Engineering
+Requires: NumPy (>=1.3)
+Requires: Python (>=3.0)
+License-File: LICENSE
+
+
+            Ongoing effort to combine an integral GP module to the AGN variablility study.
+            

@@ -34,21 +34,12 @@ for arg in sys.argv :
     if "dist" in arg :
         dist = arg
 
-
-
 # ==============================
 # = Compile Fortran extensions =
 # ==============================
 
-
-# I have disabled linking to the system lapack, quite a headache it seems for inexperienced users.
-lapack_info = get_info('',1)
-
-# For advanced users, if optimized lapack/ BLAS libraries are present, you can uncomment the following line to compile distributions that involve linear algebra against those.
-# lapack_info = get_info('lapack_opt',1)
-
-
-
+# test if optimized lapack/ BLAS libraries are present
+lapack_info = get_info('lapack_opt',1)
 
 # ===========================================
 # = Compile GP package's Fortran extensions =
@@ -95,7 +86,7 @@ if __name__ == '__main__':
             description="JAVELIN: Python Version of SPEAR",
             author="Ying Zu",
             author_email="zuying@gmail.com ",
-            url="https://bitbucket.org/nye17/javelin",
+            url="https://github.com/nye17/javelin",
             license="Academic Free License",
             classifiers=[
                 'Development Status :: 5 - Production/Stable',

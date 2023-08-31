@@ -17,12 +17,14 @@ from .predict import (PredictSignal, PredictRmap, PredictPmap, PredictSPmap,
 from .gp import FullRankCovariance, NearlyFullRankCovariance
 from .err import InputError, UsageError
 from six.moves import range
-try:
+# try:
     # try to use locally-installed emcee
-    from emcee import EnsembleSampler
-except ImportError:
+    # from emcee import EnsembleSampler
+# except ImportError:
     # try to use the internal emcee
-    from .emcee_internal import EnsembleSampler
+    # from .emcee_internal import EnsembleSampler
+# use the internal by default because the latest emcee is not downstream compatible with the older versions anymore.
+from .emcee_internal import EnsembleSampler
 from .graphic import figure_handler
 from copy import copy
 

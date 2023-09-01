@@ -744,6 +744,32 @@ two lagged components.  Please check the ``demo.py`` code under ``example`` dir 
 source code ``lcmodel.py`` under ``javelin`` dir for more details on this
 particular RM model.
 
+
+Fast Generation of Quasar Light Curves
+--------------------------------------
+
+JAVELIN also can be used for generating mock light curves that are consistent
+with damped random walks or other stochastic processes (as specified by ``covfunc``) ::
+
+    >>>PS = PredictSignal(lcmean=0.0, covfunc='drw', sigma=2, tau=40)
+    >>>jarr = np.linspace(0, 100, 50)
+    >>>earr = np.zeros_like(jarr) + 1.0
+    >>>zylist = []
+    >>>for i in range(4):
+    >>>    sarr = PS.generate(jarr, ewant=earr)
+    >>>    zylist.append([jarr, sarr, earr])
+    >>>zydata = LightCurve(zylist, names=['DRW1', 'DRW2', 'DRW3', 'DRW4'])
+    >>>zydata.plot()
+
+Then you will see four mock light curves showing up.
+
+.. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mockdrw.png
+   :scale: 150%
+
+   Fig. 9: Four mock light curves produced with input DRW parameters.
+
+
+
 Additional Information
 ----------------------
 

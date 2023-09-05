@@ -1,4 +1,0 @@
-javelin
-javelin/emcee_internal
-javelin/gp
-javelin/gp/cov_funs

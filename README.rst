@@ -729,7 +729,7 @@ range of [-2, 2]. Again, note that the units on the top hat minimum width and  :
 in your light curves.
 
 Double Photometric RM: Fitting the Continuum and the Combined Light Curve of Two Lagged Components
----------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------
 
 The Photometric RM module is as easy to use as the Spectroscopic one::
 

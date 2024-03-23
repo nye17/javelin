@@ -13,7 +13,7 @@ for **E**\stimating **L**\ags **I**\n **N**\uclei. As a version of our
 functionality and visualization. You can use **JAVELIN** to model quasar
 variability using different covariance functions
 (`Zu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_),
-and measure lags using either spectroscopic light cruves
+and measure lags using either spectroscopic light curves
 (`Zu et al. 2011 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_)
 or photometric light curves
 (`Zu et al. 2016 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_)
@@ -63,7 +63,7 @@ You can install JAVELIN by the standard Python package installation procedure::
 
     $ python setup.py install
 
-or if you want to install the package locallly::
+or if you want to install the package locally::
 
     $ python setup.py install --user
 
@@ -135,7 +135,7 @@ which exactly reproduces Figure 1 in `Zu et al. 2013  <http://adsabs.harvard.edu
 Demonstration
 =============
 
-Here we briefly explain how to use JAVELIN to caculate the spectroscopic and photometric line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
+Here we briefly explain how to use JAVELIN to calculate the spectroscopic and photometric line lags for the AGN hosted by an imaginary `Loopdeloop galaxy
 <http://www.mariowiki.com/Loopdeeloop_Galaxy>`_, where two emission lines are
 observed, `Ylem <http://en.wikipedia.org/wiki/Ylem>`_ and Zing. If you are
 already familiar with the `Zu et al. <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
@@ -150,7 +150,7 @@ show the figures below locally by running::
 
     $ python demo.py show
 
-on the command line. There are many more functionallities that are currently implemented in JAVELIN than listed below~(e.g., you can simulate random light curves from input variability parameters and lag parameters), so I strongly encourage the users to go through the ``demo.py`` file --- I have written one simple snippet for each of those functionalities in the ``demo`` function.
+on the command line. There are many more functionalities that are currently implemented in JAVELIN than listed below~(e.g., you can simulate random light curves from input variability parameters and lag parameters), so I strongly encourage the users to go through the ``demo.py`` file --- I have written one simple snippet for each of those functionalities in the ``demo`` function.
 
 In our RM models, we assume the quasar variability on scales longer than a few
 days can be well described by a Damped Random Walk (DRW) model, and the
@@ -161,7 +161,7 @@ Ylem (Zing) light curve is lagged by 100 (250) days, scaled by a factor of 0.5
 (0.25), and smoothed by a top hat of width 2 (4) days, from the continuum light
 curve. The continuum light curve is generated from the DRW model with a time
 scale 400 days, a variability amplitude of sigma=3, and a mean of 10.0
-(arbitratry flux units)  Thus, for spectroscopic RM we have two parameters for the continuum DRW model, sigma and tau, and three parameters for each emission line model --- the lag t, the width of the tophat smoothing function w, and the flux scaling
+(arbitrary flux units)  Thus, for spectroscopic RM we have two parameters for the continuum DRW model, sigma and tau, and three parameters for each emission line model --- the lag t, the width of the tophat smoothing function w, and the flux scaling
 factor s; for photometric RM we have an additional parameter `alpha` describing the ratio between the two continua, one off and one on the line flux.
 
 
@@ -248,7 +248,7 @@ single light curve.
    Fig. 7: Comparison between the simulated light curves as computed from the
    best-fit parameters, and the observed light curves.
 
-For the photometric line light curve, just to demonstrate the photometric RM function of JAVELIN, we place a hard limit on range of lags during MCMC searching, so that the 180 ambiguity won't happen. Fig. 8 shows the posterior probability disgtribution of parameters in the photometric RM model
+For the photometric line light curve, just to demonstrate the photometric RM function of JAVELIN, we place a hard limit on range of lags during MCMC searching, so that the 180 ambiguity won't happen. Fig. 8 shows the posterior probability distribution of parameters in the photometric RM model
 
 .. figure:: https://github.com/nye17/javelin/blob/master/examples/figs/mcmc3.png
    :scale: 150%
@@ -278,7 +278,7 @@ Starting from the data files in the ``examples/dat`` directly::
 
     $ cd javelin/examples/dat
 
-Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommened!),::
+Fire up a Python terminal (`iPython <http://ipython.org/>`_ is strongly recommended!),::
 
     $ python
     Python 3.7.11 (default, Jul 27 2021, 14:32:16)
@@ -303,7 +303,7 @@ to fit the continuum data, then::
     >>>cymod = Rmap_Model(cy)
     >>>cymod.do_mcmc(conthpd=cmod.hpd)
 
-to fit the continuum+line data, where ``Rmap_Model`` is the the spectroscopic
+to fit the continuum+line data, where ``Rmap_Model`` is the spectroscopic
 reverberation mapping~(RM) model. The results can be shown by::
 
     >>>cymod.show_hist()
@@ -392,7 +392,7 @@ To read the second type of file, simply do::
 Note right now there are only brackets from the ``names``, but a single string
 for the input file. Given ``loopdeloop_con_y.dat`` is just another version of
 packing ``con.dat`` and ``yelm.dat`` together, ``javdata`` and ``javedata2`` are
-equivalent to each other. You can varify this by doing ``javdata2.plot()``.
+equivalent to each other. You can verify this by doing ``javdata2.plot()``.
 
 
 Constraining Continuum Variability
@@ -409,7 +409,7 @@ or by::
 
     >>>javdata3 = get_data("loopdeloop_con.dat", names=["Continuum"])
 
-Note that the brakets are still needed even for loading a single light curve.
+Note that the brackets are still needed even for loading a single light curve.
 
 After loading the data, we need to set up a continuum model. In JAVELIN, the
 light curve models are described in the ``javelin.lcmodel`` module, for now we
@@ -446,7 +446,7 @@ burn-in and sampling periods (well, you do not want to do it right now)::
 The default values of ``nwalker``, ``nchain``, and ``nburn`` would usually be
 enough for fitting continuum or fitting continuum+one line, but the required
 values would rise quickly with the number of lines if you are doing fitting with
-muliple lines. So, whenever you find the MCMC chain does not converge well ---
+multiple lines. So, whenever you find the MCMC chain does not converge well ---
 JAVELIN fail to find a unique combination of solutions but a broad lag distribution,
 try to increase these three parameters.
 
@@ -731,14 +731,14 @@ in your light curves.
 Double Photometric RM: Fitting the Continuum and the Combined Light Curve of Two Lagged Components
 ------------------------------------------------------------------------------------------------------------------
 
-The Photometric RM module is as easy to use as the Spectroscopic one::
+The Double Photometric RM module is also straightforward to use::
 
     >>>javdata7 = get_data("loopdeloop_con_yzb.dat", names=["Continuum", "YelmZingBand"])
     >>>dpmap = DPmap_Model(javdata7)
 
 Again, the procedure is similar to the Spectroscopic RM,
 where we constrain the continuum variability first and use that as prior
-information for the second step of calling ``DPmap_Model``. The model now asks
+information for the second step of calling ``DPmap_Model``. However, the ``DPmap_Model`` model now asks
 for 8 parameters, two for the continuum variability, and three for each of the
 two lagged components.  Please check the ``demo.py`` code under ``example`` dir or the
 source code ``lcmodel.py`` under ``javelin`` dir for more details on this
@@ -784,11 +784,11 @@ use either as is or with modifications with a citation to
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Udalski, A. 2013, ApJ, 765, 106  <http://adsabs.harvard.edu/abs/2013ApJ...765..106Z>`_
 
-for quasar optical variability studies and general JAVELIN usage,
+for quasar optical variability studies and/or **general JAVELIN usage**,
 
 `Zu, Y., Kochanek, C.S., & Peterson, B.M. 2011, ApJ, 735, 80 <http://adsabs.harvard.edu/abs/2011ApJ...735...80Z>`_
 
-for spectroscopic reverberation mapping and general JAVELIN usage,
+for spectroscopic reverberation mapping and/or **general JAVELIN usage**,
 
 `Zu, Y., Kochanek, C.S., Kozlowski, S., & Peterson, B.M. 2016, ApJ, 819, 122 <http://adsabs.harvard.edu/abs/2016ApJ...819..122Z>`_
 

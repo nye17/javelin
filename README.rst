@@ -3,6 +3,14 @@
 JAVELIN
 =======
 
+JAVELIN has now evolved into JavelinTNG
+=======================================
+
+This version of JAVELIN is now deprecated and archived.
+
+Please go to `JavelinTNG <https://github.com/nye17/JavelinTNG>`_ for an
+modernized version that can be installed with `pip` without dependences on fortran.
+
 
 What is JAVELIN
 ===============
